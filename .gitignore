@@ -1,1 +1,16 @@
+# macOS system files
 .DS_Store
+*/.DS_Store
+**/.DS_Store
+
+
+
+# Local editor junk
+*.swp
+*.swo
+*.tmp
+*.bak
+
+# Ignore .gitkeep inside nested folders (but keep top-level one)
+doc/storyboard/images/.gitkeep
+
