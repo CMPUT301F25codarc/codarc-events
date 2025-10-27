@@ -1,16 +1,41 @@
-# macOS system files
+# ----------------------------
+# Android Studio & Gradle
+# ----------------------------
+*.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+
+# Build outputs
+/build
+/captures
+.externalNativeBuild
+.cxx
+
+# Local properties (duplicated for safety)
+local.properties
+
+# ----------------------------
+# macOS System Files
+# ----------------------------
 .DS_Store
 */.DS_Store
 **/.DS_Store
 
-
-
-# Local editor junk
+# ----------------------------
+# Editor / Temp Files
+# ----------------------------
 *.swp
 *.swo
 *.tmp
 *.bak
 
-# Ignore .gitkeep inside nested folders (but keep top-level one)
+# ----------------------------
+# Keep only top-level .gitkeep
+# ----------------------------
 doc/storyboard/images/.gitkeep
-
