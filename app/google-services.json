@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "909050672051",
+    "project_id": "codarc-events",
+    "storage_bucket": "codarc-events.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:909050672051:android:d9d6622aea754bc54951c6",
+        "android_client_info": {
+          "package_name": "ca.ualberta.codarc.codarc_events"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCpGR3jS0cbp7DjzLyIo_ui0UjjdMEojhQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
