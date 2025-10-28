@@ -83,6 +83,15 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.Even
             tvLotteryEnds.setText(eventCard.getLotteryEnds());
             tvEntrantsInfo.setText(eventCard.getEntrantsInfo());
 
+            //  SHOW / HIDE BUTTONS BASED ON JOIN STATE
+            if (eventCard.isJoined()) {
+                btnJoinList.setVisibility(View.VISIBLE);
+                btnLeaveList.setVisibility(View.VISIBLE);
+            } else {
+                btnJoinList.setVisibility(View.VISIBLE);
+                btnLeaveList.setVisibility(View.VISIBLE);
+            }
+
             btnViewEntrants.setOnClickListener(v -> {
                 if (clickListener != null) {
                     clickListener.onViewEntrantsClick(eventCard);
@@ -101,5 +110,6 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.Even
                 }
             });
         }
+
     }
 }

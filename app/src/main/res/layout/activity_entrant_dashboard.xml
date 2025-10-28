@@ -38,8 +38,7 @@
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:layout_marginEnd="16dp"
-            android:background="@color/white"
-            android:backgroundTint="@color/white" />
+            android:background="@color/white" />
 
         <!-- Title -->
         <TextView
@@ -58,8 +57,8 @@
             android:id="@+id/iv_profile_settings"
             android:layout_width="24dp"
             android:layout_height="24dp"
-            android:background="@drawable/ic_join_circle"
-            android:backgroundTint="@color/entrant_action_button_purple"
+            android:src="@android:drawable/ic_menu_manage"
+            android:tint="@color/entrant_action_button_purple"
             android:contentDescription="Profile Settings" />
 
     </LinearLayout>
@@ -73,7 +72,6 @@
         android:orientation="horizontal"
         android:padding="12dp">
 
-        <!-- Search Icon -->
         <ImageView
             android:layout_width="20dp"
             android:layout_height="20dp"
@@ -82,7 +80,6 @@
             android:src="@drawable/ic_search"
             android:tint="@color/text_secondary" />
 
-        <!-- Search Input -->
         <EditText
             android:id="@+id/et_search"
             android:layout_width="0dp"
@@ -94,7 +91,7 @@
             android:textColorHint="@color/text_secondary"
             android:textSize="16sp" />
 
-        <!-- Filter Icon -->
+
         <ImageView
             android:id="@+id/iv_filter"
             android:layout_width="20dp"
@@ -125,7 +122,6 @@
         android:orientation="horizontal"
         android:padding="8dp">
 
-        <!-- History Tab -->
         <LinearLayout
             android:id="@+id/tab_history"
             android:layout_width="0dp"
@@ -148,32 +144,31 @@
                 android:text="@string/bottom_nav_history"
                 android:textColor="@color/entrant_bottom_nav_inactive"
                 android:textSize="12sp" />
-
         </LinearLayout>
 
-        <!-- Scan QR Tab (Active) -->
         <LinearLayout
             android:id="@+id/tab_scan_qr"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:background="@drawable/ic_qr_scan"
-            android:backgroundTint="@color/entrant_bottom_nav_active"
             android:gravity="center"
             android:orientation="vertical"
             android:padding="8dp">
 
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_qr_scan"
+                android:tint="@color/entrant_bottom_nav_active" />
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
                 android:text="@string/bottom_nav_scan_qr"
                 android:textColor="@color/entrant_bottom_nav_active"
                 android:textSize="12sp" />
-
         </LinearLayout>
 
-        <!-- Notifications Tab -->
         <LinearLayout
             android:id="@+id/tab_notifications"
             android:layout_width="0dp"
@@ -196,7 +191,6 @@
                 android:text="@string/bottom_nav_notifications"
                 android:textColor="@color/entrant_bottom_nav_inactive"
                 android:textSize="12sp" />
-
         </LinearLayout>
 
     </LinearLayout>

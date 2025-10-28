@@ -38,6 +38,13 @@
             android:name=".MainActivity"
             android:exported="false"
             android:theme="@style/Theme.Codarcevents" />
+
+        <activity
+            android:name=".view.ProfileActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Codarcevents" />
+
+
     </application>
 
 </manifest>

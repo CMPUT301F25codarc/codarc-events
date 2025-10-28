@@ -1,6 +1,8 @@
 package ca.ualberta.codarc.codarc_events.model;
 
 public class EventCard {
+
+    private String eventId;        // <-- Move to top
     private String title;
     private String location;
     private String lotteryEnds;
@@ -9,12 +11,22 @@ public class EventCard {
 
     public EventCard() {}
 
-    public EventCard(String title, String location, String lotteryEnds, String entrantsInfo, boolean isJoined) {
+    public EventCard(String eventId, String title, String location, String lotteryEnds, String entrantsInfo, boolean isJoined) {
+        this.eventId = eventId;
         this.title = title;
         this.location = location;
         this.lotteryEnds = lotteryEnds;
         this.entrantsInfo = entrantsInfo;
         this.isJoined = isJoined;
+    }
+
+    // ✅ Getter and Setter for eventId
+    public String getEventId() {
+        return eventId;
+    }
+
+    public void setEventId(String eventId) {
+        this.eventId = eventId;
     }
 
     public String getTitle() {
