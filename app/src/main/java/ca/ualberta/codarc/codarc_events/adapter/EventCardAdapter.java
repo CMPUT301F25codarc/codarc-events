@@ -35,7 +35,7 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.Even
     public EventCardViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View itemView = LayoutInflater.from(parent.getContext())
                 .inflate(R.layout.item_event_card, parent, false);
-        return new EventCardViewHolder(itemView);
+        return new EventCardViewHolder(itemView, listener);
     }
 
     @Override
@@ -63,9 +63,11 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.Even
         private LinearLayout btnViewEntrants;
         private LinearLayout btnJoinList;
         private LinearLayout btnLeaveList;
+        private OnEventCardClickListener clickListener;
 
-        public EventCardViewHolder(@NonNull View itemView) {
+        public EventCardViewHolder(@NonNull View itemView, OnEventCardClickListener clickListener) {
             super(itemView);
+            this.clickListener = clickListener;
             tvEventTitle = itemView.findViewById(R.id.tv_event_title);
             tvEventLocation = itemView.findViewById(R.id.tv_event_location);
             tvLotteryEnds = itemView.findViewById(R.id.tv_lottery_ends);
@@ -82,20 +84,20 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.Even
             tvEntrantsInfo.setText(eventCard.getEntrantsInfo());
 
             btnViewEntrants.setOnClickListener(v -> {
-                if (listener != null) {
-                    listener.onViewEntrantsClick(eventCard);
+                if (clickListener != null) {
+                    clickListener.onViewEntrantsClick(eventCard);
                 }
             });
 
             btnJoinList.setOnClickListener(v -> {
-                if (listener != null) {
-                    listener.onJoinListClick(eventCard);
+                if (clickListener != null) {
+                    clickListener.onJoinListClick(eventCard);
                 }
             });
 
             btnLeaveList.setOnClickListener(v -> {
-                if (listener != null) {
-                    listener.onLeaveListClick(eventCard);
+                if (clickListener != null) {
+                    clickListener.onLeaveListClick(eventCard);
                 }
             });
         }
