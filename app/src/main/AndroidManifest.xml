@@ -22,35 +22,18 @@
             </intent-filter>
         </activity>
 
-        <!-- Role Selection Activity -->
+        <!-- Unified Dashboard - Main Dashboard for all users -->
         <activity
-            android:name=".view.RoleSelectionActivity"
+            android:name=".view.UnifiedDashboardActivity"
             android:exported="false"
             android:theme="@style/Theme.Codarcevents" />
 
-        <!-- Login Activity -->
-        <activity
-            android:name=".view.LoginActivity"
-            android:exported="false"
-            android:theme="@style/Theme.Codarcevents" />
-
-        <!-- Dashboard Activities -->
+        <!-- Legacy Activities (kept for reference) -->
         <activity
             android:name=".view.EntrantDashboardActivity"
             android:exported="false"
             android:theme="@style/Theme.Codarcevents" />
 
-        <activity
-            android:name=".view.OrganizerDashboardActivity"
-            android:exported="false"
-            android:theme="@style/Theme.Codarcevents" />
-
-        <activity
-            android:name=".view.AdminDashboardActivity"
-            android:exported="false"
-            android:theme="@style/Theme.Codarcevents" />
-
-        <!-- Original MainActivity (kept for reference) -->
         <activity
             android:name=".MainActivity"
             android:exported="false"

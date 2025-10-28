@@ -2,29 +2,7 @@ package ca.ualberta.codarc.codarc_events.model;
 
 import java.util.List;
 
-/**
- * Entrant model class representing a user who can join events.
- * 
- * Responsibilities:
- * - Join a waiting list for an event
- * - Leave a waiting list for an event
- * - Manage entrant profile and update information
- * - Accept an invite
- * - Decline an invite
- * - Receive notifications
- * - Track device ID for authentication
- * - Scan event QR codes to join or view event
- * 
- * Collaborators:
- * - WaitingList (event participation)
- * - Event (event management)
- * - ProfileRepository (profile management)
- * - Invite (invitation handling)
- * - Registration (confirmation process)
- * - Notification (communication)
- * - AuthenticationDeviceIdProvider (device identification)
- * - QRCodeService (QR scanning)
- */
+// Entrant model for user data
 public class Entrant {
     
     // User identification
@@ -46,16 +24,10 @@ public class Entrant {
     private boolean notificationsEnabled;
     private String pushToken;
 
-    /**
-     * Default constructor
-     */
     public Entrant() {
         this.notificationsEnabled = true;
     }
 
-    /**
-     * Constructor with basic information
-     */
     public Entrant(String entrantId, String name, String email, String deviceId) {
         this();
         this.entrantId = entrantId;
@@ -153,43 +125,23 @@ public class Entrant {
         this.pushToken = pushToken;
     }
 
-    /**
-     * Joins a waiting list for an event
-     */
     public void joinWaitingList(Event event) {
-        // Implementation would add event to waiting list
-        // This is a placeholder for the actual logic
+        // TODO: implement waiting list logic
     }
 
-    /**
-     * Leaves a waiting list for an event
-     */
     public void leaveWaitingList(Event event) {
-        // Implementation would remove event from waiting list
-        // This is a placeholder for the actual logic
+        // TODO: implement waiting list logic
     }
 
-    /**
-     * Updates profile information
-     */
     public void updateProfile(java.util.Map<String, Object> info) {
-        // Implementation would update profile fields
-        // This is a placeholder for the actual logic
+        // TODO: implement profile update
     }
 
-    /**
-     * Accepts an invitation
-     */
     public void acceptInvite(Invite invite) {
-        // Implementation would handle invitation acceptance
-        // This is a placeholder for the actual logic
+        // TODO: implement invitation acceptance
     }
 
-    /**
-     * Declines an invitation
-     */
     public void declineInvite(Invite invite) {
-        // Implementation would handle invitation decline
-        // This is a placeholder for the actual logic
+        // TODO: implement invitation decline
     }
 }
