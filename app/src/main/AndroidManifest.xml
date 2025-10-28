@@ -11,16 +11,50 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Codarcevents">
+        <!-- Landing Activity - App Entry Point -->
         <activity
-            android:name=".MainActivity"
+            android:name=".view.LandingActivity"
             android:exported="true"
             android:theme="@style/Theme.Codarcevents">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Role Selection Activity -->
+        <activity
+            android:name=".view.RoleSelectionActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Codarcevents" />
+
+        <!-- Login Activity -->
+        <activity
+            android:name=".view.LoginActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Codarcevents" />
+
+        <!-- Dashboard Activities -->
+        <activity
+            android:name=".view.EntrantDashboardActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Codarcevents" />
+
+        <activity
+            android:name=".view.OrganizerDashboardActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Codarcevents" />
+
+        <activity
+            android:name=".view.AdminDashboardActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Codarcevents" />
+
+        <!-- Original MainActivity (kept for reference) -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Codarcevents" />
     </application>
 
 </manifest>
