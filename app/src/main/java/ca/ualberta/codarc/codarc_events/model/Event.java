@@ -7,29 +7,7 @@ import com.google.firebase.firestore.GeoPoint;
 
 import java.util.Map;
 
-/**
- * Event model class representing an event in the system.
- * 
- * Responsibilities:
- * - Store event details and metadata
- * - Maintain poster for event pages
- * - Maintain waiting list reference
- * - Validate registration window
- * - Manage event lifecycle (open or close registration)
- * - Provide geolocation checks for entry rules
- * - Generate and provide QR code for sharing
- * - Participate in selection rounds
- * 
- * Collaborators:
- * - EventRepository (data persistence)
- * - ImageStorage (poster management)
- * - WaitingList (participant management)
- * - Schedule (registration window validation)
- * - Organizer (event management)
- * - GeolocationService (location validation)
- * - QRCodeService (QR code generation)
- * - SelectionRound (lottery participation)
- */
+// Event model for storing event data
 public class Event {
     
     // Event identification
@@ -65,18 +43,12 @@ public class Event {
     // QR payload for deep linking
     private String qrPayload;
 
-    /**
-     * Default constructor
-     */
     public Event() {
         this.status = EventStatus.DRAFT;
         this.createdAt = Timestamp.now();
         this.updatedAt = Timestamp.now();
     }
 
-    /**
-     * Constructor with basic event details
-     */
     public Event(String name, String description, Timestamp dateTime, String organizerId) {
         this();
         this.name = name;
@@ -222,25 +194,16 @@ public class Event {
         this.qrPayload = qrPayload;
     }
 
-    /**
-     * Opens registration for this event
-     */
     public void openRegistration() {
         this.status = EventStatus.OPEN;
         this.updatedAt = Timestamp.now();
     }
 
-    /**
-     * Closes registration for this event
-     */
     public void closeRegistration() {
         this.status = EventStatus.CLOSED;
         this.updatedAt = Timestamp.now();
     }
 
-    /**
-     * Checks if registration is currently open
-     */
     public boolean isRegistrationOpen() {
         if (status != EventStatus.OPEN) {
             return false;
@@ -253,34 +216,20 @@ public class Event {
         return now >= openTime && now <= closeTime;
     }
 
-    /**
-     * Checks if event has capacity available
-     */
     public boolean hasCapacity() {
-        return capacity == null || capacity > 0; // Assuming we track current count elsewhere
+        return capacity == null || capacity > 0;
     }
 
-    /**
-     * Converts Event to Map for Firestore storage
-     */
     public Map<String, Object> toMap() {
-        // This would be implemented to convert the event to a Map for Firestore
-        // For now, returning null as a placeholder
+        // TODO: implement Firestore conversion
         return null;
     }
 
-    /**
-     * Creates Event from Firestore DocumentSnapshot
-     */
     public static Event fromSnapshot(Object snapshot) {
-        // This would be implemented to create an Event from Firestore data
-        // For now, returning null as a placeholder
+        // TODO: implement Firestore parsing
         return null;
     }
 
-    /**
-     * Event status enumeration
-     */
     public enum EventStatus {
         DRAFT,
         OPEN,

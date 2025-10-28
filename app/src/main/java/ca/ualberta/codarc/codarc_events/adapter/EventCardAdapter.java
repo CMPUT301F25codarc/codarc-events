@@ -25,17 +25,17 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.Even
         void onLeaveListClick(EventCard eventCard);
     }
 
-    public EventCardAdapter(List<EventCard> eventCards, OnEventCardClickListener listener) {
+    public EventCardAdapter(List<EventCard> eventCards, OnEventCardClickListener clickListener) {
         this.eventCards = eventCards;
-        this.listener = listener;
+        this.listener = clickListener;
     }
 
     @NonNull
     @Override
     public EventCardViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext())
+        View itemView = LayoutInflater.from(parent.getContext())
                 .inflate(R.layout.item_event_card, parent, false);
-        return new EventCardViewHolder(view);
+        return new EventCardViewHolder(itemView);
     }
 
     @Override
@@ -50,11 +50,12 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.Even
     }
 
     public void updateEventCards(List<EventCard> newEventCards) {
-        this.eventCards = newEventCards;
+        this.eventCards.clear();
+        this.eventCards.addAll(newEventCards);
         notifyDataSetChanged();
     }
 
-    class EventCardViewHolder extends RecyclerView.ViewHolder {
+    static class EventCardViewHolder extends RecyclerView.ViewHolder {
         private TextView tvEventTitle;
         private TextView tvEventLocation;
         private TextView tvLotteryEnds;

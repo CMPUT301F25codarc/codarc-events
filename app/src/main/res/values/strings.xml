@@ -101,6 +101,19 @@
     <string name="pending_images_count">4</string>
     <string name="reports_count">9</string>
 
+    <!-- Toast Messages -->
+    <string name="filter_coming_soon">Filter functionality coming soon</string>
+    <string name="profile_coming_soon">Profile settings coming soon</string>
+    <string name="history_tab_selected">History tab selected</string>
+    <string name="qr_scanner_coming_soon">QR Scanner coming soon</string>
+    <string name="notifications_tab_selected">Notifications tab selected</string>
+    <string name="create_event_coming_soon">Create Event coming soon</string>
+    <string name="my_events_coming_soon">My Events coming soon</string>
+    <string name="admin_functions_placeholder">Admin functions will be added here</string>
+    <string name="viewing_entrants_for">Viewing entrants for: %s</string>
+    <string name="joining_list_for">Joining list for: %s</string>
+    <string name="leaving_list_for">Leaving list for: %s</string>
+
     <string name="lorem_ipsum">
         Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam in scelerisque sem. Mauris
         volutpat, dolor id interdum ullamcorper, risus dolor egestas lectus, sit amet mattis purus

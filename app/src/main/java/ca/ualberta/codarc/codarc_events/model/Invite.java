@@ -2,22 +2,7 @@ package ca.ualberta.codarc.codarc_events.model;
 
 import com.google.firebase.Timestamp;
 
-/**
- * Invite model class representing an invitation to an event.
- * 
- * Responsibilities:
- * - Represent invitation with status
- * - Handle expiry logic
- * - Notify entrant about invitation updates
- * - Upkeep invitation state
- * 
- * Collaborators:
- * - Entrant (invitation recipient)
- * - Event (invitation context)
- * - Registration (confirmation process)
- * - Notification (communication)
- * - InviteRepository (data persistence)
- */
+// Invite model for invitation data
 public class Invite {
     
     // Invitation identification
@@ -35,18 +20,12 @@ public class Invite {
     private boolean notified;
     private Timestamp notifiedAt;
 
-    /**
-     * Default constructor
-     */
     public Invite() {
         this.status = InviteStatus.PENDING;
         this.invitedAt = Timestamp.now();
         this.notified = false;
     }
 
-    /**
-     * Constructor with basic information
-     */
     public Invite(String inviteId, String entrantId, String eventId) {
         this();
         this.inviteId = inviteId;
@@ -127,43 +106,28 @@ public class Invite {
         this.notifiedAt = notifiedAt;
     }
 
-    /**
-     * Accepts the invitation
-     */
     public void acceptInvitation() {
         this.status = InviteStatus.ACCEPTED;
         this.respondedAt = Timestamp.now();
     }
 
-    /**
-     * Declines the invitation
-     */
     public void declineInvitation() {
         this.status = InviteStatus.DECLINED;
         this.respondedAt = Timestamp.now();
     }
 
-    /**
-     * Checks if the invitation has expired
-     */
     public boolean isExpired() {
         if (expiry == null) {
-            return false; // No expiry set
+            return false;
         }
         return Timestamp.now().compareTo(expiry) > 0;
     }
 
-    /**
-     * Marks the invitation as notified
-     */
     public void markAsNotified() {
         this.notified = true;
         this.notifiedAt = Timestamp.now();
     }
 
-    /**
-     * Invitation status enumeration
-     */
     public enum InviteStatus {
         PENDING,
         ACCEPTED,

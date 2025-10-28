@@ -19,7 +19,7 @@ public class LandingActivity extends AppCompatActivity {
         setContentView(binding.getRoot());
         
         binding.btnContinue.setOnClickListener(v -> {
-            Intent intent = new Intent(this, RoleSelectionActivity.class);
+            Intent intent = new Intent(this, UnifiedDashboardActivity.class);
             startActivity(intent);
             overridePendingTransition(android.R.anim.slide_in_left, android.R.anim.slide_out_right);
         });
