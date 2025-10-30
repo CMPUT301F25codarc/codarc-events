@@ -10,6 +10,11 @@ import ca.ualberta.codarc.codarc_events.R;
 import ca.ualberta.codarc.codarc_events.utils.Identity;
 import ca.ualberta.codarc.codarc_events.data.EntrantDB;
 
+/**
+ * Launcher activity that verifies identity and routes to the event browser.
+ * Identity setup is a quick Firestore write ensuring the profile document
+ * exists for this device.
+ */
 public class LandingActivity extends AppCompatActivity {
 
     @Override
@@ -20,7 +25,7 @@ public class LandingActivity extends AppCompatActivity {
         // Stage 0: device identification
         String deviceId = Identity.getOrCreateDeviceId(this);
         EntrantDB entrantDB = new EntrantDB();
-        entrantDB.getOrCreateEntrant(deviceId, new EntrantDB.Callback<Void>() {
+        entrantDB.ensureProfileDefaults(deviceId, new EntrantDB.Callback<Void>() {
             @Override
             public void onSuccess(Void value) {
                 // Optional: brief confirmation toast per user story

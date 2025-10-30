@@ -5,8 +5,16 @@ import static org.junit.Assert.*;
 
 import ca.ualberta.codarc.codarc_events.models.Entrant;
 
+/**
+ * Unit tests for the Entrant model class.
+ * Verifies basic initialization and getter/setter functionality.
+ */
 public class EntrantTest {
 
+    /**
+     * Tests that an Entrant can be constructed with all required fields
+     * and that getters return the expected values.
+     */
     @Test
     public void entrantInitialization_isCorrect() {
         String deviceId = "ABC123";
@@ -20,12 +28,20 @@ public class EntrantTest {
         assertEquals(timestamp, entrant.getCreatedAt());
     }
 
+    /**
+     * Tests that the empty constructor produces a non-null Entrant instance,
+     * as required by Firestore deserialization.
+     */
     @Test
     public void entrantDefaultConstructor_isNotNull() {
         Entrant entrant = new Entrant();
         assertNotNull(entrant);
     }
 
+    /**
+     * Tests that setters properly update the Entrant's fields
+     * and that getters reflect those changes.
+     */
     @Test
     public void entrantSetters_updateFieldsCorrectly() {
         Entrant entrant = new Entrant();
@@ -38,3 +54,5 @@ public class EntrantTest {
         assertEquals(123456789L, entrant.getCreatedAt());
     }
 }
+
+

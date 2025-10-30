@@ -10,8 +10,15 @@ import java.util.List;
 
 import ca.ualberta.codarc.codarc_events.models.Event;
 
+/**
+ * Tiny Firestore wrapper for events.
+ *
+ * We keep this intentionally small: list all events via a snapshot listener.
+ * Additional calls (get one, waitlist ops) will be added as the stories require.
+ */
 public class EventDB {
 
+    /** Lightweight async callback used by the data layer. */
     public interface Callback<T> {
         void onSuccess(T value);
         void onError(@NonNull Exception e);
@@ -19,10 +26,15 @@ public class EventDB {
 
     private final FirebaseFirestore db;
 
+    /** Construct using the default Firestore instance. */
     public EventDB() {
         this.db = FirebaseFirestore.getInstance();
     }
 
+    /**
+     * Streams all events in the `events` collection.
+     * The callback is invoked whenever data changes.
+     */
     public void getAllEvents(Callback<List<Event>> cb) {
         db.collection("events").addSnapshotListener((snapshots, e) -> {
             if (e != null) {
