@@ -22,8 +22,17 @@
             </intent-filter>
         </activity>
 
+        
         <activity
-            android:name=".views.UnifiedDashboardActivity"
+            android:name=".views.EventBrowserActivity"
+            android:exported="true"
+            android:theme="@style/Theme.Codarcevents"/>
+        <activity
+            android:name=".views.EventDetailsActivity"
+            android:exported="true"
+            android:theme="@style/Theme.Codarcevents"/>
+        <activity
+            android:name=".views.QRScannerActivity"
             android:exported="true"
             android:theme="@style/Theme.Codarcevents"/>
 
