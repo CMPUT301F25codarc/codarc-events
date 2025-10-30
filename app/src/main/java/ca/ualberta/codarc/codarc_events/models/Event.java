@@ -1,14 +1,19 @@
 package ca.ualberta.codarc.codarc_events.models;
 
+/**
+ * Plain data holder for events. The fields mirror what we store in Firestore
+ * and are intentionally minimal at this stage of the project.
+ */
 public class Event {
     private String id;
     private String name;
     private String date;
     private boolean isOpen;
 
-    // Add timestamp, location and registrationWindow later
+    // Additional fields like location and registrationWindow can be added later
 
-    public Event() {} // Firestore needs this
+    /** Required by Firestore deserializer. */
+    public Event() {}
 
     public Event(String id, String name, String date, boolean isOpen) {
         this.id = id;

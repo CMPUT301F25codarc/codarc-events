@@ -18,6 +18,13 @@ import ca.ualberta.codarc.codarc_events.data.EventDB;
 import ca.ualberta.codarc.codarc_events.models.Event;
 import ca.ualberta.codarc.codarc_events.utils.Identity;
 
+/**
+ * Displays the list of events for entrants.
+ *
+ * This screen is intentionally light: it initializes the recycler, subscribes
+ * to `EventDB.getAllEvents()`, and lets the card adapter handle per-item
+ * interactions like Join.
+ */
 public class EventBrowserActivity extends AppCompatActivity {
 
     private RecyclerView rvEvents;
@@ -30,7 +37,7 @@ public class EventBrowserActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_event_browser);
 
-        // Stage 0: device identification (moved from LandingActivity)
+        // Stage 0: device identification (redundant safety; Landing already ensures)
         String deviceId = Identity.getOrCreateDeviceId(this);
         new EntrantDB().getOrCreateEntrant(deviceId, new EntrantDB.Callback<Void>() {
             @Override
@@ -49,6 +56,9 @@ public class EventBrowserActivity extends AppCompatActivity {
         loadEvents();
     }
 
+    /**
+     * Subscribes to Firestore for all events and refreshes the adapter list.
+     */
     private void loadEvents() {
         eventDB.getAllEvents(new EventDB.Callback<List<Event>>() {
             @Override

@@ -1,10 +1,12 @@
 package ca.ualberta.codarc.codarc_events.adapters;
 
 import android.content.Context;
+import android.content.Intent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -13,7 +15,16 @@ import java.util.List;
 
 import ca.ualberta.codarc.codarc_events.R;
 import ca.ualberta.codarc.codarc_events.models.Event;
+import ca.ualberta.codarc.codarc_events.utils.Identity;
+import ca.ualberta.codarc.codarc_events.data.EntrantDB;
+import ca.ualberta.codarc.codarc_events.views.ProfileCreationActivity;
+import ca.ualberta.codarc.codarc_events.views.EventDetailsActivity;
 
+/**
+ * RecyclerView adapter for simple event cards.
+ * The adapter binds basic text fields and wires the Join action to the
+ * profile gate (create profile if needed, otherwise go to details).
+ */
 public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.ViewHolder> {
 
     private final Context context;
@@ -37,6 +48,30 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.View
         holder.title.setText(e.getName());
         holder.date.setText("Date: " + e.getDate());
         holder.status.setText(e.getIsOpen() ? "Status: Open" : "Status: Closed");
+
+        holder.joinBtn.setOnClickListener(v -> {
+            String deviceId = Identity.getOrCreateDeviceId(v.getContext());
+            EntrantDB entrantDB = new EntrantDB();
+            entrantDB.getProfile(deviceId, new EntrantDB.Callback<com.google.firebase.firestore.DocumentSnapshot>() {
+                @Override
+                public void onSuccess(com.google.firebase.firestore.DocumentSnapshot snapshot) {
+                    boolean isRegistered = snapshot != null && snapshot.getBoolean("is_registered") != null && snapshot.getBoolean("is_registered");
+                    if (!isRegistered) {
+                        Intent intent = new Intent(context, ProfileCreationActivity.class);
+                        context.startActivity(intent);
+                    } else {
+                        // For now, route to details where the actual Stage 1 join will happen next
+                        Intent intent = new Intent(context, EventDetailsActivity.class);
+                        context.startActivity(intent);
+                    }
+                }
+
+                @Override
+                public void onError(@NonNull Exception e1) {
+                    Toast.makeText(context, "Failed to check profile", Toast.LENGTH_SHORT).show();
+                }
+            });
+        });
     }
 
     @Override
@@ -44,11 +79,13 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.View
 
     static class ViewHolder extends RecyclerView.ViewHolder {
         TextView title, date, status;
+        View joinBtn;
         ViewHolder(View itemView) {
             super(itemView);
             title = itemView.findViewById(R.id.tv_event_title);
             date = itemView.findViewById(R.id.tv_lottery_ends);
             status = itemView.findViewById(R.id.tv_entrants_info);
+            joinBtn = itemView.findViewById(R.id.btn_join_list);
         }
     }
 }
