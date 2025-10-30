@@ -1,6 +1,9 @@
-package ca.ualberta.codarc.codarc_events;
+package ca.ualberta.codarc.codarc_events.views;
 
+import android.content.Intent;
 import android.os.Bundle;
+import android.widget.Toast;
+
 import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.button.MaterialButton;
 import ca.ualberta.codarc.codarc_events.R;
@@ -14,8 +17,9 @@ public class LandingActivity extends AppCompatActivity {
 
         MaterialButton continueBtn = findViewById(R.id.btn_continue);
         continueBtn.setOnClickListener(v -> {
-            // Example: go to dashboard
-            // startActivity(new Intent(this, UnifiedDashboardActivity.class));
+            Intent intent = new Intent(this, UnifiedDashboardActivity.class);
+            startActivity(intent);
         });
+
     }
 }

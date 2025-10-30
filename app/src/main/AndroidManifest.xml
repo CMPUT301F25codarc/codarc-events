@@ -13,7 +13,7 @@
         android:theme="@style/Theme.Codarcevents">
 
         <activity
-            android:name=".LandingActivity"
+            android:name=".views.LandingActivity"
             android:exported="true"
             android:theme="@style/Theme.Codarcevents">
             <intent-filter>
@@ -21,6 +21,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".views.UnifiedDashboardActivity"
+            android:exported="true"
+            android:theme="@style/Theme.Codarcevents"/>
+
     </application>
 
 </manifest>
