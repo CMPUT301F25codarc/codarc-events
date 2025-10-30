@@ -8,8 +8,7 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.SetOptions;
 
-import java.util.HashMap;
-import java.util.Map;
+import ca.ualberta.codarc.codarc_events.models.Entrant;
 
 /**
  * Small helper around Firestore operations related to entrants/profiles.
@@ -30,9 +29,6 @@ public class EntrantDB {
 
     private final FirebaseFirestore db;
 
-    /**
-     * Builds an EntrantDB bound to the default Firestore instance.
-     */
     public EntrantDB() {
         this.db = FirebaseFirestore.getInstance();
     }
@@ -65,49 +61,46 @@ public class EntrantDB {
             if (snapshot != null && snapshot.exists()) {
                 cb.onSuccess(null);
             } else {
-                Map<String, Object> payload = new HashMap<>();
-                payload.put("deviceId", deviceId);
-                payload.put("createdAtUtc", System.currentTimeMillis());
-                payload.put("name", "");
-                payload.put("email", "");
-                payload.put("phone", "");
-                payload.put("is_registered", false);
-                payload.put("is_organizer", "");
-                payload.put("is_admin", false);
-                Task<Void> setTask = docRef.set(payload);
+                // Constructor already sets all defaults (empty strings, false flags)
+                Entrant defaultEntrant = new Entrant(deviceId, "", System.currentTimeMillis());
+                Task<Void> setTask = docRef.set(defaultEntrant);
                 setTask.addOnSuccessListener(unused -> cb.onSuccess(null))
                         .addOnFailureListener(cb::onError);
             }
         });
     }
 
-    /**
-     * Fetches the profile snapshot for the given device id.
-     */
-    public void getProfile(String deviceId, Callback<DocumentSnapshot> cb) {
+    public void getProfile(String deviceId, Callback<Entrant> cb) {
         if (deviceId == null || deviceId.isEmpty()) {
             cb.onError(new IllegalArgumentException("deviceId is empty"));
             return;
         }
         db.collection("profiles").document(deviceId)
                 .get()
-                .addOnSuccessListener(cb::onSuccess)
+                .addOnSuccessListener(snapshot -> {
+                    if (snapshot != null && snapshot.exists()) {
+                        Entrant entrant = snapshot.toObject(Entrant.class);
+                        cb.onSuccess(entrant);
+                    } else {
+                        cb.onError(new RuntimeException("Profile not found"));
+                    }
+                })
                 .addOnFailureListener(cb::onError);
     }
 
-    /**
-     * Merges the provided fields into `profiles/<deviceId>`.
-     * Caller decides which keys to set; we always keep the deviceId mirrored.
-     */
-    public void upsertProfile(String deviceId, Map<String, Object> fields, Callback<Void> cb) {
+    // merge update so we don't lose existing fields
+    public void upsertProfile(String deviceId, Entrant entrant, Callback<Void> cb) {
         if (deviceId == null || deviceId.isEmpty()) {
             cb.onError(new IllegalArgumentException("deviceId is empty"));
             return;
         }
-        if (fields == null) fields = new HashMap<>();
-        fields.put("deviceId", deviceId);
+        if (entrant == null) {
+            cb.onError(new IllegalArgumentException("entrant is null"));
+            return;
+        }
+        entrant.setDeviceId(deviceId);
         db.collection("profiles").document(deviceId)
-                .set(fields, SetOptions.merge())
+                .set(entrant, SetOptions.merge())
                 .addOnSuccessListener(unused -> cb.onSuccess(null))
                 .addOnFailureListener(cb::onError);
     }

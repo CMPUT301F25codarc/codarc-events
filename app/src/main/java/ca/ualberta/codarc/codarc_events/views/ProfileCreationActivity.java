@@ -11,11 +11,9 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.button.MaterialButton;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import ca.ualberta.codarc.codarc_events.R;
 import ca.ualberta.codarc.codarc_events.data.EntrantDB;
+import ca.ualberta.codarc.codarc_events.models.Entrant;
 import ca.ualberta.codarc.codarc_events.utils.Identity;
 
 /**
@@ -37,23 +35,20 @@ public class ProfileCreationActivity extends AppCompatActivity {
         String deviceId = Identity.getOrCreateDeviceId(this);
         EntrantDB entrantDB = new EntrantDB();
 
-        // Pre-fill if profile exists
-        entrantDB.getProfile(deviceId, new EntrantDB.Callback<com.google.firebase.firestore.DocumentSnapshot>() {
+        // try to load existing profile data
+        entrantDB.getProfile(deviceId, new EntrantDB.Callback<Entrant>() {
             @Override
-            public void onSuccess(com.google.firebase.firestore.DocumentSnapshot snapshot) {
-                if (snapshot != null && snapshot.exists()) {
-                    String name = snapshot.getString("name");
-                    String email = snapshot.getString("email");
-                    String phone = snapshot.getString("phone");
-                    if (name != null) nameEt.setText(name);
-                    if (email != null) emailEt.setText(email);
-                    if (phone != null) phoneEt.setText(phone);
+            public void onSuccess(Entrant entrant) {
+                if (entrant != null) {
+                    if (entrant.getName() != null) nameEt.setText(entrant.getName());
+                    if (entrant.getEmail() != null) emailEt.setText(entrant.getEmail());
+                    if (entrant.getPhone() != null) phoneEt.setText(entrant.getPhone());
                 }
             }
 
             @Override
             public void onError(@androidx.annotation.NonNull Exception e) {
-                // ignore prefill errors; user can still enter data.
+                // if profile doesn't exist yet that's fine, user will create one
             }
         });
 
@@ -71,14 +66,13 @@ public class ProfileCreationActivity extends AppCompatActivity {
                 return;
             }
 
-            Map<String, Object> fields = new HashMap<>();
-            fields.put("name", name);
-            fields.put("email", email);
-            fields.put("phone", phone);
-            fields.put("is_registered", true);
+            Entrant entrant = new Entrant(deviceId, name, System.currentTimeMillis());
+            entrant.setEmail(email);
+            entrant.setPhone(phone);
+            entrant.setIsRegistered(true);
 
             createBtn.setEnabled(false);
-            entrantDB.upsertProfile(deviceId, fields, new EntrantDB.Callback<Void>() {
+            entrantDB.upsertProfile(deviceId, entrant, new EntrantDB.Callback<Void>() {
                 @Override
                 public void onSuccess(Void value) {
                     Toast.makeText(ProfileCreationActivity.this, "Profile created", Toast.LENGTH_SHORT).show();
@@ -88,7 +82,7 @@ public class ProfileCreationActivity extends AppCompatActivity {
                 @Override
                 public void onError(@androidx.annotation.NonNull Exception e) {
                     createBtn.setEnabled(true);
-                    Toast.makeText(ProfileCreationActivity.this, "Save failed", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(ProfileCreationActivity.this, "Couldn't save profile", Toast.LENGTH_SHORT).show();
                 }
             });
         });

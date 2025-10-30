@@ -15,6 +15,7 @@ import java.util.List;
 
 import ca.ualberta.codarc.codarc_events.R;
 import ca.ualberta.codarc.codarc_events.models.Event;
+import ca.ualberta.codarc.codarc_events.models.Entrant;
 import ca.ualberta.codarc.codarc_events.utils.Identity;
 import ca.ualberta.codarc.codarc_events.data.EntrantDB;
 import ca.ualberta.codarc.codarc_events.views.ProfileCreationActivity;
@@ -52,10 +53,10 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.View
         holder.joinBtn.setOnClickListener(v -> {
             String deviceId = Identity.getOrCreateDeviceId(v.getContext());
             EntrantDB entrantDB = new EntrantDB();
-            entrantDB.getProfile(deviceId, new EntrantDB.Callback<com.google.firebase.firestore.DocumentSnapshot>() {
+            entrantDB.getProfile(deviceId, new EntrantDB.Callback<Entrant>() {
                 @Override
-                public void onSuccess(com.google.firebase.firestore.DocumentSnapshot snapshot) {
-                    boolean isRegistered = snapshot != null && snapshot.getBoolean("is_registered") != null && snapshot.getBoolean("is_registered");
+                public void onSuccess(Entrant entrant) {
+                    boolean isRegistered = entrant != null && entrant.getIsRegistered();
                     if (!isRegistered) {
                         Intent intent = new Intent(context, ProfileCreationActivity.class);
                         context.startActivity(intent);
