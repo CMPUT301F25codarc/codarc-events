@@ -6,7 +6,7 @@ public class Event {
     private String date;
     private boolean isOpen;
 
-    // Add timestamp, location and registrationWindow later
+    // TODO: Add timestamp, location and registrationWindow later
 
     public Event() {} // Firestore needs this
 
