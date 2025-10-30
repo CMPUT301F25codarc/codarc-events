@@ -1,11 +1,136 @@
 <resources>
     <string name="app_name">codarc-events</string>
     <string name="action_settings">Settings</string>
+    
+    <!-- Landing Page Strings -->
+    <string name="app_title">EventFlow</string>
+    <string name="app_tagline">Seamless event management</string>
+    <string name="continue_button">Continue</string>
+    <string name="device_recognized">Device automatically recognised</string>
+    <string name="powered_by">Powered by EventFlow Management</string>
+    
+    <!-- Role Selection Strings -->
+    <string name="select_role_title">Select your Role !</string>
+    <string name="role_organizer">Organizer</string>
+    <string name="role_entrant">Entrant</string>
+    <string name="role_admin">Admin</string>
+    
+    <!-- Login Strings -->
+    <string name="login_title">Login</string>
+    <string name="login_button">LOGIN</string>
+    <string name="debug_organizer">Debug Organizer</string>
+    <string name="debug_admin">Debug Admin</string>
+    
     <!-- Strings used for fragments for navigation -->
     <string name="first_fragment_label">First Fragment</string>
     <string name="second_fragment_label">Second Fragment</string>
     <string name="next">Next</string>
     <string name="previous">Previous</string>
+    
+    <!-- Entrant Dashboard Strings -->
+    <string name="entrant_dashboard_title">Event List</string>
+    <string name="search_events_hint">Search events...</string>
+    <string name="filter_events">Filter</string>
+    <string name="view_entrants">View Entrants</string>
+    <string name="join_list">Join list</string>
+    <string name="leave_list">Leave List</string>
+    <string name="location_prefix">Location: </string>
+    <string name="lottery_ends_prefix">Lottery ends: </string>
+    <string name="entrants_count_prefix">entrants • </string>
+    <string name="duration_hours">hours</string>
+    <string name="bottom_nav_history">History</string>
+    <string name="bottom_nav_scan_qr">Scan QR code</string>
+    <string name="bottom_nav_notifications">Notifications</string>
+    <string name="swimming_lessons">Swimming Lessons</string>
+    <string name="yoga_wellness">Yoga for Wellness</string>
+    <string name="winter_skating">Winter Skating</string>
+    <string name="ymca_centre">YMCA Centre</string>
+    <string name="wellness_centre">Wellness Centre</string>
+    <string name="paharchura">Paharchura</string>
+    <string name="oct_20">Oct 20</string>
+    <string name="entrants_134">134 entrants • 2 hours</string>
+    
+    <!-- Organizer Dashboard Strings -->
+    <string name="organizer_dashboard_title">Organizer Dashboard</string>
+    <string name="search_events_organizer">Search events...</string>
+    <string name="view_all">View all</string>
+    <string name="create_event">Create Event</string>
+    <string name="view_entrants_organizer">View Entrants</string>
+    <string name="run_lottery">Run Lottery</string>
+    <string name="notify">Notify</string>
+    <string name="registered_format">%d/%d registered</string>
+    <string name="registration_closes_format">Registration closes %s</string>
+    <string name="bottom_nav_dashboard">Dashboard</string>
+    <string name="bottom_nav_entrants">Entrants</string>
+    <string name="bottom_nav_manage">Manage</string>
+    <string name="swim_lessons_beginners">Swim Lessons for Beginners</string>
+    <string name="yoga_wellness_organizer">Yoga for Wellness</string>
+    <string name="winter_skating_organizer">Winter Skating</string>
+    <string name="sep_10_dec_5">Sep 10 - Dec 5</string>
+    <string name="sep_29_dec_1">Sep 29 - Dec 1</string>
+    <string name="sep_16_dec_31">Sep 16 - Dec 31</string>
+    <string name="dec_15">Dec 15</string>
+    <string name="dec_31">Dec 31</string>
+    <string name="jan_21">Jan 21</string>
+    <string name="registered_45_60">45/60 registered</string>
+    <string name="registered_32_50">32/50 registered</string>
+    <string name="registered_120_200">120/200 registered</string>
+    
+    <!-- Admin Dashboard Strings -->
+    <string name="admin_panel_title">Admin Panel</string>
+    <string name="system_overview_title">System Overview</string>
+    <string name="system_overview_subtitle">Manage events, users, and system notifications.</string>
+    <string name="quick_actions_title">Quick Actions</string>
+    <string name="active_events">Active events</string>
+    <string name="total_users">Total users</string>
+    <string name="pending_images">Pending images</string>
+    <string name="reports">Reports</string>
+    <string name="browse_events">Browse Events</string>
+    <string name="browse_events_subtitle">View &amp; manage events</string>
+    <string name="user_profiles">User Profiles</string>
+    <string name="user_profiles_subtitle">Manage user accounts</string>
+    <string name="image_review">Image Review</string>
+    <string name="image_review_subtitle">Review uploaded images</string>
+    <string name="notifications_admin">Notifications</string>
+    <string name="notifications_admin_subtitle">View notification logs</string>
+    <string name="bottom_nav_history_admin">History</string>
+    <string name="bottom_nav_stats">Stats</string>
+    <string name="bottom_nav_notifications_admin">Notifications</string>
+    <string name="active_events_count">290</string>
+    <string name="total_users_count">2903</string>
+    <string name="pending_images_count">4</string>
+    <string name="reports_count">9</string>
+
+    <!-- Toast Messages -->
+    <string name="filter_coming_soon">Filter functionality coming soon</string>
+    <string name="profile_coming_soon">Profile settings coming soon</string>
+    <string name="history_tab_selected">History tab selected</string>
+    <string name="qr_scanner_coming_soon">QR Scanner coming soon</string>
+    <string name="notifications_tab_selected">Notifications tab selected</string>
+    <string name="create_event_coming_soon">Create Event coming soon</string>
+    <string name="my_events_coming_soon">My Events coming soon</string>
+    <string name="admin_functions_placeholder">Admin functions will be added here</string>
+    <string name="viewing_entrants_for">Viewing entrants for: %s</string>
+    <string name="joining_list_for">Joining list for: %s</string>
+    <string name="leaving_list_for">Leaving list for: %s</string>
+
+    <!-- Create Event Strings -->
+    <string name="create_event_title">Create New Event</string>
+    <string name="event_title_hint">Event Title</string>
+    <string name="event_description_hint">Event Description</string>
+    <string name="event_datetime_hint">Event Date &amp; Time</string>
+    <string name="event_end_time_hint">End Time (Optional)</string>
+    <string name="event_location_hint">Location</string>
+    <string name="registration_window_title">Registration Window</string>
+    <string name="registration_open_hint">Registration Opens</string>
+    <string name="registration_close_hint">Registration Closes</string>
+    <string name="event_capacity_hint">Capacity</string>
+    <string name="capacity_unlimited_hint">Leave empty for unlimited</string>
+    <string name="event_poster_title">Event Poster</string>
+    <string name="poster_image_description">Event poster image</string>
+    <string name="choose_poster_button">Choose Poster</string>
+    <string name="cancel_button">Cancel</string>
+    <string name="create_event_button">Create Event</string>
 
     <string name="lorem_ipsum">
         Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam in scelerisque sem. Mauris
