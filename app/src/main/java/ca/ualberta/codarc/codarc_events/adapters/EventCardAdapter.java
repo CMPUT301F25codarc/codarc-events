@@ -47,8 +47,8 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.View
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Event e = events.get(position);
         holder.title.setText(e.getName());
-        holder.date.setText("Date: " + e.getDate());
-        holder.status.setText(e.getIsOpen() ? "Status: Open" : "Status: Closed");
+        holder.date.setText(e.getEventDateTime());
+        holder.status.setText(e.isOpen() ? "Status: Open" : "Status: Closed");
 
         holder.joinBtn.setOnClickListener(v -> {
             String deviceId = Identity.getOrCreateDeviceId(v.getContext());

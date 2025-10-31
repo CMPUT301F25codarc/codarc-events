@@ -31,6 +31,14 @@ public class EventDB {
         this.db = FirebaseFirestore.getInstance();
     }
 
+    /** Add or update an event in Firestore. */
+    public void addEvent(Event event, Callback<Void> cb) {
+        db.collection("events").document(event.getId())
+                .set(event)
+                .addOnSuccessListener(aVoid -> cb.onSuccess(null))
+                .addOnFailureListener(cb::onError);
+    }
+
     /**
      * Streams all events in the `events` collection.
      * The callback is invoked whenever data changes.
@@ -47,12 +55,9 @@ public class EventDB {
             }
             List<Event> events = new ArrayList<>();
             for (QueryDocumentSnapshot doc : snapshots) {
-                Event event = doc.toObject(Event.class);
-                events.add(event);
+                events.add(doc.toObject(Event.class));
             }
             cb.onSuccess(events);
         });
     }
 }
-
-

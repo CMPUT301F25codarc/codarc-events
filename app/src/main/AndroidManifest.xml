@@ -32,6 +32,10 @@
             android:exported="true"
             android:theme="@style/Theme.Codarcevents"/>
         <activity
+            android:name=".views.CreateEventActivity"
+            android:exported="true"
+            android:theme="@style/Theme.Codarcevents"/>
+        <activity
             android:name=".views.ProfileCreationActivity"
             android:exported="true"
             android:theme="@style/Theme.Codarcevents"/>

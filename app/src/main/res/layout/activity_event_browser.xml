@@ -166,11 +166,17 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:background="@drawable/ic_qr_scan"
-            android:backgroundTint="@color/entrant_bottom_nav_active"
             android:gravity="center"
             android:orientation="vertical"
             android:padding="8dp">
+
+            <!-- Proper icon -->
+            <ImageView
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:src="@drawable/ic_qr_scan"
+                app:tint="@color/entrant_bottom_nav_active"
+                android:contentDescription="@string/bottom_nav_scan_qr" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -181,6 +187,7 @@
                 android:textSize="12sp" />
 
         </LinearLayout>
+
 
         <!-- Notifications Tab -->
         <LinearLayout

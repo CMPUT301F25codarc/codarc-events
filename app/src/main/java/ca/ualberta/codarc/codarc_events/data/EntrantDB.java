@@ -105,5 +105,3 @@ public class EntrantDB {
                 .addOnFailureListener(cb::onError);
     }
 }
-
-
