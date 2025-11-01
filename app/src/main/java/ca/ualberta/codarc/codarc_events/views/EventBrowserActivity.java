@@ -2,6 +2,7 @@ package ca.ualberta.codarc.codarc_events.views;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.widget.ImageButton;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -54,6 +55,12 @@ public class EventBrowserActivity extends AppCompatActivity {
 
         eventDB = new EventDB();
         loadEvents();
+
+        ImageButton plusBtn = findViewById(R.id.btn_plus);
+        plusBtn.setOnClickListener(v -> {
+            Intent intent = new Intent(EventBrowserActivity.this, CreateEventActivity.class);
+            startActivity(intent);
+        });
     }
 
     /**

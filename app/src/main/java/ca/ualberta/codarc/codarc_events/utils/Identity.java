@@ -30,5 +30,3 @@ public class Identity {
         return generated;
     }
 }
-
-
