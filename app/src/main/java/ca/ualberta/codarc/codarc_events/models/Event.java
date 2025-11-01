@@ -13,6 +13,7 @@ public class Event {
     private String registrationOpen;
     private String registrationClose;
     private boolean open;
+    private String organizerId;
 
     public Event() { }
 
@@ -36,6 +37,7 @@ public class Event {
     public String getRegistrationOpen() { return registrationOpen; }
     public String getRegistrationClose() { return registrationClose; }
     public boolean isOpen() { return open; }
+    public String getOrganizerId() { return organizerId; }
 
     // --- Setters ---
     public void setId(String id) { this.id = id; }
@@ -45,5 +47,6 @@ public class Event {
     public void setRegistrationOpen(String registrationOpen) { this.registrationOpen = registrationOpen; }
     public void setRegistrationClose(String registrationClose) { this.registrationClose = registrationClose; }
     public void setOpen(boolean open) { this.open = open; }
+    public void setOrganizerId(String organizerId) { this.organizerId = organizerId; }
 }
 

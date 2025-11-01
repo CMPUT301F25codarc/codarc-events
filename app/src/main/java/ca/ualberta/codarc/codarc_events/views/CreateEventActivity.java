@@ -46,8 +46,8 @@ public class CreateEventActivity extends AppCompatActivity {
         Button cancelButton = findViewById(R.id.btn_cancel);
 
         eventDateTime.setOnClickListener(v -> showDateTimePicker(eventDateTime));
-        regOpen.setOnClickListener(v -> showDatePicker(regOpen));
-        regClose.setOnClickListener(v -> showDatePicker(regClose));
+        regOpen.setOnClickListener(v -> showDateTimePicker(regOpen));
+        regClose.setOnClickListener(v -> showDateTimePicker(regClose));
 
         cancelButton.setOnClickListener(v -> finish());
         createButton.setOnClickListener(v -> createEvent());
@@ -64,22 +64,6 @@ public class CreateEventActivity extends AppCompatActivity {
                 target.setText(date + " " + time);
             }, c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE), false).show();
         }, c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH)).show();
-    }
-
-    private void showDatePicker(TextInputEditText target) {
-        Calendar c = Calendar.getInstance();
-        new DatePickerDialog(this, (view, year, month, day) ->
-                target.setText(String.format("%04d-%02d-%02d", year, month + 1, day)),
-                c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH)).show();
-    }
-
-    private void showTimePicker(TextInputEditText target) {
-        Calendar c = Calendar.getInstance();
-        new TimePickerDialog(this, (view, hour, minute) -> {
-            String amPm = hour >= 12 ? "PM" : "AM";
-            int displayHour = hour == 0 ? 12 : (hour > 12 ? hour - 12 : hour);
-            target.setText(String.format("%02d:%02d %s", displayHour, minute, amPm));
-        }, c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE), false).show();
     }
 
     private String get(TextInputEditText input) {
