@@ -2,9 +2,11 @@ package ca.ualberta.codarc.codarc_events.views;
 
 import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
+import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
@@ -12,6 +14,8 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.zxing.BarcodeFormat;
+import com.journeyapps.barcodescanner.BarcodeEncoder;
 
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -119,6 +123,8 @@ public class CreateEventActivity extends AppCompatActivity {
             @Override
             public void onSuccess(Void value) {
                 Toast.makeText(CreateEventActivity.this, "Event created", Toast.LENGTH_SHORT).show();
+                // TODO: Store in firebase later
+                generateEventQr(id);
                 progressBar.setVisibility(View.GONE);
                 finish();
             }
@@ -129,5 +135,16 @@ public class CreateEventActivity extends AppCompatActivity {
                 progressBar.setVisibility(View.GONE);
             }
         });
+    }
+
+    // Logic here for later when we generate QR code and put it in Firebase
+    private void generateEventQr(String eventId) {
+        try {
+            BarcodeEncoder encoder = new BarcodeEncoder();
+            String qrData = "event:" + eventId;
+            Bitmap bitmap = encoder.encodeBitmap(qrData, BarcodeFormat.QR_CODE, 400, 400);
+        } catch (Exception e) {
+            Toast.makeText(this, "Failed to generate QR", Toast.LENGTH_SHORT).show();
+        }
     }
 }

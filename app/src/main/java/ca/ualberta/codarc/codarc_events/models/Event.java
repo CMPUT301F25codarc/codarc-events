@@ -1,15 +1,17 @@
 package ca.ualberta.codarc.codarc_events.models;
 
+import java.io.Serializable;
+
 /**
  * Plain data holder for events.
  * Mirrors what we store in Firestore.
  */
-public class Event {
+public class Event implements Serializable {
 
     private String id;
     private String name;
     private String description;
-    private String eventDateTime;       // combined field
+    private String eventDateTime;
     private String registrationOpen;
     private String registrationClose;
     private boolean open;
@@ -29,7 +31,7 @@ public class Event {
         this.open = open;
     }
 
-    // --- Getters ---
+    // Getters
     public String getId() { return id; }
     public String getName() { return name; }
     public String getDescription() { return description; }
@@ -39,7 +41,7 @@ public class Event {
     public boolean isOpen() { return open; }
     public String getOrganizerId() { return organizerId; }
 
-    // --- Setters ---
+    // Setters
     public void setId(String id) { this.id = id; }
     public void setName(String name) { this.name = name; }
     public void setDescription(String description) { this.description = description; }

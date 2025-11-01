@@ -56,14 +56,13 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.View
             entrantDB.getProfile(deviceId, new EntrantDB.Callback<Entrant>() {
                 @Override
                 public void onSuccess(Entrant entrant) {
-                    boolean isRegistered = entrant != null && entrant.getIsRegistered();
+                    boolean isRegistered = (entrant != null && entrant.getIsRegistered());
                     if (!isRegistered) {
                         Intent intent = new Intent(context, ProfileCreationActivity.class);
                         context.startActivity(intent);
                     } else {
-                        // For now, route to details where the actual Stage 1 join will happen next
-                        Intent intent = new Intent(context, EventDetailsActivity.class);
-                        context.startActivity(intent);
+                        // For now, show Toast message as placeholder before implementation
+                        Toast.makeText(context, "Joined waitlist (placeholder)", Toast.LENGTH_SHORT).show();
                     }
                 }
 
@@ -72,6 +71,12 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.View
                     Toast.makeText(context, "Failed to check profile", Toast.LENGTH_SHORT).show();
                 }
             });
+        });
+
+        holder.itemView.setOnClickListener(v -> {
+            Intent intent = new Intent(context, EventDetailsActivity.class);
+            intent.putExtra("event", events.get(position));
+            context.startActivity(intent);
         });
     }
 
