@@ -46,6 +46,8 @@ public class EventTest {
         event.setRegistrationClose("2025-11-30 10:00 PM");
         event.setOpen(false);
         event.setOrganizerId("ORG123");
+        event.setQrCode("event:TEST123");
+
 
         assertEquals("E2", event.getId());
         assertEquals("New Event", event.getName());
@@ -55,6 +57,7 @@ public class EventTest {
         assertEquals("2025-11-30 10:00 PM", event.getRegistrationClose());
         assertFalse(event.isOpen());
         assertEquals("ORG123", event.getOrganizerId());
+        assertEquals("event:TEST123", event.getQrCode());
     }
 
     @Test

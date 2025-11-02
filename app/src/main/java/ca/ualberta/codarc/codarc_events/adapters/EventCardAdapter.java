@@ -31,11 +31,24 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.View
     private final Context context;
     private final List<Event> events;
 
+    /**
+     * Creates an adapter for displaying event cards in a RecyclerView.
+     *
+     * @param context the activity context
+     * @param events the list of events to display
+     */
     public EventCardAdapter(Context context, List<Event> events) {
         this.context = context;
         this.events = events;
     }
 
+    /**
+     * Creates a new ViewHolder for an event card.
+     *
+     * @param parent the ViewGroup into which the new View will be added
+     * @param viewType the view type of the new View
+     * @return a new ViewHolder that holds a View for an event card
+     */
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -43,6 +56,13 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.View
         return new ViewHolder(view);
     }
 
+    /**
+     * Binds event data to a ViewHolder and sets up click listeners.
+     * Join button checks profile registration status; card click navigates to details.
+     *
+     * @param holder the ViewHolder to bind data to
+     * @param position the position of the event in the list
+     */
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Event e = events.get(position);
@@ -80,12 +100,23 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.View
         });
     }
 
+    /**
+     * Returns the total number of events in the adapter's data set.
+     *
+     * @return the number of events
+     */
     @Override
     public int getItemCount() { return events.size(); }
 
     static class ViewHolder extends RecyclerView.ViewHolder {
         TextView title, date, status;
         View joinBtn;
+
+        /**
+         * Initializes ViewHolder with references to card views.
+         *
+         * @param itemView the root view of the event card layout
+         */
         ViewHolder(View itemView) {
             super(itemView);
             title = itemView.findViewById(R.id.tv_event_title);

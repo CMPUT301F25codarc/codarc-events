@@ -23,6 +23,13 @@ import com.journeyapps.barcodescanner.BarcodeEncoder;
  * Event details screen. Displays event info and regenerates QR from stored data.
  */
 public class EventDetailsActivity extends AppCompatActivity {
+
+    /**
+     * Initializes the event details screen, populating UI from the Event passed via Intent.
+     * Displays event information and regenerates the QR code from stored data.
+     *
+     * @param savedInstanceState previously saved instance state
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -43,12 +50,8 @@ public class EventDetailsActivity extends AppCompatActivity {
             dateTime.setText(event.getEventDateTime());
             regWindow.setText("Registration: " + event.getRegistrationOpen() + " → " + event.getRegistrationClose());
 
-            // Regenerate QR from stored qrCode field
             try {
                 String qrData = event.getQrCode();
-                if (qrData == null || qrData.isEmpty()) {
-                    qrData = "event:" + event.getId();
-                }
                 BarcodeEncoder encoder = new BarcodeEncoder();
                 Bitmap qrBitmap = encoder.encodeBitmap(qrData, BarcodeFormat.QR_CODE, 600, 600);
                 qrImage.setImageBitmap(qrBitmap);

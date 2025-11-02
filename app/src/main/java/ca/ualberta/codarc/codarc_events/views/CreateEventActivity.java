@@ -63,6 +63,12 @@ public class CreateEventActivity extends AppCompatActivity {
         createButton.setOnClickListener(v -> createEvent());
     }
 
+    /**
+     * Shows a date picker followed by a time picker.
+     * Formats the selected date/time for display and stores ISO format in the tag.
+     *
+     * @param target the TextInputEditText to populate with the selected date/time
+     */
     private void showDateTimePicker(TextInputEditText target) {
         Calendar c = Calendar.getInstance();
 
@@ -86,16 +92,28 @@ public class CreateEventActivity extends AppCompatActivity {
         }, c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH)).show();
     }
 
+    private String getDateValue(TextInputEditText input) {
+        String tagValue = (String) input.getTag();
+        if (tagValue != null && !tagValue.isEmpty()) {
+            return tagValue;  // use ISO format if present
+        }
+        return get(input);  // fallback to displayed text
+    }
     private String get(TextInputEditText input) {
         return input.getText() == null ? "" : input.getText().toString().trim();
     }
 
+    /**
+     * Validates form inputs and creates a new event in Firestore.
+     * Generates a unique ID, associates it with the current organizer,
+     * and creates QR code data. Shows progress bar during async operation.
+     */
     private void createEvent() {
         String name = get(title);
         String desc = get(description);
-        String dateTime = get(eventDateTime);
-        String open = get(regOpen);
-        String close = get(regClose);
+        String dateTime = getDateValue(eventDateTime);
+        String open = getDateValue(regOpen);
+        String close = getDateValue(regClose);
 
         if (name.isEmpty() || dateTime.isEmpty() || open.isEmpty() || close.isEmpty()) {
             Toast.makeText(this, "Fill all required fields", Toast.LENGTH_SHORT).show();
@@ -114,7 +132,7 @@ public class CreateEventActivity extends AppCompatActivity {
         event.setRegistrationOpen(open);
         event.setRegistrationClose(close);
         event.setOrganizerId(organizerId);
-        event.setQrCode(qrData); // set QR data
+        event.setQrCode(qrData);
         event.setOpen(true);
 
         progressBar.setVisibility(View.VISIBLE);
@@ -123,8 +141,6 @@ public class CreateEventActivity extends AppCompatActivity {
             @Override
             public void onSuccess(Void value) {
                 Toast.makeText(CreateEventActivity.this, "Event created", Toast.LENGTH_SHORT).show();
-                // QR code generated locally for optional preview or upload later
-                generateEventQr(qrData);
                 progressBar.setVisibility(View.GONE);
                 finish();
             }
@@ -135,14 +151,5 @@ public class CreateEventActivity extends AppCompatActivity {
                 progressBar.setVisibility(View.GONE);
             }
         });
-    }
-
-    private void generateEventQr(String qrData) {
-        try {
-            BarcodeEncoder encoder = new BarcodeEncoder();
-            Bitmap bitmap = encoder.encodeBitmap(qrData, BarcodeFormat.QR_CODE, 400, 400);
-        } catch (Exception e) {
-            Toast.makeText(this, "Failed to generate QR", Toast.LENGTH_SHORT).show();
-        }
     }
 }
