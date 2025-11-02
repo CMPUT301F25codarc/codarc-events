@@ -3,6 +3,7 @@ package ca.ualberta.codarc.codarc_events.views;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.content.Intent;
+import android.util.Log;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -44,21 +45,31 @@ public class EventDetailsActivity extends AppCompatActivity {
         MaterialButton joinBtn = findViewById(R.id.btn_join_waitlist);
 
         Event event = (Event) getIntent().getSerializableExtra("event");
-        if (event != null) {
-            title.setText(event.getName());
-            desc.setText(event.getDescription());
-            dateTime.setText(event.getEventDateTime());
-            regWindow.setText("Registration: " + event.getRegistrationOpen() + " → " + event.getRegistrationClose());
+        if (event == null) {
+            Log.e("EventDetailsActivity", "Event not found in Intent");
+            Toast.makeText(this, "Event not found", Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
 
-            try {
-                String qrData = event.getQrCode();
-                BarcodeEncoder encoder = new BarcodeEncoder();
-                Bitmap qrBitmap = encoder.encodeBitmap(qrData, BarcodeFormat.QR_CODE, 600, 600);
-                qrImage.setImageBitmap(qrBitmap);
-            } catch (Exception e) {
-                Toast.makeText(this, "QR error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        title.setText(event.getName());
+        desc.setText(event.getDescription());
+        dateTime.setText(event.getEventDateTime());
+        regWindow.setText("Registration: " + event.getRegistrationOpen() + " → " + event.getRegistrationClose());
+
+        // Generate QR code with null safety
+        try {
+            String qrData = event.getQrCode();
+            if (qrData == null || qrData.isEmpty()) {
+                qrData = "event:" + event.getId(); // Fallback to event ID
+                Log.w("EventDetailsActivity", "QR code missing, using fallback: " + qrData);
             }
-
+            BarcodeEncoder encoder = new BarcodeEncoder();
+            Bitmap qrBitmap = encoder.encodeBitmap(qrData, BarcodeFormat.QR_CODE, 600, 600);
+            qrImage.setImageBitmap(qrBitmap);
+        } catch (Exception e) {
+            Log.e("EventDetailsActivity", "Failed to generate QR code", e);
+            Toast.makeText(this, "Failed to display QR code", Toast.LENGTH_SHORT).show();
         }
 
         joinBtn.setOnClickListener(v -> {
@@ -78,6 +89,7 @@ public class EventDetailsActivity extends AppCompatActivity {
 
                 @Override
                 public void onError(@NonNull Exception e) {
+                    Log.e("EventDetailsActivity", "Failed to check profile", e);
                     Toast.makeText(EventDetailsActivity.this, "Failed to check profile", Toast.LENGTH_SHORT).show();
                 }
             });

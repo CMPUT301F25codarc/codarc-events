@@ -2,8 +2,8 @@ package ca.ualberta.codarc.codarc_events.views;
 
 import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
-import android.graphics.Bitmap;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ProgressBar;
@@ -13,8 +13,6 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.textfield.TextInputEditText;
-import com.google.zxing.BarcodeFormat;
-import com.journeyapps.barcodescanner.BarcodeEncoder;
 
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -92,6 +90,13 @@ public class CreateEventActivity extends AppCompatActivity {
         }, c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH)).show();
     }
 
+    /**
+     * Retrieves date value from TextInputEditText, preferring ISO format stored in tag.
+     * Falls back to displayed text if tag is not available.
+     *
+     * @param input the TextInputEditText to read from
+     * @return the ISO formatted date string if available, otherwise the displayed text
+     */
     private String getDateValue(TextInputEditText input) {
         String tagValue = (String) input.getTag();
         if (tagValue != null && !tagValue.isEmpty()) {
@@ -147,7 +152,8 @@ public class CreateEventActivity extends AppCompatActivity {
 
             @Override
             public void onError(@NonNull Exception e) {
-                Toast.makeText(CreateEventActivity.this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                Log.e("CreateEventActivity", "Failed to create event", e);
+                Toast.makeText(CreateEventActivity.this, "Failed to create event. Please try again.", Toast.LENGTH_SHORT).show();
                 progressBar.setVisibility(View.GONE);
             }
         });
