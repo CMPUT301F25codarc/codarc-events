@@ -20,9 +20,7 @@ import com.google.zxing.BarcodeFormat;
 import com.journeyapps.barcodescanner.BarcodeEncoder;
 
 /**
- * Event details screen. For Stage 1 this mostly hosts the Join button which
- * checks if a profile is registered. The actual join/leave logic will be added
- * as we progress the story.
+ * Event details screen. Displays event info and regenerates QR from stored data.
  */
 public class EventDetailsActivity extends AppCompatActivity {
     @Override
@@ -45,16 +43,19 @@ public class EventDetailsActivity extends AppCompatActivity {
             dateTime.setText(event.getEventDateTime());
             regWindow.setText("Registration: " + event.getRegistrationOpen() + " → " + event.getRegistrationClose());
 
-            // TODO: QR code generated will be same as createEvent, will need to store in Firebase later
+            // Regenerate QR from stored qrCode field
             try {
+                String qrData = event.getQrCode();
+                if (qrData == null || qrData.isEmpty()) {
+                    qrData = "event:" + event.getId();
+                }
                 BarcodeEncoder encoder = new BarcodeEncoder();
-                String qrData = "event:" + event.getId();  // same pattern used in CreateEventActivity
-                Bitmap qrBitmap = encoder.encodeBitmap(qrData, BarcodeFormat.QR_CODE, 400, 400);
+                Bitmap qrBitmap = encoder.encodeBitmap(qrData, BarcodeFormat.QR_CODE, 600, 600);
                 qrImage.setImageBitmap(qrBitmap);
             } catch (Exception e) {
-                e.printStackTrace();
-                Toast.makeText(this, "Failed to generate QR", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "QR error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
             }
+
         }
 
         joinBtn.setOnClickListener(v -> {
@@ -79,5 +80,4 @@ public class EventDetailsActivity extends AppCompatActivity {
             });
         });
     }
-
 }

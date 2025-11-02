@@ -16,12 +16,13 @@ public class Event implements Serializable {
     private String registrationClose;
     private boolean open;
     private String organizerId;
+    private String qrCode;
 
     public Event() { }
 
     public Event(String id, String name, String description,
                  String eventDateTime, String registrationOpen,
-                 String registrationClose, boolean open) {
+                 String registrationClose, boolean open, String organizerId, String qrCode) {
         this.id = id;
         this.name = name;
         this.description = description;
@@ -29,7 +30,10 @@ public class Event implements Serializable {
         this.registrationOpen = registrationOpen;
         this.registrationClose = registrationClose;
         this.open = open;
+        this.organizerId = organizerId;
+        this.qrCode = qrCode;
     }
+
 
     // Getters
     public String getId() { return id; }
@@ -41,6 +45,8 @@ public class Event implements Serializable {
     public boolean isOpen() { return open; }
     public String getOrganizerId() { return organizerId; }
 
+    public String getQrCode() { return qrCode; }
+
     // Setters
     public void setId(String id) { this.id = id; }
     public void setName(String name) { this.name = name; }
@@ -50,5 +56,6 @@ public class Event implements Serializable {
     public void setRegistrationClose(String registrationClose) { this.registrationClose = registrationClose; }
     public void setOpen(boolean open) { this.open = open; }
     public void setOrganizerId(String organizerId) { this.organizerId = organizerId; }
+    public void setQrCode(String qrCode) { this.qrCode = qrCode; }
 }
 

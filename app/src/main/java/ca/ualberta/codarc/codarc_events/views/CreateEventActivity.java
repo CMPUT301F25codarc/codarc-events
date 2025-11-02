@@ -6,7 +6,6 @@ import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
-import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
@@ -87,7 +86,6 @@ public class CreateEventActivity extends AppCompatActivity {
         }, c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH)).show();
     }
 
-
     private String get(TextInputEditText input) {
         return input.getText() == null ? "" : input.getText().toString().trim();
     }
@@ -106,6 +104,7 @@ public class CreateEventActivity extends AppCompatActivity {
 
         String id = UUID.randomUUID().toString();
         String organizerId = Identity.getOrCreateDeviceId(this);
+        String qrData = "event:" + id; // store QR data as a string
 
         Event event = new Event();
         event.setId(id);
@@ -115,6 +114,7 @@ public class CreateEventActivity extends AppCompatActivity {
         event.setRegistrationOpen(open);
         event.setRegistrationClose(close);
         event.setOrganizerId(organizerId);
+        event.setQrCode(qrData); // set QR data
         event.setOpen(true);
 
         progressBar.setVisibility(View.VISIBLE);
@@ -123,8 +123,8 @@ public class CreateEventActivity extends AppCompatActivity {
             @Override
             public void onSuccess(Void value) {
                 Toast.makeText(CreateEventActivity.this, "Event created", Toast.LENGTH_SHORT).show();
-                // TODO: Store in firebase later
-                generateEventQr(id);
+                // QR code generated locally for optional preview or upload later
+                generateEventQr(qrData);
                 progressBar.setVisibility(View.GONE);
                 finish();
             }
@@ -137,11 +137,9 @@ public class CreateEventActivity extends AppCompatActivity {
         });
     }
 
-    // Logic here for later when we generate QR code and put it in Firebase
-    private void generateEventQr(String eventId) {
+    private void generateEventQr(String qrData) {
         try {
             BarcodeEncoder encoder = new BarcodeEncoder();
-            String qrData = "event:" + eventId;
             Bitmap bitmap = encoder.encodeBitmap(qrData, BarcodeFormat.QR_CODE, 400, 400);
         } catch (Exception e) {
             Toast.makeText(this, "Failed to generate QR", Toast.LENGTH_SHORT).show();
