@@ -31,7 +31,7 @@ import ca.ualberta.codarc.codarc_events.utils.Identity;
 public class CreateEventActivity extends AppCompatActivity {
 
     private TextInputEditText title, description, eventDateTime,
-            regOpen, regClose;
+            regOpen, regClose, location, capacity;
     private EventDB eventDB;
     private ProgressBar progressBar;
 
@@ -47,8 +47,10 @@ public class CreateEventActivity extends AppCompatActivity {
         title = findViewById(R.id.et_title);
         description = findViewById(R.id.et_description);
         eventDateTime = findViewById(R.id.et_datetime);
+        location = findViewById(R.id.et_location);
         regOpen = findViewById(R.id.et_reg_open);
         regClose = findViewById(R.id.et_reg_close);
+        capacity = findViewById(R.id.et_capacity);
 
         Button createButton = findViewById(R.id.btn_create_event);
         Button cancelButton = findViewById(R.id.btn_cancel);
@@ -117,8 +119,10 @@ public class CreateEventActivity extends AppCompatActivity {
         String name = get(title);
         String desc = get(description);
         String dateTime = getDateValue(eventDateTime);
+        String loc = get(location);
         String open = getDateValue(regOpen);
         String close = getDateValue(regClose);
+        String capacityStr = get(capacity);
 
         if (name.isEmpty() || dateTime.isEmpty() || open.isEmpty() || close.isEmpty()) {
             Toast.makeText(this, "Fill all required fields", Toast.LENGTH_SHORT).show();
@@ -127,18 +131,31 @@ public class CreateEventActivity extends AppCompatActivity {
 
         String id = UUID.randomUUID().toString();
         String organizerId = Identity.getOrCreateDeviceId(this);
-        String qrData = "event:" + id; // store QR data as a string
+        String qrData = "event:" + id;
 
         Event event = new Event();
         event.setId(id);
         event.setName(name);
         event.setDescription(desc);
         event.setEventDateTime(dateTime);
+        event.setLocation(loc);
         event.setRegistrationOpen(open);
         event.setRegistrationClose(close);
         event.setOrganizerId(organizerId);
         event.setQrCode(qrData);
         event.setOpen(true);
+
+        // Parse capacity (optional field)
+        if (capacityStr != null && !capacityStr.isEmpty()) {
+            try {
+                Integer maxCap = Integer.parseInt(capacityStr);
+                event.setMaxCapacity(maxCap > 0 ? maxCap : null);
+            } catch (NumberFormatException e) {
+                event.setMaxCapacity(null);
+            }
+        } else {
+            event.setMaxCapacity(null);
+        }
 
         progressBar.setVisibility(View.VISIBLE);
 

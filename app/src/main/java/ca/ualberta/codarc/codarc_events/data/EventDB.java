@@ -6,7 +6,9 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import ca.ualberta.codarc.codarc_events.models.Event;
 
@@ -55,9 +57,115 @@ public class EventDB {
             }
             List<Event> events = new ArrayList<>();
             for (QueryDocumentSnapshot doc : snapshots) {
-                events.add(doc.toObject(Event.class));
+                Event event = doc.toObject(Event.class);
+                if (event != null) {
+                    event.setId(doc.getId());
+                    events.add(event);
+                }
             }
             cb.onSuccess(events);
         });
+    }
+
+    /**
+     * Fetches a single event by its ID.
+     */
+    public void getEvent(String eventId, Callback<Event> cb) {
+        if (eventId == null || eventId.isEmpty()) {
+            cb.onError(new IllegalArgumentException("eventId is empty"));
+            return;
+        }
+        db.collection("events").document(eventId)
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    if (snapshot != null && snapshot.exists()) {
+                        Event event = snapshot.toObject(Event.class);
+                        if (event != null) {
+                            event.setId(snapshot.getId());
+                            cb.onSuccess(event);
+                        } else {
+                            cb.onError(new RuntimeException("Failed to parse event"));
+                        }
+                    } else {
+                        cb.onError(new RuntimeException("Event not found"));
+                    }
+                })
+                .addOnFailureListener(cb::onError);
+    }
+
+    /**
+     * Checks if an entrant is currently on the waitlist for an event.
+     * Returns true if a document exists with is_waiting=true.
+     */
+    public void isEntrantOnWaitlist(String eventId, String deviceId, Callback<Boolean> cb) {
+        if (eventId == null || eventId.isEmpty() || deviceId == null || deviceId.isEmpty()) {
+            cb.onError(new IllegalArgumentException("eventId or deviceId is empty"));
+            return;
+        }
+        db.collection("events").document(eventId)
+                .collection("entrants").document(deviceId)
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    if (snapshot != null && snapshot.exists()) {
+                        Boolean isWaiting = snapshot.getBoolean("is_waiting");
+                        cb.onSuccess(isWaiting != null && isWaiting);
+                    } else {
+                        cb.onSuccess(false);
+                    }
+                })
+                .addOnFailureListener(cb::onError);
+    }
+
+    /**
+     * Counts the number of entrants with is_waiting=true for the event.
+     */
+    public void getWaitlistCount(String eventId, Callback<Integer> cb) {
+        if (eventId == null || eventId.isEmpty()) {
+            cb.onError(new IllegalArgumentException("eventId is empty"));
+            return;
+        }
+        db.collection("events").document(eventId)
+                .collection("entrants")
+                .whereEqualTo("is_waiting", true)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    cb.onSuccess(querySnapshot != null ? querySnapshot.size() : 0);
+                })
+                .addOnFailureListener(cb::onError);
+    }
+
+    /**
+     * Adds or updates an entrant document in the event's entrants subcollection.
+     * Sets is_waiting=true. Idempotent: if already on waitlist, no error.
+     */
+    public void joinWaitlist(String eventId, String deviceId, Callback<Void> cb) {
+        if (eventId == null || eventId.isEmpty() || deviceId == null || deviceId.isEmpty()) {
+            cb.onError(new IllegalArgumentException("eventId or deviceId is empty"));
+            return;
+        }
+        Map<String, Object> data = new HashMap<>();
+        data.put("is_waiting", true);
+
+        db.collection("events").document(eventId)
+                .collection("entrants").document(deviceId)
+                .set(data)
+                .addOnSuccessListener(unused -> cb.onSuccess(null))
+                .addOnFailureListener(cb::onError);
+    }
+
+    /**
+     * Removes an entrant from the waitlist by deleting their document.
+     * If document doesn't exist, still succeeds (idempotent).
+     */
+    public void leaveWaitlist(String eventId, String deviceId, Callback<Void> cb) {
+        if (eventId == null || eventId.isEmpty() || deviceId == null || deviceId.isEmpty()) {
+            cb.onError(new IllegalArgumentException("eventId or deviceId is empty"));
+            return;
+        }
+        db.collection("events").document(eventId)
+                .collection("entrants").document(deviceId)
+                .delete()
+                .addOnSuccessListener(unused -> cb.onSuccess(null))
+                .addOnFailureListener(cb::onError);
     }
 }
