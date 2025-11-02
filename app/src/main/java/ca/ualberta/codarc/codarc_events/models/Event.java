@@ -17,6 +17,8 @@ public class Event implements Serializable {
     private boolean open;
     private String organizerId;
     private String qrCode;
+    private Integer maxCapacity;
+    private String location;
 
     public Event() { }
 
@@ -46,6 +48,8 @@ public class Event implements Serializable {
     public String getOrganizerId() { return organizerId; }
 
     public String getQrCode() { return qrCode; }
+    public Integer getMaxCapacity() { return maxCapacity; }
+    public String getLocation() { return location; }
 
     // Setters
     public void setId(String id) { this.id = id; }
@@ -57,5 +61,7 @@ public class Event implements Serializable {
     public void setOpen(boolean open) { this.open = open; }
     public void setOrganizerId(String organizerId) { this.organizerId = organizerId; }
     public void setQrCode(String qrCode) { this.qrCode = qrCode; }
+    public void setMaxCapacity(Integer maxCapacity) { this.maxCapacity = maxCapacity; }
+    public void setLocation(String location) { this.location = location; }
 }
 
