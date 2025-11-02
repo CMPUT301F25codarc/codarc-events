@@ -19,7 +19,9 @@ public class EventTest {
                 "2025-11-10 10:00 AM",
                 "2025-11-01 09:00 AM",
                 "2025-11-09 09:00 PM",
-                true
+                true,
+                "123456",
+                "123456"
         );
 
         assertEquals("E1", event.getId());
@@ -29,6 +31,8 @@ public class EventTest {
         assertEquals("2025-11-01 09:00 AM", event.getRegistrationOpen());
         assertEquals("2025-11-09 09:00 PM", event.getRegistrationClose());
         assertTrue(event.isOpen());
+        assertEquals("123456", event.getOrganizerId());
+        assertEquals("123456", event.getQrCode());
     }
 
     @Test
@@ -42,6 +46,8 @@ public class EventTest {
         event.setRegistrationClose("2025-11-30 10:00 PM");
         event.setOpen(false);
         event.setOrganizerId("ORG123");
+        event.setQrCode("event:TEST123");
+
 
         assertEquals("E2", event.getId());
         assertEquals("New Event", event.getName());
@@ -51,6 +57,7 @@ public class EventTest {
         assertEquals("2025-11-30 10:00 PM", event.getRegistrationClose());
         assertFalse(event.isOpen());
         assertEquals("ORG123", event.getOrganizerId());
+        assertEquals("event:TEST123", event.getQrCode());
     }
 
     @Test
@@ -70,5 +77,3 @@ public class EventTest {
         assertNull(event.getDescription());
     }
 }
-
-

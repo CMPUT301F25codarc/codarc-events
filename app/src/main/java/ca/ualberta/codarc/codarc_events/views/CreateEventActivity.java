@@ -3,6 +3,7 @@ package ca.ualberta.codarc.codarc_events.views;
 import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ProgressBar;
@@ -60,6 +61,12 @@ public class CreateEventActivity extends AppCompatActivity {
         createButton.setOnClickListener(v -> createEvent());
     }
 
+    /**
+     * Shows a date picker followed by a time picker.
+     * Formats the selected date/time for display and stores ISO format in the tag.
+     *
+     * @param target the TextInputEditText to populate with the selected date/time
+     */
     private void showDateTimePicker(TextInputEditText target) {
         Calendar c = Calendar.getInstance();
 
@@ -83,17 +90,35 @@ public class CreateEventActivity extends AppCompatActivity {
         }, c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH)).show();
     }
 
-
+    /**
+     * Retrieves date value from TextInputEditText, preferring ISO format stored in tag.
+     * Falls back to displayed text if tag is not available.
+     *
+     * @param input the TextInputEditText to read from
+     * @return the ISO formatted date string if available, otherwise the displayed text
+     */
+    private String getDateValue(TextInputEditText input) {
+        String tagValue = (String) input.getTag();
+        if (tagValue != null && !tagValue.isEmpty()) {
+            return tagValue;  // use ISO format if present
+        }
+        return get(input);  // fallback to displayed text
+    }
     private String get(TextInputEditText input) {
         return input.getText() == null ? "" : input.getText().toString().trim();
     }
 
+    /**
+     * Validates form inputs and creates a new event in Firestore.
+     * Generates a unique ID, associates it with the current organizer,
+     * and creates QR code data. Shows progress bar during async operation.
+     */
     private void createEvent() {
         String name = get(title);
         String desc = get(description);
-        String dateTime = get(eventDateTime);
-        String open = get(regOpen);
-        String close = get(regClose);
+        String dateTime = getDateValue(eventDateTime);
+        String open = getDateValue(regOpen);
+        String close = getDateValue(regClose);
 
         if (name.isEmpty() || dateTime.isEmpty() || open.isEmpty() || close.isEmpty()) {
             Toast.makeText(this, "Fill all required fields", Toast.LENGTH_SHORT).show();
@@ -102,6 +127,7 @@ public class CreateEventActivity extends AppCompatActivity {
 
         String id = UUID.randomUUID().toString();
         String organizerId = Identity.getOrCreateDeviceId(this);
+        String qrData = "event:" + id; // store QR data as a string
 
         Event event = new Event();
         event.setId(id);
@@ -111,6 +137,7 @@ public class CreateEventActivity extends AppCompatActivity {
         event.setRegistrationOpen(open);
         event.setRegistrationClose(close);
         event.setOrganizerId(organizerId);
+        event.setQrCode(qrData);
         event.setOpen(true);
 
         progressBar.setVisibility(View.VISIBLE);
@@ -125,7 +152,8 @@ public class CreateEventActivity extends AppCompatActivity {
 
             @Override
             public void onError(@NonNull Exception e) {
-                Toast.makeText(CreateEventActivity.this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                Log.e("CreateEventActivity", "Failed to create event", e);
+                Toast.makeText(CreateEventActivity.this, "Failed to create event. Please try again.", Toast.LENGTH_SHORT).show();
                 progressBar.setVisibility(View.GONE);
             }
         });

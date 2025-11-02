@@ -1,25 +1,28 @@
 package ca.ualberta.codarc.codarc_events.models;
 
+import java.io.Serializable;
+
 /**
  * Plain data holder for events.
  * Mirrors what we store in Firestore.
  */
-public class Event {
+public class Event implements Serializable {
 
     private String id;
     private String name;
     private String description;
-    private String eventDateTime;       // combined field
+    private String eventDateTime;
     private String registrationOpen;
     private String registrationClose;
     private boolean open;
     private String organizerId;
+    private String qrCode;
 
     public Event() { }
 
     public Event(String id, String name, String description,
                  String eventDateTime, String registrationOpen,
-                 String registrationClose, boolean open) {
+                 String registrationClose, boolean open, String organizerId, String qrCode) {
         this.id = id;
         this.name = name;
         this.description = description;
@@ -27,9 +30,12 @@ public class Event {
         this.registrationOpen = registrationOpen;
         this.registrationClose = registrationClose;
         this.open = open;
+        this.organizerId = organizerId;
+        this.qrCode = qrCode;
     }
 
-    // --- Getters ---
+
+    // Getters
     public String getId() { return id; }
     public String getName() { return name; }
     public String getDescription() { return description; }
@@ -39,7 +45,9 @@ public class Event {
     public boolean isOpen() { return open; }
     public String getOrganizerId() { return organizerId; }
 
-    // --- Setters ---
+    public String getQrCode() { return qrCode; }
+
+    // Setters
     public void setId(String id) { this.id = id; }
     public void setName(String name) { this.name = name; }
     public void setDescription(String description) { this.description = description; }
@@ -48,5 +56,6 @@ public class Event {
     public void setRegistrationClose(String registrationClose) { this.registrationClose = registrationClose; }
     public void setOpen(boolean open) { this.open = open; }
     public void setOrganizerId(String organizerId) { this.organizerId = organizerId; }
+    public void setQrCode(String qrCode) { this.qrCode = qrCode; }
 }
 
