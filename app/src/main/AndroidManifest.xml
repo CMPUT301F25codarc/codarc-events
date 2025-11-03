@@ -43,6 +43,16 @@
             android:name=".views.QRScannerActivity"
             android:exported="true"
             android:theme="@style/Theme.Codarcevents"/>
+        <activity
+            android:name=".views.EventSettingsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Codarcevents"
+            android:parentActivityName=".views.EventDetailsActivity"/>
+        <activity
+            android:name=".views.ManageWaitlistActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Codarcevents"
+            android:parentActivityName=".views.EventSettingsActivity"/>
 
     </application>
 

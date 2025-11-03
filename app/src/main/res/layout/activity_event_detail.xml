@@ -9,14 +9,34 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
-        <!-- Event title -->
-        <TextView
-            android:id="@+id/event_title"
+        <!-- Title row with gear icon -->
+        <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Event Title"
-            android:textStyle="bold"
-            android:textSize="22sp" />
+            android:layout_marginBottom="8dp">
+
+            <TextView
+                android:id="@+id/event_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_toStartOf="@+id/btn_event_settings"
+                android:layout_marginEnd="48dp"
+                android:text="Event Title"
+                android:textStyle="bold"
+                android:textSize="22sp" />
+
+            <ImageButton
+                android:id="@+id/btn_event_settings"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:src="@android:drawable/ic_menu_preferences"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Event Settings"
+                android:visibility="gone" />
+
+        </RelativeLayout>
 
         <!-- Description -->
         <TextView
