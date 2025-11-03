@@ -2,6 +2,7 @@ package ca.ualberta.codarc.codarc_events.views;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 
 import androidx.annotation.NonNull;
@@ -77,13 +78,12 @@ public class EventBrowserActivity extends AppCompatActivity {
             });
         }
 
-        // --- Profile icon: opens ProfileCreationActivity for entrants
+        // Profile icon: opens ProfileCreationActivity for profile management
         ImageView profileIcon = findViewById(R.id.iv_profile_settings);
         if (profileIcon != null) {
             profileIcon.setOnClickListener(v -> {
                 Intent intent = new Intent(EventBrowserActivity.this, ProfileCreationActivity.class);
                 startActivity(intent);
-                // Optional slide animation for smoother transition
                 overridePendingTransition(android.R.anim.slide_in_left, android.R.anim.slide_out_right);
             });
         }

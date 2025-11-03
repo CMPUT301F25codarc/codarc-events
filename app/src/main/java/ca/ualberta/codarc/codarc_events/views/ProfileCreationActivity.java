@@ -12,7 +12,6 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.button.MaterialButton;
-import com.google.firebase.firestore.FirebaseFirestore;
 
 import ca.ualberta.codarc.codarc_events.R;
 import ca.ualberta.codarc.codarc_events.data.EntrantDB;
@@ -21,15 +20,20 @@ import ca.ualberta.codarc.codarc_events.utils.Identity;
 
 /**
  * Handles creation, update, and deletion of an entrant's profile.
- * Users can view and edit their info, delete their profile,
- * or navigate back to the event dashboard.
+ *
+ * <p>Users can view and edit their profile information, delete their profile,
+ * or navigate back to the event dashboard. This activity loads existing profile
+ * data if available and allows users to modify their name, email, and phone number.</p>
  */
 public class ProfileCreationActivity extends AppCompatActivity {
 
     private EntrantDB entrantDB;
     private String deviceId;
-    private EditText nameEt, emailEt, phoneEt;
-    private MaterialButton createBtn, deleteBtn;
+    private EditText nameEt;
+    private EditText emailEt;
+    private EditText phoneEt;
+    private MaterialButton saveBtn;
+    private MaterialButton deleteBtn;
     private ImageView backBtn;
 
     @Override
@@ -41,55 +45,75 @@ public class ProfileCreationActivity extends AppCompatActivity {
         nameEt = findViewById(R.id.et_name);
         emailEt = findViewById(R.id.et_email);
         phoneEt = findViewById(R.id.et_phone);
-        createBtn = findViewById(R.id.btn_create_profile);
+        saveBtn = findViewById(R.id.btn_create_profile);
         deleteBtn = findViewById(R.id.btn_delete_profile);
         backBtn = findViewById(R.id.iv_back);
 
-        // Init Firestore helper
+        // Initialize Firestore helper
         entrantDB = new EntrantDB();
         deviceId = Identity.getOrCreateDeviceId(this);
 
-        // Load existing profile data
+        // Load existing profile data if available
         loadProfile();
 
         // Handle Save button
-        createBtn.setOnClickListener(v -> saveOrUpdateProfile());
+        if (saveBtn != null) {
+            saveBtn.setOnClickListener(v -> saveOrUpdateProfile());
+        }
 
         // Handle Delete button
-        deleteBtn.setOnClickListener(v -> confirmAndDeleteProfile());
+        if (deleteBtn != null) {
+            deleteBtn.setOnClickListener(v -> confirmAndDeleteProfile());
+        }
 
         // Handle Back button
-        backBtn.setOnClickListener(v -> {
-            onBackPressed();
-            overridePendingTransition(android.R.anim.slide_in_left, android.R.anim.slide_out_right);
-        });
+        if (backBtn != null) {
+            backBtn.setOnClickListener(v -> {
+                onBackPressed();
+                overridePendingTransition(android.R.anim.slide_in_left, android.R.anim.slide_out_right);
+            });
+        }
     }
 
     /**
      * Loads existing profile info from Firestore and fills input fields.
+     * If no profile exists, fields remain empty for new profile creation.
      */
     private void loadProfile() {
+        if (nameEt == null || emailEt == null || phoneEt == null) {
+            return;
+        }
         entrantDB.getProfile(deviceId, new EntrantDB.Callback<Entrant>() {
             @Override
             public void onSuccess(Entrant entrant) {
                 if (entrant != null) {
-                    if (entrant.getName() != null) nameEt.setText(entrant.getName());
-                    if (entrant.getEmail() != null) emailEt.setText(entrant.getEmail());
-                    if (entrant.getPhone() != null) phoneEt.setText(entrant.getPhone());
+                    if (entrant.getName() != null) {
+                        nameEt.setText(entrant.getName());
+                    }
+                    if (entrant.getEmail() != null) {
+                        emailEt.setText(entrant.getEmail());
+                    }
+                    if (entrant.getPhone() != null) {
+                        phoneEt.setText(entrant.getPhone());
+                    }
                 }
             }
 
             @Override
             public void onError(@androidx.annotation.NonNull Exception e) {
-                // Profile might not exist yet — ignore.
+                // Profile might not exist yet — ignore. User will create one.
             }
         });
     }
 
     /**
      * Validates input fields and saves/updates profile in Firestore.
+     * Sets the isRegistered flag to true upon successful save.
      */
     private void saveOrUpdateProfile() {
+        if (nameEt == null || emailEt == null || phoneEt == null) {
+            return;
+        }
         String name = nameEt.getText().toString().trim();
         String email = emailEt.getText().toString().trim();
         String phone = phoneEt.getText().toString().trim();
@@ -108,19 +132,19 @@ public class ProfileCreationActivity extends AppCompatActivity {
         entrant.setPhone(phone);
         entrant.setIsRegistered(true);
 
-        createBtn.setEnabled(false);
+        saveBtn.setEnabled(false);
         entrantDB.upsertProfile(deviceId, entrant, new EntrantDB.Callback<Void>() {
             @Override
             public void onSuccess(Void value) {
                 Toast.makeText(ProfileCreationActivity.this, "Profile saved successfully", Toast.LENGTH_SHORT).show();
-                createBtn.setEnabled(true);
+                saveBtn.setEnabled(true);
                 finish();
                 overridePendingTransition(android.R.anim.slide_in_left, android.R.anim.slide_out_right);
             }
 
             @Override
             public void onError(@androidx.annotation.NonNull Exception e) {
-                createBtn.setEnabled(true);
+                saveBtn.setEnabled(true);
                 Toast.makeText(ProfileCreationActivity.this, "Error saving profile", Toast.LENGTH_SHORT).show();
             }
         });
@@ -128,6 +152,7 @@ public class ProfileCreationActivity extends AppCompatActivity {
 
     /**
      * Shows confirmation dialog before deleting the user's profile.
+     * Prevents accidental deletion by requiring user confirmation.
      */
     private void confirmAndDeleteProfile() {
         new AlertDialog.Builder(this)
@@ -139,19 +164,25 @@ public class ProfileCreationActivity extends AppCompatActivity {
     }
 
     /**
-     * Deletes the profile document from Firestore.
+     * Clears the profile information and sets registration status to false.
+     * Preserves the device identity document to prevent waitlist join errors.
      */
     private void deleteProfile() {
-        FirebaseFirestore.getInstance()
-                .collection("profiles")
-                .document(deviceId)
-                .delete()
-                .addOnSuccessListener(aVoid -> {
-                    Toast.makeText(ProfileCreationActivity.this, "Profile deleted", Toast.LENGTH_SHORT).show();
-                    finish();
-                    overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
-                })
-                .addOnFailureListener(e -> Toast.makeText(ProfileCreationActivity.this, "Failed to delete profile", Toast.LENGTH_SHORT).show());
+        deleteBtn.setEnabled(false);
+        entrantDB.deleteProfile(deviceId, new EntrantDB.Callback<Void>() {
+            @Override
+            public void onSuccess(Void value) {
+                Toast.makeText(ProfileCreationActivity.this, "Profile deleted", Toast.LENGTH_SHORT).show();
+                finish();
+                overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
+            }
+
+            @Override
+            public void onError(@androidx.annotation.NonNull Exception e) {
+                deleteBtn.setEnabled(true);
+                Toast.makeText(ProfileCreationActivity.this, "Failed to delete profile", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 }
 

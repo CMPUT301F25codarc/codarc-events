@@ -106,46 +106,44 @@ public class EntrantDB {
     }
 
     /**
-     * Checks whether a profile document already exists for the given device ID.
+     * Clears an entrant's profile information and sets registration status to false.
      *
-     * <p>This is primarily used by UI components (e.g., JoinWaitlistController or
-     * ProfileActivity) to determine whether the current device has already
-     * completed the signup flow.</p>
+     * <p>Rather than deleting the profile document, this method clears the user's
+     * personal information (name, email, phone) and sets isRegistered to false.
+     * This preserves the device identity document and prevents issues when
+     * checking profile registration status during waitlist operations.</p>
      *
-     * @param deviceId The unique device identifier that serves as the Firestore document key.
-     * @param cb       Callback invoked with {@code true} if the profile exists,
-     *                 {@code false} if it does not, or {@link Callback#onError(Exception)}
-     *                 if the lookup fails.
-     */
-    public void profileExists(String deviceId, Callback<Boolean> cb) {
-        if (deviceId == null || deviceId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("deviceId is empty"));
-            return;
-        }
-        db.collection("profiles").document(deviceId).get()
-                .addOnSuccessListener(doc -> cb.onSuccess(doc.exists()))
-                .addOnFailureListener(cb::onError);
-    }
-
-    /**
-     * Deletes an entrant profile document for the specified device ID.
-     *
-     * <p>If the profile document does not exist, this operation still succeeds
-     * (idempotent delete). This method is typically called when a user requests
-     * to permanently remove their profile from the app through the Profile screen.</p>
-     *
-     * @param deviceId The unique device identifier whose profile document should be deleted.
-     * @param cb       Callback invoked on successful deletion or with an exception if it fails.
+     * @param deviceId The unique device identifier whose profile should be cleared.
+     * @param cb       Callback invoked on successful update or with an exception if it fails.
      */
     public void deleteProfile(String deviceId, Callback<Void> cb) {
         if (deviceId == null || deviceId.isEmpty()) {
             cb.onError(new IllegalArgumentException("deviceId is empty"));
             return;
         }
-        db.collection("profiles").document(deviceId)
-                .delete()
-                .addOnSuccessListener(unused -> cb.onSuccess(null))
-                .addOnFailureListener(cb::onError);
+
+        // Get existing profile to preserve createdAtUtc
+        getProfile(deviceId, new Callback<Entrant>() {
+            @Override
+            public void onSuccess(Entrant existing) {
+                long createdAtUtc = existing != null ? existing.getCreatedAtUtc() : System.currentTimeMillis();
+                Entrant cleared = new Entrant(deviceId, "", createdAtUtc);
+                cleared.setEmail("");
+                cleared.setPhone("");
+                cleared.setIsRegistered(false);
+                upsertProfile(deviceId, cleared, cb);
+            }
+
+            @Override
+            public void onError(@NonNull Exception e) {
+                // Profile doesn't exist, create new one
+                Entrant cleared = new Entrant(deviceId, "", System.currentTimeMillis());
+                cleared.setEmail("");
+                cleared.setPhone("");
+                cleared.setIsRegistered(false);
+                upsertProfile(deviceId, cleared, cb);
+            }
+        });
     }
 
 }
