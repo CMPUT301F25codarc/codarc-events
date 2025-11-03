@@ -104,4 +104,50 @@ public class EntrantDB {
                 .addOnSuccessListener(unused -> cb.onSuccess(null))
                 .addOnFailureListener(cb::onError);
     }
+
+    /**
+     * Checks whether a profile document already exists for the given device ID.
+     *
+     * <p>This is primarily used by UI components (e.g., JoinWaitlistController or
+     * ProfileActivity) to determine whether the current device has already
+     * completed the signup flow.</p>
+     *
+     * @param deviceId The unique device identifier that serves as the Firestore document key.
+     * @param cb       Callback invoked with {@code true} if the profile exists,
+     *                 {@code false} if it does not, or {@link Callback#onError(Exception)}
+     *                 if the lookup fails.
+     */
+    public void profileExists(String deviceId, Callback<Boolean> cb) {
+        if (deviceId == null || deviceId.isEmpty()) {
+            cb.onError(new IllegalArgumentException("deviceId is empty"));
+            return;
+        }
+        db.collection("profiles").document(deviceId).get()
+                .addOnSuccessListener(doc -> cb.onSuccess(doc.exists()))
+                .addOnFailureListener(cb::onError);
+    }
+
+    /**
+     * Deletes an entrant profile document for the specified device ID.
+     *
+     * <p>If the profile document does not exist, this operation still succeeds
+     * (idempotent delete). This method is typically called when a user requests
+     * to permanently remove their profile from the app through the Profile screen.</p>
+     *
+     * @param deviceId The unique device identifier whose profile document should be deleted.
+     * @param cb       Callback invoked on successful deletion or with an exception if it fails.
+     */
+    public void deleteProfile(String deviceId, Callback<Void> cb) {
+        if (deviceId == null || deviceId.isEmpty()) {
+            cb.onError(new IllegalArgumentException("deviceId is empty"));
+            return;
+        }
+        db.collection("profiles").document(deviceId)
+                .delete()
+                .addOnSuccessListener(unused -> cb.onSuccess(null))
+                .addOnFailureListener(cb::onError);
+    }
+
 }
+
+
