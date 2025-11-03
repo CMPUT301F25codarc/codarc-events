@@ -44,6 +44,9 @@
             android:exported="true"
             android:theme="@style/Theme.Codarcevents"/>
 
+        <activity android:name=".views.ViewEntrantsActivity" />
+
+
     </application>
 
 </manifest>

@@ -20,6 +20,7 @@ import ca.ualberta.codarc.codarc_events.utils.Identity;
 import ca.ualberta.codarc.codarc_events.data.EntrantDB;
 import ca.ualberta.codarc.codarc_events.views.ProfileCreationActivity;
 import ca.ualberta.codarc.codarc_events.views.EventDetailsActivity;
+import ca.ualberta.codarc.codarc_events.views.ViewEntrantsActivity;
 
 /**
  * RecyclerView adapter for simple event cards.
@@ -30,6 +31,10 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.View
 
     private final Context context;
     private final List<Event> events;
+
+
+
+
 
     /**
      * Creates an adapter for displaying event cards in a RecyclerView.
@@ -98,6 +103,20 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.View
             intent.putExtra("event", events.get(position));
             context.startActivity(intent);
         });
+
+        String deviceId = Identity.getOrCreateDeviceId(context);
+        if (e.getOrganizerId() != null && e.getOrganizerId().equals(deviceId)) {
+            holder.btnViewEntrants.setVisibility(View.VISIBLE);
+            holder.btnViewEntrants.setOnClickListener(v -> {
+                Intent intent = new Intent(context, ViewEntrantsActivity.class);
+                intent.putExtra("eventId", e.getId());
+                context.startActivity(intent);
+            });
+        } else {
+            holder.btnViewEntrants.setVisibility(View.GONE);
+        }
+
+
     }
 
     /**
@@ -112,6 +131,8 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.View
         TextView title, date, status;
         View joinBtn;
 
+        View btnViewEntrants;
+
         /**
          * Initializes ViewHolder with references to card views.
          *
@@ -123,6 +144,7 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.View
             date = itemView.findViewById(R.id.tv_lottery_ends);
             status = itemView.findViewById(R.id.tv_entrants_info);
             joinBtn = itemView.findViewById(R.id.btn_join_list);
+            btnViewEntrants = itemView.findViewById(R.id.btn_view_entrants);
         }
     }
 }
