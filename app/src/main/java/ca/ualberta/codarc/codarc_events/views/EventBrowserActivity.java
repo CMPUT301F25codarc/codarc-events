@@ -3,6 +3,7 @@ package ca.ualberta.codarc.codarc_events.views;
 import android.content.Intent;
 import android.os.Bundle;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -20,11 +21,15 @@ import ca.ualberta.codarc.codarc_events.models.Event;
 import ca.ualberta.codarc.codarc_events.utils.Identity;
 
 /**
- * Displays the list of events for entrants.
+ * Displays the list of available events for entrants.
  *
- * This screen is intentionally light: it initializes the recycler, subscribes
- * to `EventDB.getAllEvents()`, and lets the card adapter handle per-item
- * interactions like Join.
+ * <p>This activity:
+ * <ul>
+ *   <li>Initializes and subscribes to Firestore via {@link EventDB#getAllEvents(EventDB.Callback)}.</li>
+ *   <li>Displays all events in a RecyclerView using {@link EventCardAdapter}.</li>
+ *   <li>Allows navigation to the profile screen (via iv_profile).</li>
+ *   <li>Allows organizers to create a new event (via btn_plus).</li>
+ * </ul></p>
  */
 public class EventBrowserActivity extends AppCompatActivity {
 
@@ -38,16 +43,19 @@ public class EventBrowserActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_event_browser);
 
-        // Stage 0: device identification (redundant safety; Landing already ensures)
+        // --- Ensure device has a unique ID (used as entrant identifier)
         String deviceId = Identity.getOrCreateDeviceId(this);
         new EntrantDB().getOrCreateEntrant(deviceId, new EntrantDB.Callback<Void>() {
             @Override
             public void onSuccess(Void value) { }
 
             @Override
-            public void onError(@NonNull Exception e) { }
+            public void onError(@NonNull Exception e) {
+                android.util.Log.e("EventBrowserActivity", "Failed to ensure entrant profile", e);
+            }
         });
 
+        // --- RecyclerView setup for events
         rvEvents = findViewById(R.id.rv_events);
         if (rvEvents == null) {
             android.util.Log.e("EventBrowserActivity", "RecyclerView not found in layout");
@@ -61,17 +69,28 @@ public class EventBrowserActivity extends AppCompatActivity {
         eventDB = new EventDB();
         loadEvents();
 
-        ImageButton plusBtn = findViewById(R.id.btn_plus);
-        if (plusBtn != null) {
-            plusBtn.setOnClickListener(v -> {
+        // --- "+" icon: opens CreateEventActivity for organizers
+        ImageView plusIcon = findViewById(R.id.btn_plus);
+        if (plusIcon != null) {
+            plusIcon.setOnClickListener(v -> {
                 Intent intent = new Intent(EventBrowserActivity.this, CreateEventActivity.class);
                 startActivity(intent);
+            });
+        }
+
+        // Profile icon: opens ProfileCreationActivity for profile management
+        ImageView profileIcon = findViewById(R.id.iv_profile_settings);
+        if (profileIcon != null) {
+            profileIcon.setOnClickListener(v -> {
+                Intent intent = new Intent(EventBrowserActivity.this, ProfileCreationActivity.class);
+                startActivity(intent);
+                overridePendingTransition(android.R.anim.slide_in_left, android.R.anim.slide_out_right);
             });
         }
     }
 
     /**
-     * Subscribes to Firestore for all events and refreshes the adapter list.
+     * Loads all events from Firestore and updates the adapter list.
      */
     private void loadEvents() {
         eventDB.getAllEvents(new EventDB.Callback<List<Event>>() {
@@ -91,5 +110,6 @@ public class EventBrowserActivity extends AppCompatActivity {
         });
     }
 }
+
 
 
