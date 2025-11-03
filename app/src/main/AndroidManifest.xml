@@ -43,6 +43,14 @@
             android:name=".views.QRScannerActivity"
             android:exported="true"
             android:theme="@style/Theme.Codarcevents"/>
+        <activity
+            android:name=".views.EventSettingsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Codarcevents"/>
+        <activity
+            android:name=".views.ManageEntrantsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Codarcevents"/>
 
     </application>
 
