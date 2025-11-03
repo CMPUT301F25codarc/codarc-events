@@ -123,6 +123,5 @@
             app:cornerRadius="8dp" />
 
     </LinearLayout>
+
 </ScrollView>
-
-
