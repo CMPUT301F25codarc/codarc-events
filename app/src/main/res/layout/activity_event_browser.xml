@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/entrant_background"
+    android:orientation="vertical">
+
+    <!-- Status Bar Spacer -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="24dp"
+        android:background="@color/entrant_background" />
+
+    <!-- Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/entrant_header_pink"
+        android:orientation="horizontal"
+        android:padding="16dp">
+
+        <!-- Profile Picture Placeholder -->
+        <View
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginEnd="16dp"
+            android:background="@color/white"
+            android:backgroundTint="@color/white" />
+
+        <!-- Title -->
+        <TextView
+            android:id="@+id/tv_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="@string/entrant_dashboard_title"
+            android:textColor="@color/text_primary"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <!-- Admin Lock Button -->
+        <ImageButton
+            android:id="@+id/btn_admin"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_marginEnd="12dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Admin Functions"
+            android:src="@drawable/ic_lock"
+            app:tint="@color/entrant_action_button_purple" />
+
+        <!-- Plus Button for Organizer Menu -->
+        <ImageButton
+            android:id="@+id/btn_plus"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_marginEnd="12dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Organizer Menu"
+            android:src="@drawable/ic_add"
+            app:tint="@color/entrant_action_button_purple" />
+
+        <!-- Profile/Settings Icon -->
+        <ImageView
+            android:id="@+id/iv_profile_settings"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:background="@drawable/ic_join_circle"
+            android:backgroundTint="@color/entrant_action_button_purple"
+            android:contentDescription="Profile Settings" />
+
+    </LinearLayout>
+
+    <!-- Search and Filter Bar -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:background="@color/entrant_search_background"
+        android:orientation="horizontal"
+        android:padding="12dp">
+
+        <!-- Search Icon -->
+        <ImageView
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_gravity="center_vertical"
+            android:layout_marginEnd="8dp"
+            android:src="@drawable/ic_search"
+            app:tint="@color/text_secondary" />
+
+        <!-- Search Input -->
+        <EditText
+            android:id="@+id/et_search"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:background="@android:color/transparent"
+            android:hint="@string/search_events_hint"
+            android:textColor="@color/text_primary"
+            android:textColorHint="@color/text_secondary"
+            android:textSize="16sp" />
+
+        <!-- Filter Icon -->
+        <ImageView
+            android:id="@+id/iv_filter"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_gravity="center_vertical"
+            android:layout_marginStart="8dp"
+            android:src="@drawable/ic_filter"
+            app:tint="@color/entrant_action_button_purple" />
+
+    </LinearLayout>
+
+    <!-- Events List -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rv_events"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:paddingBottom="80dp"
+        />
+
+    <!-- Bottom Navigation -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="80dp"
+        android:background="@color/entrant_bottom_nav_background"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:padding="8dp">
+
+        <!-- History Tab -->
+        <LinearLayout
+            android:id="@+id/tab_history"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="8dp">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_history"
+                app:tint="@color/entrant_bottom_nav_inactive" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/bottom_nav_history"
+                android:textColor="@color/entrant_bottom_nav_inactive"
+                android:textSize="12sp" />
+
+        </LinearLayout>
+
+        <!-- Scan QR Tab (Active) -->
+        <LinearLayout
+            android:id="@+id/tab_scan_qr"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="8dp">
+
+            <!-- Proper icon -->
+            <ImageView
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:src="@drawable/ic_qr_scan"
+                app:tint="@color/entrant_bottom_nav_active"
+                android:contentDescription="@string/bottom_nav_scan_qr" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/bottom_nav_scan_qr"
+                android:textColor="@color/entrant_bottom_nav_active"
+                android:textSize="12sp" />
+
+        </LinearLayout>
+
+
+        <!-- Notifications Tab -->
+        <LinearLayout
+            android:id="@+id/tab_notifications"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="8dp">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_notifications"
+                app:tint="@color/entrant_bottom_nav_inactive" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/bottom_nav_notifications"
+                android:textColor="@color/entrant_bottom_nav_inactive"
+                android:textSize="12sp" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</LinearLayout>
+
+
