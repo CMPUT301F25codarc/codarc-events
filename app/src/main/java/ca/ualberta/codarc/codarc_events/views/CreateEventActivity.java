@@ -14,10 +14,8 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.textfield.TextInputEditText;
 
-import java.lang.reflect.Constructor;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
-import java.util.Date;
 import java.util.Locale;
 import java.util.UUID;
 
@@ -67,7 +65,7 @@ public class CreateEventActivity extends AppCompatActivity {
 
     /**
      * Shows a date picker followed by a time picker.
-     * Formats the selected date/time for display and stores Timestamp in the tag.
+     * Formats the selected date/time for display and stores ISO format in the tag.
      *
      * @param target the TextInputEditText to populate with the selected date/time
      */
@@ -85,78 +83,28 @@ public class CreateEventActivity extends AppCompatActivity {
                         (hour % 12 == 0 ? 12 : hour % 12),
                         minute, (hour >= 12 ? "PM" : "AM"));
 
-                // Create Firestore Timestamp from selected date using reflection
-                Date selectedDate = selected.getTime();
-                Object timestamp = createTimestamp(selectedDate);
+                SimpleDateFormat iso = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US);
+                String lIso = iso.format(selected.getTime());
 
                 target.setText(localDisplay);
-                target.setTag(timestamp);
+                target.setTag(lIso);
             }, c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE), false).show();
         }, c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH)).show();
     }
 
     /**
-     * Creates a Firestore Timestamp object from a Date using reflection.
-     *
-     * @param date the date to convert
-     * @return Firestore Timestamp object, or null if creation fails
-     */
-    private Object createTimestamp(Date date) {
-        try {
-            // Try com.google.firebase.Timestamp first
-            try {
-                Class<?> timestampClass = Class.forName("com.google.firebase.Timestamp");
-                Constructor<?> constructor = timestampClass.getConstructor(Date.class);
-                return constructor.newInstance(date);
-            } catch (ClassNotFoundException e) {
-                // Try com.google.firebase.firestore.Timestamp
-                Class<?> timestampClass = Class.forName("com.google.firebase.firestore.Timestamp");
-                Constructor<?> constructor = timestampClass.getConstructor(Date.class);
-                return constructor.newInstance(date);
-            }
-        } catch (Exception e) {
-            // If reflection fails, return Date object and let Firestore handle conversion
-            return date;
-        }
-    }
-
-    /**
-     * Retrieves date value from TextInputEditText, preferring Timestamp stored in tag.
-     * Falls back to parsing displayed text if tag is not available.
+     * Retrieves date value from TextInputEditText, preferring ISO format stored in tag.
+     * Falls back to displayed text if tag is not available.
      *
      * @param input the TextInputEditText to read from
-     * @return the Timestamp object if available, otherwise attempts to parse displayed text
+     * @return the ISO formatted date string if available, otherwise the displayed text
      */
-    private Object getDateValue(TextInputEditText input) {
-        Object tagValue = input.getTag();
-        if (tagValue != null) {
-            String className = tagValue.getClass().getName();
-            if (className.contains("Timestamp")) {
-                return tagValue;
-            }
-            // Handle legacy ISO string format for backwards compatibility
-            if (tagValue instanceof String) {
-                try {
-                    SimpleDateFormat isoFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US);
-                    Date date = isoFormat.parse((String) tagValue);
-                    return createTimestamp(date);
-                } catch (Exception e) {
-                    // Fall through to text parsing
-                }
-            }
+    private String getDateValue(TextInputEditText input) {
+        String tagValue = (String) input.getTag();
+        if (tagValue != null && !tagValue.isEmpty()) {
+            return tagValue;  // use ISO format if present
         }
-        // Fallback: try to parse displayed text (for backwards compatibility)
-        String text = get(input);
-        if (!text.isEmpty()) {
-            try {
-                SimpleDateFormat displayFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm a", Locale.US);
-                Date date = displayFormat.parse(text);
-                return createTimestamp(date);
-            } catch (Exception e) {
-                // Parsing failed, return null
-            }
-        }
-        return null;
+        return get(input);  // fallback to displayed text
     }
     private String get(TextInputEditText input) {
         return input.getText() == null ? "" : input.getText().toString().trim();
@@ -170,13 +118,13 @@ public class CreateEventActivity extends AppCompatActivity {
     private void createEvent() {
         String name = get(title);
         String desc = get(description);
-        Object dateTime = getDateValue(eventDateTime);
+        String dateTime = getDateValue(eventDateTime);
         String loc = get(location);
-        Object open = getDateValue(regOpen);
-        Object close = getDateValue(regClose);
+        String open = getDateValue(regOpen);
+        String close = getDateValue(regClose);
         String capacityStr = get(capacity);
 
-        if (name.isEmpty() || dateTime == null || open == null || close == null) {
+        if (name.isEmpty() || dateTime.isEmpty() || open.isEmpty() || close.isEmpty()) {
             Toast.makeText(this, "Fill all required fields", Toast.LENGTH_SHORT).show();
             return;
         }

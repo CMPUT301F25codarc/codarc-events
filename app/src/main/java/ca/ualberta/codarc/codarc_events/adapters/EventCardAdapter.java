@@ -16,7 +16,6 @@ import java.util.List;
 import ca.ualberta.codarc.codarc_events.R;
 import ca.ualberta.codarc.codarc_events.models.Event;
 import ca.ualberta.codarc.codarc_events.models.Entrant;
-import ca.ualberta.codarc.codarc_events.utils.DateTimeUtils;
 import ca.ualberta.codarc.codarc_events.utils.Identity;
 import ca.ualberta.codarc.codarc_events.data.EntrantDB;
 import ca.ualberta.codarc.codarc_events.views.ProfileCreationActivity;
@@ -68,7 +67,7 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.View
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Event e = events.get(position);
         holder.title.setText(e.getName());
-        holder.date.setText(DateTimeUtils.formatTimestampShort(e.getEventDateTime()));
+        holder.date.setText(e.getEventDateTime());
         holder.status.setText(e.isOpen() ? "Status: Open" : "Status: Closed");
 
         holder.joinBtn.setOnClickListener(v -> {

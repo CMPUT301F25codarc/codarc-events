@@ -5,7 +5,6 @@ import androidx.annotation.NonNull;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
-import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.SetOptions;
 
@@ -62,8 +61,8 @@ public class EntrantDB {
             if (snapshot != null && snapshot.exists()) {
                 cb.onSuccess(null);
             } else {
-                // Create default entrant with server timestamp
-                Entrant defaultEntrant = new Entrant(deviceId, "", FieldValue.serverTimestamp());
+                // Constructor already sets all defaults (empty strings, false flags)
+                Entrant defaultEntrant = new Entrant(deviceId, "", System.currentTimeMillis());
                 Task<Void> setTask = docRef.set(defaultEntrant);
                 setTask.addOnSuccessListener(unused -> cb.onSuccess(null))
                         .addOnFailureListener(cb::onError);

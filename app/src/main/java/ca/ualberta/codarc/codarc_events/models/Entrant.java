@@ -10,7 +10,7 @@ public class Entrant {
 
     private String deviceId;
     private String name;
-    private Object createdAtUtc;
+    private long createdAtUtc;
     private String email;
     private String phone;
     private boolean isRegistered;
@@ -26,7 +26,7 @@ public class Entrant {
      * Constructs an Entrant with the given device id, name, and timestamp.
      * Profile fields (email, phone, flags) are initialized to defaults.
      */
-    public Entrant(String deviceId, String name, Object createdAtUtc) {
+    public Entrant(String deviceId, String name, long createdAtUtc) {
         this.deviceId = deviceId;
         this.name = name;
         this.createdAtUtc = createdAtUtc;
@@ -54,22 +54,22 @@ public class Entrant {
     }
 
     // kept for test compatibility
-    public Object getCreatedAt() {
+    public long getCreatedAt() {
         return createdAtUtc;
     }
 
-    public void setCreatedAt(Object createdAtUtc) {
+    public void setCreatedAt(long createdAtUtc) {
         this.createdAtUtc = createdAtUtc;
     }
 
     // Firestore field name is createdAtUtc
     @PropertyName("createdAtUtc")
-    public Object getCreatedAtUtc() {
+    public long getCreatedAtUtc() {
         return createdAtUtc;
     }
 
     @PropertyName("createdAtUtc")
-    public void setCreatedAtUtc(Object createdAtUtc) {
+    public void setCreatedAtUtc(long createdAtUtc) {
         this.createdAtUtc = createdAtUtc;
     }
 

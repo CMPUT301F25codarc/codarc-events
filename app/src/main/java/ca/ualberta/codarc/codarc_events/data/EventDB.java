@@ -2,7 +2,6 @@ package ca.ualberta.codarc.codarc_events.data;
 
 import androidx.annotation.NonNull;
 
-import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
@@ -35,25 +34,10 @@ public class EventDB {
         this.db = FirebaseFirestore.getInstance();
     }
 
-    /**
-     * Add or update an event in Firestore.
-     * Manually builds the document to preserve timestamp objects.
-     */
+    /** Add or update an event in Firestore. */
     public void addEvent(Event event, Callback<Void> cb) {
-        Map<String, Object> eventData = new HashMap<>();
-        eventData.put("name", event.getName());
-        eventData.put("description", event.getDescription());
-        eventData.put("eventDateTime", event.getEventDateTime());
-        eventData.put("registrationOpen", event.getRegistrationOpen());
-        eventData.put("registrationClose", event.getRegistrationClose());
-        eventData.put("open", event.isOpen());
-        eventData.put("organizerId", event.getOrganizerId());
-        eventData.put("qrCode", event.getQrCode());
-        eventData.put("maxCapacity", event.getMaxCapacity());
-        eventData.put("location", event.getLocation());
-
         db.collection("events").document(event.getId())
-                .set(eventData)
+                .set(event)
                 .addOnSuccessListener(aVoid -> cb.onSuccess(null))
                 .addOnFailureListener(cb::onError);
     }
@@ -74,8 +58,9 @@ public class EventDB {
             }
             List<Event> events = new ArrayList<>();
             for (QueryDocumentSnapshot doc : snapshots) {
-                Event event = parseEventFromDocument(doc);
+                Event event = doc.toObject(Event.class);
                 if (event != null) {
+                    event.setId(doc.getId());
                     events.add(event);
                 }
             }
@@ -95,8 +80,9 @@ public class EventDB {
                 .get()
                 .addOnSuccessListener(snapshot -> {
                     if (snapshot != null && snapshot.exists()) {
-                        Event event = parseEventFromDocument(snapshot);
+                        Event event = snapshot.toObject(Event.class);
                         if (event != null) {
+                            event.setId(snapshot.getId());
                             cb.onSuccess(event);
                         } else {
                             cb.onError(new RuntimeException("Failed to parse event"));
@@ -106,37 +92,6 @@ public class EventDB {
                     }
                 })
                 .addOnFailureListener(cb::onError);
-    }
-
-    /**
-     * Parses Event from Firestore document.
-     * Manually extracts fields to handle Object-typed timestamps.
-     *
-     * @param doc the document snapshot
-     * @return Event or null if parsing fails
-     */
-    private Event parseEventFromDocument(DocumentSnapshot doc) {
-        try {
-            Event event = new Event();
-            event.setId(doc.getId());
-            event.setName(doc.getString("name"));
-            event.setDescription(doc.getString("description"));
-            event.setOpen(doc.getBoolean("open") != null && doc.getBoolean("open"));
-            event.setOrganizerId(doc.getString("organizerId"));
-            event.setQrCode(doc.getString("qrCode"));
-            event.setMaxCapacity(doc.get("maxCapacity", Integer.class));
-            event.setLocation(doc.getString("location"));
-
-            // Manually extract timestamp fields to handle Object type
-            event.setEventDateTime(doc.get("eventDateTime"));
-            event.setRegistrationOpen(doc.get("registrationOpen"));
-            event.setRegistrationClose(doc.get("registrationClose"));
-
-            return event;
-        } catch (Exception e) {
-            android.util.Log.e("EventDB", "Failed to parse event from document", e);
-            return null;
-        }
     }
 
     /**

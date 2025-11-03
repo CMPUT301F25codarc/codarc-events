@@ -5,7 +5,6 @@ import android.os.Bundle;
 import android.content.Intent;
 import android.util.Log;
 import android.view.View;
-import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -22,7 +21,6 @@ import ca.ualberta.codarc.codarc_events.data.EntrantDB;
 import ca.ualberta.codarc.codarc_events.data.EventDB;
 import ca.ualberta.codarc.codarc_events.models.Entrant;
 import ca.ualberta.codarc.codarc_events.models.Event;
-import ca.ualberta.codarc.codarc_events.utils.DateTimeUtils;
 import ca.ualberta.codarc.codarc_events.utils.Identity;
 import com.google.android.material.button.MaterialButton;
 import com.google.zxing.BarcodeFormat;
@@ -37,7 +35,6 @@ public class EventDetailsActivity extends AppCompatActivity {
     private EventDB eventDB;
     private MaterialButton joinBtn;
     private MaterialButton leaveBtn;
-    private ImageButton settingsBtn;
     private String deviceId;
 
     /**
@@ -74,31 +71,13 @@ public class EventDetailsActivity extends AppCompatActivity {
 
         title.setText(event.getName());
         desc.setText(event.getDescription());
-        
-        // Format event date/time
-        Object eventDateTimeObj = event.getEventDateTime();
-        String eventDateTimeStr = DateTimeUtils.formatTimestamp(eventDateTimeObj);
-        dateTime.setText(eventDateTimeStr != null ? eventDateTimeStr : "Date/time: TBD");
+        dateTime.setText(event.getEventDateTime());
         
         TextView location = findViewById(R.id.event_location);
         String eventLocation = event.getLocation();
         location.setText("Location: " + (eventLocation != null && !eventLocation.isEmpty() ? eventLocation : "TBD"));
         
-        // Format registration window
-        Object regOpenObj = event.getRegistrationOpen();
-        Object regCloseObj = event.getRegistrationClose();
-        String regOpenStr = DateTimeUtils.formatTimestampShort(regOpenObj);
-        String regCloseStr = DateTimeUtils.formatTimestampShort(regCloseObj);
-        
-        if (regOpenStr.equals("Time unknown") || regCloseStr.equals("Time unknown")) {
-            // Log for debugging
-            Log.w("EventDetailsActivity", "Failed to parse registration times. RegOpen: " + 
-                (regOpenObj != null ? regOpenObj.getClass().getName() : "null") + 
-                ", RegClose: " + (regCloseObj != null ? regCloseObj.getClass().getName() : "null"));
-            regWindow.setText("Registration: Unable to display");
-        } else {
-            regWindow.setText("Registration: " + regOpenStr + " → " + regCloseStr);
-        }
+        regWindow.setText("Registration: " + event.getRegistrationOpen() + " → " + event.getRegistrationClose());
 
         // Generate QR code with null safety
         try {
@@ -122,28 +101,8 @@ public class EventDetailsActivity extends AppCompatActivity {
         joinBtn.setOnClickListener(v -> showJoinConfirmation());
         leaveBtn.setOnClickListener(v -> showLeaveConfirmation());
 
-        // Check if current user is organizer and show settings button
-        setupOrganizerSettings();
-
         // Check waitlist status on load
         checkWaitlistStatus();
-    }
-
-    /**
-     * Shows settings button if current user is the organizer.
-     */
-    private void setupOrganizerSettings() {
-        settingsBtn = findViewById(R.id.btn_event_settings);
-        if (event.getOrganizerId() != null && event.getOrganizerId().equals(deviceId)) {
-            settingsBtn.setVisibility(View.VISIBLE);
-            settingsBtn.setOnClickListener(v -> {
-                Intent intent = new Intent(this, EventSettingsActivity.class);
-                intent.putExtra("event", event);
-                startActivity(intent);
-            });
-        } else {
-            settingsBtn.setVisibility(View.GONE);
-        }
     }
 
     /**
@@ -340,30 +299,28 @@ public class EventDetailsActivity extends AppCompatActivity {
      * Validates if current time is within the registration window.
      */
     private boolean isWithinRegistrationWindow(Event event) {
-        Object regOpen = event.getRegistrationOpen();
-        Object regClose = event.getRegistrationClose();
+        try {
+            SimpleDateFormat isoFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US);
+            long now = System.currentTimeMillis();
 
-        if (regOpen == null || regClose == null) {
-            Log.w("EventDetailsActivity", "Registration window times are null");
+            String regOpen = event.getRegistrationOpen();
+            String regClose = event.getRegistrationClose();
+
+            if (regOpen == null || regOpen.isEmpty() || regClose == null || regClose.isEmpty()) {
+                return false;
+            }
+
+            long openTime = isoFormat.parse(regOpen).getTime();
+            long closeTime = isoFormat.parse(regClose).getTime();
+
+            return now >= openTime && now <= closeTime;
+        } catch (java.text.ParseException e) {
+            Log.e("EventDetailsActivity", "Error parsing registration window", e);
+            return false;
+        } catch (Exception e) {
+            Log.e("EventDetailsActivity", "Unexpected error in registration window check", e);
             return false;
         }
-
-        long now = System.currentTimeMillis();
-        long openTime = DateTimeUtils.extractTimeMillis(regOpen);
-        long closeTime = DateTimeUtils.extractTimeMillis(regClose);
-
-        if (openTime == Long.MAX_VALUE || closeTime == Long.MAX_VALUE) {
-            Log.e("EventDetailsActivity", "Failed to extract registration window times. " +
-                "RegOpen type: " + (regOpen != null ? regOpen.getClass().getName() : "null") +
-                ", RegClose type: " + (regClose != null ? regClose.getClass().getName() : "null"));
-            return false;
-        }
-
-        boolean isWithinWindow = now >= openTime && now <= closeTime;
-        Log.d("EventDetailsActivity", "Registration window check: now=" + now + 
-            ", open=" + openTime + ", close=" + closeTime + ", within=" + isWithinWindow);
-        
-        return isWithinWindow;
     }
 
     /**

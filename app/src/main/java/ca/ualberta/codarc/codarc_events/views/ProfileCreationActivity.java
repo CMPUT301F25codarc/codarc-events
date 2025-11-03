@@ -15,7 +15,6 @@ import ca.ualberta.codarc.codarc_events.R;
 import ca.ualberta.codarc.codarc_events.data.EntrantDB;
 import ca.ualberta.codarc.codarc_events.models.Entrant;
 import ca.ualberta.codarc.codarc_events.utils.Identity;
-import com.google.firebase.firestore.FieldValue;
 
 /**
  * Simple form that collects name, email, and optional phone.
@@ -67,7 +66,7 @@ public class ProfileCreationActivity extends AppCompatActivity {
                 return;
             }
 
-            Entrant entrant = new Entrant(deviceId, name, FieldValue.serverTimestamp());
+            Entrant entrant = new Entrant(deviceId, name, System.currentTimeMillis());
             entrant.setEmail(email);
             entrant.setPhone(phone);
             entrant.setIsRegistered(true);
