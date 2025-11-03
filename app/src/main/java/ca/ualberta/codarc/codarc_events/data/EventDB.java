@@ -2,6 +2,7 @@ package ca.ualberta.codarc.codarc_events.data;
 
 import androidx.annotation.NonNull;
 
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
@@ -136,7 +137,8 @@ public class EventDB {
 
     /**
      * Adds or updates an entrant document in the event's entrants subcollection.
-     * Sets is_waiting=true. Idempotent: if already on waitlist, no error.
+     * Sets is_waiting=true and records request_time timestamp.
+     * Idempotent: if already on waitlist, no error.
      */
     public void joinWaitlist(String eventId, String deviceId, Callback<Void> cb) {
         if (eventId == null || eventId.isEmpty() || deviceId == null || deviceId.isEmpty()) {
@@ -145,6 +147,7 @@ public class EventDB {
         }
         Map<String, Object> data = new HashMap<>();
         data.put("is_waiting", true);
+        data.put("request_time", FieldValue.serverTimestamp());
 
         db.collection("events").document(eventId)
                 .collection("entrants").document(deviceId)
@@ -166,6 +169,41 @@ public class EventDB {
                 .collection("entrants").document(deviceId)
                 .delete()
                 .addOnSuccessListener(unused -> cb.onSuccess(null))
+                .addOnFailureListener(cb::onError);
+    }
+
+    /**
+     * Fetches all entrants on the waitlist for an event.
+     * Returns a list of maps containing deviceId and requestTime.
+     * Only includes entrants with is_waiting=true.
+     * Note: Sorting by request_time should be done in the calling Activity
+     * to avoid requiring a Firestore composite index.
+     *
+     * @param eventId the event ID to get waitlist for
+     * @param cb callback with list of maps: {deviceId: String, requestTime: Object}
+     */
+    public void getWaitlist(String eventId, Callback<List<Map<String, Object>>> cb) {
+        if (eventId == null || eventId.isEmpty()) {
+            cb.onError(new IllegalArgumentException("eventId is empty"));
+            return;
+        }
+        db.collection("events").document(eventId)
+                .collection("entrants")
+                .whereEqualTo("is_waiting", true)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    List<Map<String, Object>> entries = new ArrayList<>();
+                    if (querySnapshot != null) {
+                        for (QueryDocumentSnapshot doc : querySnapshot) {
+                            Map<String, Object> entry = new HashMap<>();
+                            entry.put("deviceId", doc.getId());
+                            Object requestTime = doc.get("request_time");
+                            entry.put("requestTime", requestTime);
+                            entries.add(entry);
+                        }
+                    }
+                    cb.onSuccess(entries);
+                })
                 .addOnFailureListener(cb::onError);
     }
 }
