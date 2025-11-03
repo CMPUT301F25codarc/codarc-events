@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.content.Intent;
 import android.util.Log;
 import android.view.View;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -37,6 +38,7 @@ public class EventDetailsActivity extends AppCompatActivity {
     private LeaveWaitlistController leaveController;
     private MaterialButton joinBtn;
     private MaterialButton leaveBtn;
+    private ImageButton settingsBtn;
     private String deviceId;
 
     /**
@@ -111,6 +113,27 @@ public class EventDetailsActivity extends AppCompatActivity {
 
         // Check waitlist status on load
         checkWaitlistStatus();
+
+        // Show settings icon if organizer
+        setupOrganizerSettings();
+    }
+
+    private void setupOrganizerSettings() {
+        settingsBtn = findViewById(R.id.btn_event_settings);
+        if (settingsBtn == null) {
+            return;
+        }
+
+        if (event.getOrganizerId() != null && event.getOrganizerId().equals(deviceId)) {
+            settingsBtn.setVisibility(View.VISIBLE);
+            settingsBtn.setOnClickListener(v -> {
+                Intent intent = new Intent(this, EventSettingsActivity.class);
+                intent.putExtra("event", event);
+                startActivity(intent);
+            });
+        } else {
+            settingsBtn.setVisibility(View.GONE);
+        }
     }
 
     /**
