@@ -17,9 +17,9 @@ import com.google.android.material.textfield.TextInputEditText;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Locale;
-import java.util.UUID;
 
 import ca.ualberta.codarc.codarc_events.R;
+import ca.ualberta.codarc.codarc_events.controllers.CreateEventController;
 import ca.ualberta.codarc.codarc_events.data.EventDB;
 import ca.ualberta.codarc.codarc_events.models.Event;
 import ca.ualberta.codarc.codarc_events.utils.Identity;
@@ -33,6 +33,7 @@ public class CreateEventActivity extends AppCompatActivity {
     private TextInputEditText title, description, eventDateTime,
             regOpen, regClose, location, capacity;
     private EventDB eventDB;
+    private CreateEventController controller;
     private ProgressBar progressBar;
 
     @Override
@@ -41,6 +42,8 @@ public class CreateEventActivity extends AppCompatActivity {
         setContentView(R.layout.activity_create_event);
 
         eventDB = new EventDB();
+        String organizerId = Identity.getOrCreateDeviceId(this);
+        controller = new CreateEventController(eventDB, organizerId);
 
         progressBar = findViewById(R.id.progress_bar);
         progressBar.setVisibility(View.GONE);
@@ -112,8 +115,7 @@ public class CreateEventActivity extends AppCompatActivity {
 
     /**
      * Validates form inputs and creates a new event in Firestore.
-     * Generates a unique ID, associates it with the current organizer,
-     * and creates QR code data. Shows progress bar during async operation.
+     * Uses CreateEventController to handle business logic.
      */
     private void createEvent() {
         String name = get(title);
@@ -124,42 +126,20 @@ public class CreateEventActivity extends AppCompatActivity {
         String close = getDateValue(regClose);
         String capacityStr = get(capacity);
 
-        if (name.isEmpty() || dateTime.isEmpty() || open.isEmpty() || close.isEmpty()) {
-            Toast.makeText(this, "Fill all required fields", Toast.LENGTH_SHORT).show();
+        // Use controller to validate and create event
+        CreateEventController.CreateEventResult result = controller.validateAndCreateEvent(
+                name, desc, dateTime, loc, open, close, capacityStr
+        );
+
+        if (!result.isValid()) {
+            Toast.makeText(this, result.getErrorMessage(), Toast.LENGTH_SHORT).show();
             return;
-        }
-
-        String id = UUID.randomUUID().toString();
-        String organizerId = Identity.getOrCreateDeviceId(this);
-        String qrData = "event:" + id;
-
-        Event event = new Event();
-        event.setId(id);
-        event.setName(name);
-        event.setDescription(desc);
-        event.setEventDateTime(dateTime);
-        event.setLocation(loc);
-        event.setRegistrationOpen(open);
-        event.setRegistrationClose(close);
-        event.setOrganizerId(organizerId);
-        event.setQrCode(qrData);
-        event.setOpen(true);
-
-        // Parse capacity (optional field)
-        if (capacityStr != null && !capacityStr.isEmpty()) {
-            try {
-                Integer maxCap = Integer.parseInt(capacityStr);
-                event.setMaxCapacity(maxCap > 0 ? maxCap : null);
-            } catch (NumberFormatException e) {
-                event.setMaxCapacity(null);
-            }
-        } else {
-            event.setMaxCapacity(null);
         }
 
         progressBar.setVisibility(View.VISIBLE);
 
-        eventDB.addEvent(event, new EventDB.Callback<Void>() {
+        // Persist event using controller
+        controller.persistEvent(result.getEvent(), new EventDB.Callback<Void>() {
             @Override
             public void onSuccess(Void value) {
                 Toast.makeText(CreateEventActivity.this, "Event created", Toast.LENGTH_SHORT).show();

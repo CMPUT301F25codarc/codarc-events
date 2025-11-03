@@ -49,6 +49,11 @@ public class EventBrowserActivity extends AppCompatActivity {
         });
 
         rvEvents = findViewById(R.id.rv_events);
+        if (rvEvents == null) {
+            android.util.Log.e("EventBrowserActivity", "RecyclerView not found in layout");
+            finish();
+            return;
+        }
         rvEvents.setLayoutManager(new LinearLayoutManager(this));
         adapter = new EventCardAdapter(this, eventList);
         rvEvents.setAdapter(adapter);
@@ -57,10 +62,12 @@ public class EventBrowserActivity extends AppCompatActivity {
         loadEvents();
 
         ImageButton plusBtn = findViewById(R.id.btn_plus);
-        plusBtn.setOnClickListener(v -> {
-            Intent intent = new Intent(EventBrowserActivity.this, CreateEventActivity.class);
-            startActivity(intent);
-        });
+        if (plusBtn != null) {
+            plusBtn.setOnClickListener(v -> {
+                Intent intent = new Intent(EventBrowserActivity.this, CreateEventActivity.class);
+                startActivity(intent);
+            });
+        }
     }
 
     /**
@@ -70,13 +77,17 @@ public class EventBrowserActivity extends AppCompatActivity {
         eventDB.getAllEvents(new EventDB.Callback<List<Event>>() {
             @Override
             public void onSuccess(List<Event> value) {
-                eventList.clear();
-                eventList.addAll(value);
-                adapter.notifyDataSetChanged();
+                if (value != null) {
+                    eventList.clear();
+                    eventList.addAll(value);
+                    adapter.notifyDataSetChanged();
+                }
             }
 
             @Override
-            public void onError(@NonNull Exception e) { }
+            public void onError(@NonNull Exception e) {
+                android.util.Log.e("EventBrowserActivity", "Failed to load events", e);
+            }
         });
     }
 }

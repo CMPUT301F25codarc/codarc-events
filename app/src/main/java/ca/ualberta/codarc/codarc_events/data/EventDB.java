@@ -2,13 +2,18 @@ package ca.ualberta.codarc.codarc_events.data;
 
 import androidx.annotation.NonNull;
 
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.firebase.Timestamp;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import ca.ualberta.codarc.codarc_events.models.Event;
@@ -58,9 +63,8 @@ public class EventDB {
             }
             List<Event> events = new ArrayList<>();
             for (QueryDocumentSnapshot doc : snapshots) {
-                Event event = doc.toObject(Event.class);
+                Event event = parseEventFromDocument(doc);
                 if (event != null) {
-                    event.setId(doc.getId());
                     events.add(event);
                 }
             }
@@ -80,9 +84,8 @@ public class EventDB {
                 .get()
                 .addOnSuccessListener(snapshot -> {
                     if (snapshot != null && snapshot.exists()) {
-                        Event event = snapshot.toObject(Event.class);
+                        Event event = parseEventFromDocument(snapshot);
                         if (event != null) {
-                            event.setId(snapshot.getId());
                             cb.onSuccess(event);
                         } else {
                             cb.onError(new RuntimeException("Failed to parse event"));
@@ -208,4 +211,63 @@ public class EventDB {
     }
 
     
+    /**
+     * Parses an Event from a Firestore DocumentSnapshot.
+     * Handles conversion of Timestamp objects to String format.
+     *
+     * @param doc the document snapshot
+     * @return Event or null if parsing fails
+     */
+    private Event parseEventFromDocument(DocumentSnapshot doc) {
+        try {
+            Event event = new Event();
+            event.setId(doc.getId());
+            event.setName(doc.getString("name"));
+            event.setDescription(doc.getString("description"));
+            event.setLocation(doc.getString("location"));
+            event.setOpen(doc.getBoolean("open") != null && doc.getBoolean("open"));
+            event.setOrganizerId(doc.getString("organizerId"));
+            event.setQrCode(doc.getString("qrCode"));
+            event.setMaxCapacity(doc.get("maxCapacity", Integer.class));
+
+            // Convert Timestamp objects to String (ISO format)
+            event.setEventDateTime(convertTimestampToString(doc.get("eventDateTime")));
+            event.setRegistrationOpen(convertTimestampToString(doc.get("registrationOpen")));
+            event.setRegistrationClose(convertTimestampToString(doc.get("registrationClose")));
+
+            return event;
+        } catch (Exception e) {
+            android.util.Log.e("EventDB", "Failed to parse event from document", e);
+            return null;
+        }
+    }
+
+    /**
+     * Converts a Firestore Timestamp to ISO format string.
+     * If the value is already a String, returns it as-is.
+     * If it's a Timestamp, converts to ISO format.
+     * If null, returns null.
+     */
+    private String convertTimestampToString(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof String) {
+            return (String) value;
+        }
+        if (value instanceof Timestamp) {
+            Timestamp timestamp = (Timestamp) value;
+            Date date = timestamp.toDate();
+            SimpleDateFormat isoFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US);
+            return isoFormat.format(date);
+        }
+        // Try to handle Date objects too
+        if (value instanceof Date) {
+            Date date = (Date) value;
+            SimpleDateFormat isoFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US);
+            return isoFormat.format(date);
+        }
+        // Fallback: convert to string
+        return value.toString();
+    }
 }
