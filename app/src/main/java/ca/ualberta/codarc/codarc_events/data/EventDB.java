@@ -142,7 +142,13 @@ public class EventDB {
                 .addOnFailureListener(cb::onError);
     }
 
-    /** Counts the number of entrants on waitlist (legacy method). */
+    /**
+     * Counts the number of entrants on waitlist.
+     * Uses a one-time fetch, suitable for RecyclerView adapters.
+     *
+     * @param eventId the event ID
+     * @param cb callback with the count
+     */
     public void getWaitlistCount(String eventId, Callback<Integer> cb) {
         if (eventId == null || eventId.isEmpty()) {
             cb.onError(new IllegalArgumentException("eventId is empty"));
@@ -162,8 +168,12 @@ public class EventDB {
     }
 
     /**
-     *  Real-time accurate waitlist count (auto-updates when entrants change)
-     * Uses addSnapshotListener to continuously reflect changes on Firestore.
+     * Fetches waitlist count using a real-time listener.
+     * WARNING: This method creates a snapshot listener that must be manually removed
+     * to prevent memory leaks. Use getWaitlistCount() for one-time fetches in adapters.
+     *
+     * @param eventId the event ID
+     * @param cb callback with the count
      */
     public void fetchAccurateWaitlistCount(String eventId, Callback<Integer> cb) {
         if (eventId == null || eventId.isEmpty()) {
