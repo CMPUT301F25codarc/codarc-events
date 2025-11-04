@@ -137,7 +137,7 @@ public class EventDetailsActivity extends AppCompatActivity {
     }
 
     /**
-     * Checks if current user is on the waitlist and updates UI accordingly.
+     * Checks if current user can join waitlist and updates UI accordingly.
      */
     private void checkWaitlistStatus() {
         if (event == null || deviceId == null) {
@@ -147,28 +147,47 @@ public class EventDetailsActivity extends AppCompatActivity {
         eventDB.isEntrantOnWaitlist(event.getId(), deviceId, new EventDB.Callback<Boolean>() {
             @Override
             public void onSuccess(Boolean isOnWaitlist) {
-                runOnUiThread(() -> updateButtonVisibility(isOnWaitlist));
+                if (isOnWaitlist) {
+                    runOnUiThread(() -> {
+                        joinBtn.setVisibility(View.GONE);
+                        leaveBtn.setVisibility(View.VISIBLE);
+                    });
+                } else {
+                    eventDB.canJoinWaitlist(event.getId(), deviceId, new EventDB.Callback<Boolean>() {
+                        @Override
+                        public void onSuccess(Boolean canJoin) {
+                            runOnUiThread(() -> {
+                                if (canJoin) {
+                                    joinBtn.setVisibility(View.VISIBLE);
+                                    leaveBtn.setVisibility(View.GONE);
+                                } else {
+                                    joinBtn.setVisibility(View.GONE);
+                                    leaveBtn.setVisibility(View.GONE);
+                                }
+                            });
+                        }
+
+                        @Override
+                        public void onError(@NonNull Exception e) {
+                            Log.e("EventDetailsActivity", "Failed to check if can join", e);
+                            runOnUiThread(() -> {
+                                joinBtn.setVisibility(View.VISIBLE);
+                                leaveBtn.setVisibility(View.GONE);
+                            });
+                        }
+                    });
+                }
             }
 
             @Override
             public void onError(@NonNull Exception e) {
                 Log.e("EventDetailsActivity", "Failed to check waitlist status", e);
-                runOnUiThread(() -> updateButtonVisibility(false));
+                runOnUiThread(() -> {
+                    joinBtn.setVisibility(View.VISIBLE);
+                    leaveBtn.setVisibility(View.GONE);
+                });
             }
         });
-    }
-
-    /**
-     * Updates button visibility based on waitlist status.
-     */
-    private void updateButtonVisibility(boolean isOnWaitlist) {
-        if (isOnWaitlist) {
-            joinBtn.setVisibility(View.GONE);
-            leaveBtn.setVisibility(View.VISIBLE);
-        } else {
-            joinBtn.setVisibility(View.VISIBLE);
-            leaveBtn.setVisibility(View.GONE);
-        }
     }
 
     /**
