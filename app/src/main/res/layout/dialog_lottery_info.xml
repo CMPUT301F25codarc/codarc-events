@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="24dp"
+    android:scrollbars="vertical"
+    android:background="@android:color/transparent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center_horizontal">
+
+        <!-- Decorative Header -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🎲 Fair and Random Selection"
+            android:textColor="@color/primary_purple"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:paddingBottom="12dp" />
+
+        <!-- Divider line -->
+        <View
+            android:layout_width="60dp"
+            android:layout_height="2dp"
+            android:background="@color/primary_purple"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Main Info Text -->
+        <TextView
+            android:id="@+id/tv_lottery_info_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:lineSpacingExtra="6dp"
+            android:textSize="15sp"
+            android:textColor="@color/black"
+            android:textAlignment="viewStart"
+            android:text="
+Selection is performed through a random lottery to ensure fairness and equal opportunity.
+
+All entrants in the waiting list have an equal chance of being selected once registration closes.
+
+The selection does not depend on when you joined or on any personal details.
+
+Every participant is treated equally, making the lottery process transparent and unbiased." />
+
+        <!-- Subtle Footer Note -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="\nFor transparency, organizers cannot influence the lottery results."
+            android:textColor="@color/primary_purple"
+            android:textSize="13sp"
+            android:gravity="center"
+            android:lineSpacingExtra="4dp"
+            android:paddingTop="12dp" />
+
+    </LinearLayout>
+</ScrollView>
