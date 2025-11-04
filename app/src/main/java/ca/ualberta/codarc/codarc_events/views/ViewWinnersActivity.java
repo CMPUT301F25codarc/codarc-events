@@ -2,7 +2,7 @@ package ca.ualberta.codarc.codarc_events.views;
 
 import android.os.Bundle;
 import android.util.Log;
-import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -27,7 +27,7 @@ import ca.ualberta.codarc.codarc_events.models.Event;
 import ca.ualberta.codarc.codarc_events.utils.Identity;
 
 /**
- * Displays list of winners for an event.
+ * Displays list of winners for an event and allows organizer to notify them.
  */
 public class ViewWinnersActivity extends AppCompatActivity {
 
@@ -38,6 +38,8 @@ public class ViewWinnersActivity extends AppCompatActivity {
     private EntrantDB entrantDB;
     private String eventId;
     private List<WinnersAdapter.WinnerItem> itemList;
+    private Button notifyButton;
+    private boolean isNotifying;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,10 +59,16 @@ public class ViewWinnersActivity extends AppCompatActivity {
 
         recyclerView = findViewById(R.id.rv_entrants);
         emptyState = findViewById(R.id.tv_empty_state);
+        notifyButton = findViewById(R.id.btn_notify_winners);
 
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         adapter = new WinnersAdapter(itemList);
         recyclerView.setAdapter(adapter);
+
+        if (notifyButton != null) {
+            notifyButton.setOnClickListener(v -> notifyWinners());
+        }
+        updateNotifyButtonState();
 
         verifyOrganizerAccess();
         loadWinners();
@@ -68,7 +76,7 @@ public class ViewWinnersActivity extends AppCompatActivity {
 
     private void verifyOrganizerAccess() {
         String deviceId = Identity.getOrCreateDeviceId(this);
-        
+
         eventDB.getEvent(eventId, new EventDB.Callback<Event>() {
             @Override
             public void onSuccess(Event event) {
@@ -98,7 +106,6 @@ public class ViewWinnersActivity extends AppCompatActivity {
                     showEmptyState();
                     return;
                 }
-
                 fetchEntrantNames(entries);
             }
 
@@ -124,23 +131,15 @@ public class ViewWinnersActivity extends AppCompatActivity {
             String deviceId = (String) entry.get("deviceId");
             Object invitedAtObj = entry.get("invitedAt");
             Object isEnrolledObj = entry.get("is_enrolled");
-            final Boolean isEnrolled;
-            if (isEnrolledObj instanceof Boolean) {
-                isEnrolled = (Boolean) isEnrolledObj;
-            } else {
-                isEnrolled = null;
-            }
+            final Boolean isEnrolled = (isEnrolledObj instanceof Boolean) ? (Boolean) isEnrolledObj : null;
 
             entrantDB.getProfile(deviceId, new EntrantDB.Callback<Entrant>() {
                 @Override
                 public void onSuccess(Entrant entrant) {
-                    String name = deviceId;
-                    if (entrant != null && entrant.getName() != null && !entrant.getName().isEmpty()) {
-                        name = entrant.getName();
-                    }
+                    String name = (entrant != null && entrant.getName() != null && !entrant.getName().isEmpty())
+                            ? entrant.getName() : deviceId;
                     long timestamp = parseTimestamp(invitedAtObj);
                     itemList.add(new WinnersAdapter.WinnerItem(deviceId, name, timestamp, isEnrolled));
-
                     checkAndUpdateUI(completed, totalEntries);
                 }
 
@@ -148,7 +147,6 @@ public class ViewWinnersActivity extends AppCompatActivity {
                 public void onError(@NonNull Exception e) {
                     long timestamp = parseTimestamp(invitedAtObj);
                     itemList.add(new WinnersAdapter.WinnerItem(deviceId, deviceId, timestamp, isEnrolled));
-
                     checkAndUpdateUI(completed, totalEntries);
                 }
             });
@@ -168,32 +166,83 @@ public class ViewWinnersActivity extends AppCompatActivity {
             Log.w("ViewWinnersActivity", "Timestamp is null, using 0");
             return 0L;
         }
-
         if (timestampObj instanceof Timestamp) {
-            Timestamp ts = (Timestamp) timestampObj;
-            return ts.toDate().getTime();
+            return ((Timestamp) timestampObj).toDate().getTime();
         }
-
         if (timestampObj instanceof Long) {
             return (Long) timestampObj;
         }
-
         if (timestampObj instanceof Date) {
             return ((Date) timestampObj).getTime();
         }
-
         Log.w("ViewWinnersActivity", "Unknown timestamp type: " + timestampObj.getClass().getName());
         return 0L;
     }
 
     private void showEmptyState() {
-        recyclerView.setVisibility(View.GONE);
-        emptyState.setVisibility(View.VISIBLE);
+        recyclerView.setVisibility(android.view.View.GONE);
+        emptyState.setVisibility(android.view.View.VISIBLE);
+        updateNotifyButtonState();
     }
 
     private void hideEmptyState() {
-        recyclerView.setVisibility(View.VISIBLE);
-        emptyState.setVisibility(View.GONE);
+        recyclerView.setVisibility(android.view.View.VISIBLE);
+        emptyState.setVisibility(android.view.View.GONE);
+        updateNotifyButtonState();
+    }
+
+    private void notifyWinners() {
+        if (itemList == null || itemList.isEmpty()) {
+            Toast.makeText(this, R.string.notification_none_available, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        isNotifying = true;
+        updateNotifyButtonState();
+
+        final int total = itemList.size();
+        final int[] completed = {0};
+        final int[] failed = {0};
+        String message = getString(R.string.notification_message_winner);
+
+        for (WinnersAdapter.WinnerItem item : itemList) {
+            entrantDB.addNotification(item.getDeviceId(), eventId, message, "winner", new EntrantDB.Callback<Void>() {
+                @Override
+                public void onSuccess(Void value) {
+                    handleNotificationCompletion(completed, failed, total, R.string.notification_sent_winners);
+                }
+
+                @Override
+                public void onError(@NonNull Exception e) {
+                    failed[0]++;
+                    handleNotificationCompletion(completed, failed, total, R.string.notification_sent_winners);
+                }
+            });
+        }
+    }
+
+    private void handleNotificationCompletion(int[] completed, int[] failed, int total, int successMessageRes) {
+        completed[0]++;
+        if (completed[0] == total) {
+            runOnUiThread(() -> {
+                isNotifying = false;
+                updateNotifyButtonState();
+                if (failed[0] == 0) {
+                    Toast.makeText(ViewWinnersActivity.this, successMessageRes, Toast.LENGTH_SHORT).show();
+                } else if (failed[0] == total) {
+                    Toast.makeText(ViewWinnersActivity.this, R.string.notification_all_failed, Toast.LENGTH_SHORT).show();
+                } else {
+                    String message = getString(R.string.notification_partial_failure, failed[0]);
+                    Toast.makeText(ViewWinnersActivity.this, message, Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+    }
+
+    private void updateNotifyButtonState() {
+        if (notifyButton == null) return;
+        boolean hasEntries = itemList != null && !itemList.isEmpty();
+        notifyButton.setEnabled(hasEntries && !isNotifying);
     }
 }
 

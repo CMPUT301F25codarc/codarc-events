@@ -143,10 +143,10 @@ public class EventDB {
                     }
                     Boolean isWinner = snapshot.getBoolean("is_winner");
                     Boolean isEnrolled = snapshot.getBoolean("is_enrolled");
-                    
+
                     boolean onWaitlist = (isWinner == null || !isWinner) && isEnrolled == null;
                     boolean winnerDeclined = Boolean.TRUE.equals(isWinner) && Boolean.FALSE.equals(isEnrolled);
-                    
+
                     cb.onSuccess(!onWaitlist && winnerDeclined);
                 })
                 .addOnFailureListener(cb::onError);
@@ -233,7 +233,7 @@ public class EventDB {
                             Boolean isWinner = doc.getBoolean("is_winner");
                             Boolean isEnrolled = doc.getBoolean("is_enrolled");
                             boolean onWaitlist = (isWinner == null || !isWinner) && isEnrolled == null;
-                            
+
                             if (onWaitlist) {
                                 Map<String, Object> entry = new HashMap<>();
                                 entry.put("deviceId", doc.getId());
@@ -306,7 +306,7 @@ public class EventDB {
                         cb.onError(new IllegalStateException("Entrant already a winner"));
                         return;
                     }
-                    
+
                     db.collection("events").document(eventId)
                             .collection("entrants").document(entrantId)
                             .update("is_winner", true, "invitedAt", System.currentTimeMillis())

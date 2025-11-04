@@ -19,6 +19,13 @@
         android:layout_height="0dp"
         android:layout_weight="1" />
 
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_notify_cancelled"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="@string/notify_cancelled_button" />
+
     <TextView
         android:id="@+id/tv_empty_state"
         android:layout_width="match_parent"
@@ -30,4 +37,3 @@
         android:layout_marginTop="32dp" />
 
 </LinearLayout>
-
