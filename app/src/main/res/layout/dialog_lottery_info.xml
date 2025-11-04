@@ -40,13 +40,13 @@
             android:textColor="@color/black"
             android:textAlignment="viewStart"
             android:text="
-Selection is performed through a **random lottery** to ensure fairness and equal opportunity.
+Selection is performed through a random lottery to ensure fairness and equal opportunity.
 
-All entrants in the waiting list have **an equal chance** of being selected once registration closes.
+All entrants in the waiting list have an equal chance of being selected once registration closes.
 
-⏱️ The selection does *not* depend on when you joined or on any personal details.
+The selection does not depend on when you joined or on any personal details.
 
-✨ Every participant is treated equally, making the lottery process transparent and unbiased." />
+Every participant is treated equally, making the lottery process transparent and unbiased." />
 
         <!-- Subtle Footer Note -->
         <TextView
