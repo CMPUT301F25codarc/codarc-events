@@ -2,7 +2,6 @@ package ca.ualberta.codarc.codarc_events.data;
 
 import androidx.annotation.NonNull;
 
-import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
@@ -10,6 +9,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.SetOptions;
 import com.google.firebase.firestore.WriteBatch;
+import com.google.firebase.Timestamp;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -50,7 +50,10 @@ public class EventDB {
                 .addOnFailureListener(cb::onError);
     }
 
-    /** Streams all events in the `events` collection. */
+    /**
+     * Streams all events in the `events` collection.
+     * The callback is invoked whenever data changes.
+     */
     public void getAllEvents(Callback<List<Event>> cb) {
         db.collection("events").addSnapshotListener((snapshots, e) -> {
             if (e != null) {
@@ -72,7 +75,9 @@ public class EventDB {
         });
     }
 
-    /** Fetches a single event by its ID. */
+    /**
+     * Fetches a single event by its ID.
+     */
     public void getEvent(String eventId, Callback<Event> cb) {
         if (eventId == null || eventId.isEmpty()) {
             cb.onError(new IllegalArgumentException("eventId is empty"));
@@ -95,7 +100,10 @@ public class EventDB {
                 .addOnFailureListener(cb::onError);
     }
 
-    /** Checks if an entrant is currently on the waitlist. */
+    /**
+     * Checks if an entrant is currently on the waitlist for an event.
+     * Returns true if entrant exists with is_winner=false and is_enrolled=null.
+     */
     public void isEntrantOnWaitlist(String eventId, String deviceId, Callback<Boolean> cb) {
         if (eventId == null || eventId.isEmpty() || deviceId == null || deviceId.isEmpty()) {
             cb.onError(new IllegalArgumentException("eventId or deviceId is empty"));
@@ -117,7 +125,9 @@ public class EventDB {
                 .addOnFailureListener(cb::onError);
     }
 
-    /** Checks if an entrant can join the waitlist. */
+    /**
+     * Checks if an entrant can join the waitlist.
+     */
     public void canJoinWaitlist(String eventId, String deviceId, Callback<Boolean> cb) {
         if (eventId == null || eventId.isEmpty() || deviceId == null || deviceId.isEmpty()) {
             cb.onError(new IllegalArgumentException("eventId or deviceId is empty"));
@@ -133,17 +143,17 @@ public class EventDB {
                     }
                     Boolean isWinner = snapshot.getBoolean("is_winner");
                     Boolean isEnrolled = snapshot.getBoolean("is_enrolled");
-
+                    
                     boolean onWaitlist = (isWinner == null || !isWinner) && isEnrolled == null;
                     boolean winnerDeclined = Boolean.TRUE.equals(isWinner) && Boolean.FALSE.equals(isEnrolled);
-
+                    
                     cb.onSuccess(!onWaitlist && winnerDeclined);
                 })
                 .addOnFailureListener(cb::onError);
     }
 
     /**
-     * Counts the number of entrants on waitlist.
+     * Counts the number of entrants on waitlist (is_winner=false or null, is_enrolled=null).
      * Uses a one-time fetch, suitable for RecyclerView adapters.
      *
      * @param eventId the event ID
@@ -203,8 +213,11 @@ public class EventDB {
                 });
     }
 
-
-    /** Adds or updates an entrant document in the event's entrants subcollection. */
+    /**
+     * Adds or updates an entrant document in the event's entrants subcollection.
+     * Sets is_winner=false, is_enrolled=null and records request_time timestamp.
+     * Idempotent: if already on waitlist, no error.
+     */
     public void joinWaitlist(String eventId, String deviceId, Callback<Void> cb) {
         if (eventId == null || eventId.isEmpty() || deviceId == null || deviceId.isEmpty()) {
             cb.onError(new IllegalArgumentException("eventId or deviceId is empty"));
@@ -222,7 +235,10 @@ public class EventDB {
                 .addOnFailureListener(cb::onError);
     }
 
-    /** Removes an entrant from the waitlist. */
+    /**
+     * Removes an entrant from the waitlist by deleting their document.
+     * If document doesn't exist, still succeeds (idempotent).
+     */
     public void leaveWaitlist(String eventId, String deviceId, Callback<Void> cb) {
         if (eventId == null || eventId.isEmpty() || deviceId == null || deviceId.isEmpty()) {
             cb.onError(new IllegalArgumentException("eventId or deviceId is empty"));
@@ -235,7 +251,13 @@ public class EventDB {
                 .addOnFailureListener(cb::onError);
     }
 
-    /** Fetches all entrants on the waitlist. */
+    /**
+     * Fetches all entrants on the waitlist for an event.
+     * Returns entrants with is_winner=false (or null) and is_enrolled=null.
+     *
+     * @param eventId the event ID to get waitlist for
+     * @param cb callback with list of maps: {deviceId: String, requestTime: Object}
+     */
     public void getWaitlist(String eventId, Callback<List<Map<String, Object>>> cb) {
         if (eventId == null || eventId.isEmpty()) {
             cb.onError(new IllegalArgumentException("eventId is empty"));
@@ -251,7 +273,7 @@ public class EventDB {
                             Boolean isWinner = doc.getBoolean("is_winner");
                             Boolean isEnrolled = doc.getBoolean("is_enrolled");
                             boolean onWaitlist = (isWinner == null || !isWinner) && isEnrolled == null;
-
+                            
                             if (onWaitlist) {
                                 Map<String, Object> entry = new HashMap<>();
                                 entry.put("deviceId", doc.getId());
@@ -265,7 +287,9 @@ public class EventDB {
                 .addOnFailureListener(cb::onError);
     }
 
-    /** Sets is_winner=true for selected entrants. */
+    /**
+     * Sets is_winner=true for selected entrants.
+     */
     public void markWinners(String eventId, List<String> entrantIds, Callback<Void> cb) {
         if (eventId == null || eventId.isEmpty()) {
             cb.onError(new IllegalArgumentException("eventId is empty"));
@@ -295,7 +319,9 @@ public class EventDB {
                 .addOnFailureListener(cb::onError);
     }
 
-    /** Sets is_winner=true for a replacement entrant. */
+    /**
+     * Sets is_winner=true for a replacement entrant.
+     */
     public void markReplacement(String eventId, String entrantId, Callback<Void> cb) {
         if (eventId == null || eventId.isEmpty()) {
             cb.onError(new IllegalArgumentException("eventId is empty"));
@@ -319,7 +345,7 @@ public class EventDB {
                         cb.onError(new IllegalStateException("Entrant already a winner"));
                         return;
                     }
-
+                    
                     db.collection("events").document(eventId)
                             .collection("entrants").document(entrantId)
                             .update("is_winner", true, "invitedAt", System.currentTimeMillis())
@@ -329,7 +355,9 @@ public class EventDB {
                 .addOnFailureListener(cb::onError);
     }
 
-    /** Sets is_enrolled status for an entrant. */
+    /**
+     * Sets is_enrolled status for an entrant.
+     */
     public void setEnrolledStatus(String eventId, String deviceId, Boolean enrolled, Callback<Void> cb) {
         if (eventId == null || eventId.isEmpty() || deviceId == null || deviceId.isEmpty()) {
             cb.onError(new IllegalArgumentException("eventId or deviceId is empty"));
@@ -343,7 +371,9 @@ public class EventDB {
                 .addOnFailureListener(cb::onError);
     }
 
-    /** Retrieves entrants with is_winner=true. */
+    /**
+     * Retrieves entrants with is_winner=true.
+     */
     public void getWinners(String eventId, Callback<List<Map<String, Object>>> cb) {
         if (eventId == null || eventId.isEmpty()) {
             cb.onError(new IllegalArgumentException("eventId is empty"));
@@ -370,7 +400,9 @@ public class EventDB {
                 .addOnFailureListener(cb::onError);
     }
 
-    /** Retrieves entrants with is_enrolled=false. */
+    /**
+     * Retrieves entrants with is_enrolled=false.
+     */
     public void getCancelled(String eventId, Callback<List<Map<String, Object>>> cb) {
         if (eventId == null || eventId.isEmpty()) {
             cb.onError(new IllegalArgumentException("eventId is empty"));
@@ -396,7 +428,9 @@ public class EventDB {
                 .addOnFailureListener(cb::onError);
     }
 
-    /** Retrieves entrants with is_enrolled=true. */
+    /**
+     * Retrieves entrants with is_enrolled=true.
+     */
     public void getEnrolled(String eventId, Callback<List<Map<String, Object>>> cb) {
         if (eventId == null || eventId.isEmpty()) {
             cb.onError(new IllegalArgumentException("eventId is empty"));
@@ -422,7 +456,13 @@ public class EventDB {
                 .addOnFailureListener(cb::onError);
     }
 
-    /** Parses Event from a Firestore DocumentSnapshot. */
+    /**
+     * Parses an Event from a Firestore DocumentSnapshot.
+     * Handles conversion of Timestamp objects to String format.
+     *
+     * @param doc the document snapshot
+     * @return Event or null if parsing fails
+     */
     private Event parseEventFromDocument(DocumentSnapshot doc) {
         try {
             Event event = new Event();
@@ -447,21 +487,32 @@ public class EventDB {
         }
     }
 
-    /** Converts a Firestore Timestamp to ISO string. */
+    /**
+     * Converts a Firestore Timestamp to ISO format string.
+     * If the value is already a String, returns it as-is.
+     * If it's a Timestamp, converts to ISO format.
+     * If null, returns null.
+     */
     private String convertTimestampToString(Object value) {
-        if (value == null) return null;
-        if (value instanceof String) return (String) value;
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof String) {
+            return (String) value;
+        }
         if (value instanceof Timestamp) {
             Timestamp timestamp = (Timestamp) value;
             Date date = timestamp.toDate();
             SimpleDateFormat isoFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US);
             return isoFormat.format(date);
         }
+        // Try to handle Date objects too
         if (value instanceof Date) {
             Date date = (Date) value;
             SimpleDateFormat isoFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US);
             return isoFormat.format(date);
         }
+        // Fallback: convert to string
         return value.toString();
     }
 }
