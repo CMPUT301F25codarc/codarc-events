@@ -14,11 +14,44 @@
         android:layout_marginBottom="24dp" />
 
     <com.google.android.material.button.MaterialButton
-        android:id="@+id/btn_manage_entrants"
+        android:id="@+id/btn_manage_waitlist"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Manage Entrants"
+        android:text="Manage Waitlist"
         android:textSize="16sp"
         android:layout_marginBottom="16dp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_run_lottery"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Run Lottery Draw"
+        android:textSize="16sp"
+        android:backgroundTint="@color/primary_purple"
+        android:textColor="@android:color/white"
+        android:layout_marginBottom="16dp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_view_winners"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="View Winners"
+        android:textSize="16sp"
+        android:layout_marginBottom="16dp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_view_cancelled"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="View Cancelled"
+        android:textSize="16sp"
+        android:layout_marginBottom="16dp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_view_enrolled"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="View Enrolled"
+        android:textSize="16sp" />
 
 </LinearLayout>

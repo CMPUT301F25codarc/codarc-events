@@ -11,8 +11,9 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.firebase.Timestamp;
+
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -22,13 +23,13 @@ import ca.ualberta.codarc.codarc_events.adapters.WaitlistAdapter;
 import ca.ualberta.codarc.codarc_events.data.EntrantDB;
 import ca.ualberta.codarc.codarc_events.data.EventDB;
 import ca.ualberta.codarc.codarc_events.models.Entrant;
-import com.google.firebase.Timestamp;
+import ca.ualberta.codarc.codarc_events.models.Event;
+import ca.ualberta.codarc.codarc_events.utils.Identity;
 
 /**
- * Displays list of entrants on the waitlist for an event.
- * Shows entrant names and request timestamps.
+ * Displays list of enrolled entrants for an event.
  */
-public class ManageEntrantsActivity extends AppCompatActivity {
+public class ViewEnrolledActivity extends AppCompatActivity {
 
     private RecyclerView recyclerView;
     private WaitlistAdapter adapter;
@@ -41,7 +42,7 @@ public class ManageEntrantsActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_manage_entrants);
+        setContentView(R.layout.activity_view_enrolled);
 
         eventId = getIntent().getStringExtra("eventId");
         if (eventId == null || eventId.isEmpty()) {
@@ -61,11 +62,36 @@ public class ManageEntrantsActivity extends AppCompatActivity {
         adapter = new WaitlistAdapter(itemList);
         recyclerView.setAdapter(adapter);
 
-        loadWaitlist();
+        verifyOrganizerAccess();
+        loadEnrolled();
     }
 
-    private void loadWaitlist() {
-        eventDB.getWaitlist(eventId, new EventDB.Callback<List<Map<String, Object>>>() {
+    private void verifyOrganizerAccess() {
+        String deviceId = Identity.getOrCreateDeviceId(this);
+        
+        eventDB.getEvent(eventId, new EventDB.Callback<Event>() {
+            @Override
+            public void onSuccess(Event event) {
+                if (event == null || event.getOrganizerId() == null || !event.getOrganizerId().equals(deviceId)) {
+                    runOnUiThread(() -> {
+                        Toast.makeText(ViewEnrolledActivity.this, "Only event organizer can access this", Toast.LENGTH_SHORT).show();
+                        finish();
+                    });
+                }
+            }
+
+            @Override
+            public void onError(@NonNull Exception e) {
+                runOnUiThread(() -> {
+                    Toast.makeText(ViewEnrolledActivity.this, "Failed to verify access", Toast.LENGTH_SHORT).show();
+                    finish();
+                });
+            }
+        });
+    }
+
+    private void loadEnrolled() {
+        eventDB.getEnrolled(eventId, new EventDB.Callback<List<Map<String, Object>>>() {
             @Override
             public void onSuccess(List<Map<String, Object>> entries) {
                 if (entries == null || entries.isEmpty()) {
@@ -78,8 +104,8 @@ public class ManageEntrantsActivity extends AppCompatActivity {
 
             @Override
             public void onError(@NonNull Exception e) {
-                Log.e("ManageEntrantsActivity", "Failed to load waitlist", e);
-                Toast.makeText(ManageEntrantsActivity.this, "Failed to load entrants", Toast.LENGTH_SHORT).show();
+                Log.e("ViewEnrolledActivity", "Failed to load enrolled entrants", e);
+                Toast.makeText(ViewEnrolledActivity.this, "Failed to load enrolled entrants", Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -96,7 +122,7 @@ public class ManageEntrantsActivity extends AppCompatActivity {
 
         for (Map<String, Object> entry : entries) {
             String deviceId = (String) entry.get("deviceId");
-            Object requestTimeObj = entry.get("requestTime");
+            Object invitedAtObj = entry.get("invitedAt");
 
             entrantDB.getProfile(deviceId, new EntrantDB.Callback<Entrant>() {
                 @Override
@@ -105,18 +131,17 @@ public class ManageEntrantsActivity extends AppCompatActivity {
                     if (entrant != null && entrant.getName() != null && !entrant.getName().isEmpty()) {
                         name = entrant.getName();
                     }
-                    long timestamp = parseTimestamp(requestTimeObj);
+                    long timestamp = parseTimestamp(invitedAtObj);
                     itemList.add(new WaitlistAdapter.WaitlistItem(deviceId, name, timestamp));
-                    
+
                     checkAndUpdateUI(completed, totalEntries);
                 }
 
                 @Override
                 public void onError(@NonNull Exception e) {
-                    // use deviceId if can't get name
-                    long timestamp = parseTimestamp(requestTimeObj);
+                    long timestamp = parseTimestamp(invitedAtObj);
                     itemList.add(new WaitlistAdapter.WaitlistItem(deviceId, deviceId, timestamp));
-                    
+
                     checkAndUpdateUI(completed, totalEntries);
                 }
             });
@@ -126,37 +151,32 @@ public class ManageEntrantsActivity extends AppCompatActivity {
     private void checkAndUpdateUI(int[] completed, int totalEntries) {
         completed[0]++;
         if (completed[0] == totalEntries) {
-            sortByTime();
             adapter.notifyDataSetChanged();
             hideEmptyState();
         }
     }
 
-    private long parseTimestamp(Object requestTimeObj) {
-        if (requestTimeObj == null) {
-            Log.w("ManageEntrantsActivity", "Request time is null, using 0");
+    private long parseTimestamp(Object timestampObj) {
+        if (timestampObj == null) {
+            Log.w("ViewEnrolledActivity", "Timestamp is null, using 0");
             return 0L;
         }
 
-        if (requestTimeObj instanceof Timestamp) {
-            Timestamp ts = (Timestamp) requestTimeObj;
+        if (timestampObj instanceof Timestamp) {
+            Timestamp ts = (Timestamp) timestampObj;
             return ts.toDate().getTime();
         }
 
-        if (requestTimeObj instanceof Long) {
-            return (Long) requestTimeObj;
+        if (timestampObj instanceof Long) {
+            return (Long) timestampObj;
         }
 
-        if (requestTimeObj instanceof Date) {
-            return ((Date) requestTimeObj).getTime();
+        if (timestampObj instanceof Date) {
+            return ((Date) timestampObj).getTime();
         }
 
-        Log.w("ManageEntrantsActivity", "Unknown timestamp type: " + requestTimeObj.getClass().getName());
+        Log.w("ViewEnrolledActivity", "Unknown timestamp type: " + timestampObj.getClass().getName());
         return 0L;
-    }
-
-    private void sortByTime() {
-        Collections.sort(itemList, (a, b) -> Long.compare(a.getRequestTime(), b.getRequestTime()));
     }
 
     private void showEmptyState() {
@@ -169,3 +189,4 @@ public class ManageEntrantsActivity extends AppCompatActivity {
         emptyState.setVisibility(View.GONE);
     }
 }
+

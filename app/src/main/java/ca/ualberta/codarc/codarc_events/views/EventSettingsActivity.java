@@ -38,9 +38,38 @@ public class EventSettingsActivity extends AppCompatActivity {
             return;
         }
 
-        MaterialButton manageBtn = findViewById(R.id.btn_manage_entrants);
-        manageBtn.setOnClickListener(v -> {
-            Intent intent = new Intent(this, ManageEntrantsActivity.class);
+        MaterialButton manageWaitlistBtn = findViewById(R.id.btn_manage_waitlist);
+        manageWaitlistBtn.setOnClickListener(v -> {
+            Intent intent = new Intent(this, ManageWaitlistActivity.class);
+            intent.putExtra("eventId", event.getId());
+            startActivity(intent);
+        });
+
+        MaterialButton runLotteryBtn = findViewById(R.id.btn_run_lottery);
+        runLotteryBtn.setOnClickListener(v -> {
+            Intent intent = new Intent(this, DrawActivity.class);
+            intent.putExtra("eventId", event.getId());
+            intent.putExtra("eventName", event.getName());
+            startActivity(intent);
+        });
+
+        MaterialButton viewWinnersBtn = findViewById(R.id.btn_view_winners);
+        viewWinnersBtn.setOnClickListener(v -> {
+            Intent intent = new Intent(this, ViewWinnersActivity.class);
+            intent.putExtra("eventId", event.getId());
+            startActivity(intent);
+        });
+
+        MaterialButton viewCancelledBtn = findViewById(R.id.btn_view_cancelled);
+        viewCancelledBtn.setOnClickListener(v -> {
+            Intent intent = new Intent(this, ViewCancelledActivity.class);
+            intent.putExtra("eventId", event.getId());
+            startActivity(intent);
+        });
+
+        MaterialButton viewEnrolledBtn = findViewById(R.id.btn_view_enrolled);
+        viewEnrolledBtn.setOnClickListener(v -> {
+            Intent intent = new Intent(this, ViewEnrolledActivity.class);
             intent.putExtra("eventId", event.getId());
             startActivity(intent);
         });
