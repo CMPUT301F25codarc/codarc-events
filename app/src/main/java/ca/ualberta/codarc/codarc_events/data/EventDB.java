@@ -154,6 +154,10 @@ public class EventDB {
 
     /**
      * Counts the number of entrants on waitlist (is_winner=false or null, is_enrolled=null).
+     * Uses a one-time fetch, suitable for RecyclerView adapters.
+     *
+     * @param eventId the event ID
+     * @param cb callback with the count
      */
     public void getWaitlistCount(String eventId, Callback<Integer> cb) {
         if (eventId == null || eventId.isEmpty()) {
@@ -171,6 +175,42 @@ public class EventDB {
                 cb.onError(e);
             }
         });
+    }
+
+    /**
+     * Fetches waitlist count using a real-time listener.
+     * WARNING: This method creates a snapshot listener that must be manually removed
+     * to prevent memory leaks. Use getWaitlistCount() for one-time fetches in adapters.
+     *
+     * @param eventId the event ID
+     * @param cb callback with the count
+     */
+    public void fetchAccurateWaitlistCount(String eventId, Callback<Integer> cb) {
+        if (eventId == null || eventId.isEmpty()) {
+            cb.onError(new IllegalArgumentException("eventId is empty"));
+            return;
+        }
+
+        db.collection("events").document(eventId)
+                .collection("entrants")
+                .addSnapshotListener((querySnapshot, e) -> {
+                    if (e != null) {
+                        cb.onError(e);
+                        return;
+                    }
+
+                    int count = 0;
+                    if (querySnapshot != null) {
+                        for (QueryDocumentSnapshot doc : querySnapshot) {
+                            Boolean isWinner = doc.getBoolean("is_winner");
+                            Boolean isEnrolled = doc.getBoolean("is_enrolled");
+                            boolean onWaitlist = (isWinner == null || !isWinner) && isEnrolled == null;
+                            if (onWaitlist) count++;
+                        }
+                    }
+
+                    cb.onSuccess(count);
+                });
     }
 
     /**

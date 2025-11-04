@@ -58,7 +58,7 @@
     <string name="view_entrants_organizer">View Entrants</string>
     <string name="run_lottery">Run Lottery</string>
     <string name="notify">Notify</string>
-    <string name="registered_format">%d/%d registered</string>
+    <string name="registered_format">%1$d/%2$d registered</string>
     <string name="registration_closes_format">Registration closes %s</string>
     <string name="bottom_nav_dashboard">Dashboard</string>
     <string name="bottom_nav_entrants">Entrants</string>
@@ -131,4 +131,17 @@
     <string name="choose_poster_button">Choose Poster</string>
     <string name="cancel_button">Cancel</string>
     <string name="create_event_button">Create Event</string>
+    
+    <!-- Lottery Info Dialog Strings -->
+    <string name="lottery_info">Lottery Info</string>
+    <string name="lottery_info_title">Fair and Random Selection</string>
+    <string name="lottery_info_description">Selection is performed through a random lottery to ensure fairness and equal opportunity.
+
+All entrants in the waiting list have an equal chance of being selected once registration closes.
+
+The selection does not depend on when you joined or on any personal details.
+
+Every participant is treated equally, making the lottery process transparent and unbiased.</string>
+    <string name="lottery_info_footer">\nFor transparency, organizers cannot influence the lottery results.</string>
+    <string name="got_it">Got it</string>
 </resources>
