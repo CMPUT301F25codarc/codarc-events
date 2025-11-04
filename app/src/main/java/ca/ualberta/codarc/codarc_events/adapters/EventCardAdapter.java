@@ -63,7 +63,7 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.View
         holder.date.setText(e.getEventDateTime() != null ? e.getEventDateTime() : "");
         holder.status.setText(e.isOpen() ? "Status: Open" : "Status: Closed");
 
-        // --- Waitlist count (accurate + prevents mismatched updates) ---
+        // Waitlist count
         holder.waitlistCount.setTag(eventId);
         holder.waitlistCount.setText("Waitlist: …");
 
@@ -85,7 +85,7 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.View
             }
         });
 
-        // --- Join Waitlist button logic (kept same as original) ---
+        // Join Waitlist
         holder.joinBtn.setOnClickListener(v -> {
             String deviceId = Identity.getOrCreateDeviceId(v.getContext());
             EntrantDB entrantDB = new EntrantDB();
@@ -108,7 +108,7 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.View
             });
         });
 
-        // --- Lottery Info popup (US 01.04.05 - custom XML) ---
+        // Lottery Info popup (US 01.04.05 - custom XML)
         holder.lotteryInfoBtn.setOnClickListener(v -> {
             View dialogView = LayoutInflater.from(context)
                     .inflate(R.layout.dialog_lottery_info, null);
@@ -119,7 +119,7 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.View
                     .show();
         });
 
-        // --- Card click → Event Details ---
+        // Event Details
         holder.itemView.setOnClickListener(v -> {
             Intent intent = new Intent(context, EventDetailsActivity.class);
             intent.putExtra("event", e);
@@ -143,7 +143,7 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.View
             status = itemView.findViewById(R.id.tv_entrants_info);
             waitlistCount = itemView.findViewById(R.id.tv_waitlist_count);
             joinBtn = itemView.findViewById(R.id.btn_join_list);
-            lotteryInfoBtn = itemView.findViewById(R.id.btn_lottery_info); // 🎯 New button
+            lotteryInfoBtn = itemView.findViewById(R.id.btn_lottery_info);
         }
     }
 }
