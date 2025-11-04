@@ -63,17 +63,6 @@
                 android:textColor="@color/entrant_event_card_location"
                 android:textSize="14sp" />
 
-            <!-- 🔹 Waitlist Count -->
-            <TextView
-                android:id="@+id/tv_waitlist_count"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:gravity="center"
-                android:text="Waitlist: ..."
-                android:textColor="@color/entrant_event_card_text"
-                android:textStyle="italic"
-                android:textSize="14sp" />
         </LinearLayout>
 
         <!-- Separator Line -->
@@ -89,7 +78,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             android:orientation="horizontal"
-            android:weightSum="4">
+            android:weightSum="3">
 
             <!-- View Entrants Button -->
             <LinearLayout
@@ -114,6 +103,7 @@
                     android:text="@string/view_entrants"
                     android:textColor="@color/entrant_action_button_purple"
                     android:textSize="12sp" />
+
             </LinearLayout>
 
             <!-- Join List Button -->
@@ -139,6 +129,7 @@
                     android:text="@string/join_list"
                     android:textColor="@color/entrant_action_button_purple"
                     android:textSize="12sp" />
+
             </LinearLayout>
 
             <!-- Leave List Button -->
@@ -164,32 +155,11 @@
                     android:text="@string/leave_list"
                     android:textColor="@color/entrant_action_button_purple"
                     android:textSize="12sp" />
+
             </LinearLayout>
 
-            <!-- 🎯 New: Lottery Info Button -->
-            <LinearLayout
-                android:id="@+id/btn_lottery_info"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:gravity="center"
-                android:orientation="horizontal"
-                android:padding="8dp">
-
-                <ImageView
-                    android:layout_width="16dp"
-                    android:layout_height="16dp"
-                    android:layout_marginEnd="4dp"
-                    android:src="@drawable/ic_info"
-                    android:tint="@color/entrant_action_button_purple" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Lottery Info"
-                    android:textColor="@color/entrant_action_button_purple"
-                    android:textSize="12sp" />
-            </LinearLayout>
         </LinearLayout>
+
     </LinearLayout>
+
 </androidx.cardview.widget.CardView>
