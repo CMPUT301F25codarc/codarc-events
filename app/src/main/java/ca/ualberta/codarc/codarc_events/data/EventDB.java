@@ -154,6 +154,10 @@ public class EventDB {
 
     /**
      * Counts the number of entrants on waitlist (is_winner=false or null, is_enrolled=null).
+     * Uses a one-time fetch, suitable for RecyclerView adapters.
+     *
+     * @param eventId the event ID
+     * @param cb callback with the count
      */
     public void getWaitlistCount(String eventId, Callback<Integer> cb) {
         if (eventId == null || eventId.isEmpty()) {
@@ -174,10 +178,39 @@ public class EventDB {
     }
 
     /**
-     * Adds or updates an entrant document in the event's entrants subcollection.
-     * Sets is_winner=false, is_enrolled=null and records request_time timestamp.
-     * Idempotent: if already on waitlist, no error.
+     * Real-time waitlist count using snapshot listener.
+     * Note: This creates a persistent listener that must be manually removed to prevent memory leaks.
+     * For RecyclerView adapters, use getWaitlistCount() instead.
      */
+    public void fetchAccurateWaitlistCount(String eventId, Callback<Integer> cb) {
+        if (eventId == null || eventId.isEmpty()) {
+            cb.onError(new IllegalArgumentException("eventId is empty"));
+            return;
+        }
+
+        db.collection("events").document(eventId)
+                .collection("entrants")
+                .addSnapshotListener((querySnapshot, e) -> {
+                    if (e != null) {
+                        cb.onError(e);
+                        return;
+                    }
+
+                    int count = 0;
+                    if (querySnapshot != null) {
+                        for (QueryDocumentSnapshot doc : querySnapshot) {
+                            Boolean isWinner = doc.getBoolean("is_winner");
+                            Boolean isEnrolled = doc.getBoolean("is_enrolled");
+                            boolean onWaitlist = (isWinner == null || !isWinner) && isEnrolled == null;
+                            if (onWaitlist) count++;
+                        }
+                    }
+
+                    cb.onSuccess(count);
+                });
+    }
+
+    /** Adds or updates an entrant document in the event's entrants subcollection. */
     public void joinWaitlist(String eventId, String deviceId, Callback<Void> cb) {
         if (eventId == null || eventId.isEmpty() || deviceId == null || deviceId.isEmpty()) {
             cb.onError(new IllegalArgumentException("eventId or deviceId is empty"));

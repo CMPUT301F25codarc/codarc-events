@@ -179,6 +179,16 @@ public class JoinWaitlistController {
     }
 
     /**
+     * Retrieves the total number of entrants currently on the waitlist for an event.
+     *
+     * @param eventId the ID of the event
+     * @param cb callback returning the count as Integer
+     */
+    public void getWaitlistCount(String eventId, EventDB.Callback<Integer> cb) {
+        eventDB.getWaitlistCount(eventId, cb);
+    }
+
+    /**
      * Callback interface for join waitlist operations.
      */
     public interface Callback {
