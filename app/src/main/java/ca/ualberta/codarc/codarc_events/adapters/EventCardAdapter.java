@@ -60,18 +60,18 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.View
 
         holder.title.setText(e.getName() != null ? e.getName() : "");
         holder.date.setText(e.getEventDateTime() != null ? e.getEventDateTime() : "");
-        holder.status.setText(e.isOpen() ? "Status: Open" : "Status: Closed");
+        holder.status.setText(e.isOpen() ? context.getString(R.string.status_open) : context.getString(R.string.status_closed));
 
         // Waitlist count - use one-time fetch to avoid memory leaks
         holder.waitlistCount.setTag(eventId);
-        holder.waitlistCount.setText("Waitlist: …");
+        holder.waitlistCount.setText(context.getString(R.string.waitlist_loading));
 
         joinWaitlistController.getWaitlistCount(eventId, new EventDB.Callback<Integer>() {
             @Override
             public void onSuccess(Integer count) {
                 Object tag = holder.waitlistCount.getTag();
                 if (tag != null && tag.equals(eventId)) {
-                    holder.waitlistCount.setText("Waitlist: " + count);
+                    holder.waitlistCount.setText(context.getString(R.string.waitlist_count, count));
                 }
             }
 
@@ -79,26 +79,27 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.View
             public void onError(@NonNull Exception ex) {
                 Object tag = holder.waitlistCount.getTag();
                 if (tag != null && tag.equals(eventId)) {
-                    holder.waitlistCount.setText("Waitlist: N/A");
+                    holder.waitlistCount.setText(context.getString(R.string.waitlist_unavailable));
                 }
             }
         });
 
-        // Join Waitlist - use controller for proper business logic
+        // Join Waitlist - use controller for proper validation and business logic
         holder.joinBtn.setOnClickListener(v -> {
+            int adapterPosition = holder.getAdapterPosition();
+            if (adapterPosition == RecyclerView.NO_POSITION) {
+                return;
+            }
             String deviceId = Identity.getOrCreateDeviceId(v.getContext());
-            Event event = events.get(position);
-            joinWaitlistController.joinWaitlist(event, deviceId, new JoinWaitlistController.Callback() {
-                @Override
-                public void onResult(JoinWaitlistController.JoinResult result) {
-                    if (result.needsProfileRegistration()) {
-                        Intent intent = new Intent(context, ProfileCreationActivity.class);
-                        context.startActivity(intent);
-                    } else if (result.isSuccess()) {
-                        Toast.makeText(context, result.getMessage(), Toast.LENGTH_SHORT).show();
-                    } else {
-                        Toast.makeText(context, result.getMessage(), Toast.LENGTH_SHORT).show();
-                    }
+            Event event = events.get(adapterPosition);
+            joinWaitlistController.joinWaitlist(event, deviceId, result -> {
+                if (result.needsProfileRegistration()) {
+                    Intent intent = new Intent(context, ProfileCreationActivity.class);
+                    context.startActivity(intent);
+                } else if (result.isSuccess()) {
+                    Toast.makeText(context, result.getMessage(), Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(context, result.getMessage(), Toast.LENGTH_SHORT).show();
                 }
             });
         });
@@ -127,7 +128,7 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.View
         return events.size();
     }
 
-    static class ViewHolder extends RecyclerView.ViewHolder {
+    public static class ViewHolder extends RecyclerView.ViewHolder {
         TextView title, date, status, waitlistCount;
         View joinBtn, lotteryInfoBtn;
 

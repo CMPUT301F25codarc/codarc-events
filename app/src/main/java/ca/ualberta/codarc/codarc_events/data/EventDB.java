@@ -178,12 +178,9 @@ public class EventDB {
     }
 
     /**
-     * Fetches waitlist count using a real-time listener.
-     * WARNING: This method creates a snapshot listener that must be manually removed
-     * to prevent memory leaks. Use getWaitlistCount() for one-time fetches in adapters.
-     *
-     * @param eventId the event ID
-     * @param cb callback with the count
+     * Real-time waitlist count using snapshot listener.
+     * Note: This creates a persistent listener that must be manually removed to prevent memory leaks.
+     * For RecyclerView adapters, use getWaitlistCount() instead.
      */
     public void fetchAccurateWaitlistCount(String eventId, Callback<Integer> cb) {
         if (eventId == null || eventId.isEmpty()) {
@@ -213,11 +210,7 @@ public class EventDB {
                 });
     }
 
-    /**
-     * Adds or updates an entrant document in the event's entrants subcollection.
-     * Sets is_winner=false, is_enrolled=null and records request_time timestamp.
-     * Idempotent: if already on waitlist, no error.
-     */
+    /** Adds or updates an entrant document in the event's entrants subcollection. */
     public void joinWaitlist(String eventId, String deviceId, Callback<Void> cb) {
         if (eventId == null || eventId.isEmpty() || deviceId == null || deviceId.isEmpty()) {
             cb.onError(new IllegalArgumentException("eventId or deviceId is empty"));
