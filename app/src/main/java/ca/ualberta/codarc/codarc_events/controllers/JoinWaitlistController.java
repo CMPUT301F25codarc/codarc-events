@@ -176,7 +176,6 @@ public class JoinWaitlistController {
                 callback.onResult(JoinResult.failure("Failed to check profile"));
             }
         });
-
     }
 
     /**

@@ -162,8 +162,9 @@ public class EventDB {
     }
 
     /**
-     *  Real-time accurate waitlist count (auto-updates when entrants change)
-     * Uses addSnapshotListener to continuously reflect changes on Firestore.
+     * Real-time waitlist count using snapshot listener.
+     * Note: This creates a persistent listener that must be manually removed to prevent memory leaks.
+     * For RecyclerView adapters, use getWaitlistCount() instead.
      */
     public void fetchAccurateWaitlistCount(String eventId, Callback<Integer> cb) {
         if (eventId == null || eventId.isEmpty()) {
@@ -192,7 +193,6 @@ public class EventDB {
                     cb.onSuccess(count);
                 });
     }
-
 
     /** Adds or updates an entrant document in the event's entrants subcollection. */
     public void joinWaitlist(String eventId, String deviceId, Callback<Void> cb) {

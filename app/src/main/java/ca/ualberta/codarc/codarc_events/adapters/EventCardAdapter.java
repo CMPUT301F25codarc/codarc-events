@@ -18,7 +18,6 @@ import ca.ualberta.codarc.codarc_events.R;
 import ca.ualberta.codarc.codarc_events.controllers.JoinWaitlistController;
 import ca.ualberta.codarc.codarc_events.data.EntrantDB;
 import ca.ualberta.codarc.codarc_events.data.EventDB;
-import ca.ualberta.codarc.codarc_events.models.Entrant;
 import ca.ualberta.codarc.codarc_events.models.Event;
 import ca.ualberta.codarc.codarc_events.utils.Identity;
 import ca.ualberta.codarc.codarc_events.views.EventDetailsActivity;
@@ -61,18 +60,18 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.View
 
         holder.title.setText(e.getName() != null ? e.getName() : "");
         holder.date.setText(e.getEventDateTime() != null ? e.getEventDateTime() : "");
-        holder.status.setText(e.isOpen() ? "Status: Open" : "Status: Closed");
+        holder.status.setText(e.isOpen() ? context.getString(R.string.status_open) : context.getString(R.string.status_closed));
 
-        // Waitlist count
+        // Waitlist count - use one-time fetch to avoid memory leaks
         holder.waitlistCount.setTag(eventId);
-        holder.waitlistCount.setText("Waitlist: …");
+        holder.waitlistCount.setText(context.getString(R.string.waitlist_loading));
 
-        new EventDB().fetchAccurateWaitlistCount(eventId, new EventDB.Callback<Integer>() {
+        joinWaitlistController.getWaitlistCount(eventId, new EventDB.Callback<Integer>() {
             @Override
             public void onSuccess(Integer count) {
                 Object tag = holder.waitlistCount.getTag();
                 if (tag != null && tag.equals(eventId)) {
-                    holder.waitlistCount.setText("Waitlist: " + count);
+                    holder.waitlistCount.setText(context.getString(R.string.waitlist_count, count));
                 }
             }
 
@@ -80,42 +79,39 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.View
             public void onError(@NonNull Exception ex) {
                 Object tag = holder.waitlistCount.getTag();
                 if (tag != null && tag.equals(eventId)) {
-                    holder.waitlistCount.setText("Waitlist: N/A");
+                    holder.waitlistCount.setText(context.getString(R.string.waitlist_unavailable));
                 }
             }
         });
 
-        // Join Waitlist
+        // Join Waitlist - use controller for proper validation and business logic
         holder.joinBtn.setOnClickListener(v -> {
+            int adapterPosition = holder.getAdapterPosition();
+            if (adapterPosition == RecyclerView.NO_POSITION) {
+                return;
+            }
             String deviceId = Identity.getOrCreateDeviceId(v.getContext());
-            EntrantDB entrantDB = new EntrantDB();
-            entrantDB.getProfile(deviceId, new EntrantDB.Callback<Entrant>() {
-                @Override
-                public void onSuccess(Entrant entrant) {
-                    boolean isRegistered = (entrant != null && entrant.getIsRegistered());
-                    if (!isRegistered) {
-                        Intent intent = new Intent(context, ProfileCreationActivity.class);
-                        context.startActivity(intent);
-                    } else {
-                        Toast.makeText(context, "Joined waitlist (placeholder)", Toast.LENGTH_SHORT).show();
-                    }
-                }
-
-                @Override
-                public void onError(@NonNull Exception e1) {
-                    Toast.makeText(context, "Failed to check profile", Toast.LENGTH_SHORT).show();
+            Event event = events.get(adapterPosition);
+            joinWaitlistController.joinWaitlist(event, deviceId, result -> {
+                if (result.needsProfileRegistration()) {
+                    Intent intent = new Intent(context, ProfileCreationActivity.class);
+                    context.startActivity(intent);
+                } else if (result.isSuccess()) {
+                    Toast.makeText(context, result.getMessage(), Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(context, result.getMessage(), Toast.LENGTH_SHORT).show();
                 }
             });
         });
 
-        // Lottery Info popup (US 01.04.05 - custom XML)
+        // Lottery Info popup
         holder.lotteryInfoBtn.setOnClickListener(v -> {
             View dialogView = LayoutInflater.from(context)
                     .inflate(R.layout.dialog_lottery_info, null);
 
             new AlertDialog.Builder(context)
                     .setView(dialogView)
-                    .setPositiveButton("Got it", (dialog, which) -> dialog.dismiss())
+                    .setPositiveButton(context.getString(R.string.got_it), (dialog, which) -> dialog.dismiss())
                     .show();
         });
 
@@ -132,7 +128,7 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.View
         return events.size();
     }
 
-    static class ViewHolder extends RecyclerView.ViewHolder {
+    public static class ViewHolder extends RecyclerView.ViewHolder {
         TextView title, date, status, waitlistCount;
         View joinBtn, lotteryInfoBtn;
 

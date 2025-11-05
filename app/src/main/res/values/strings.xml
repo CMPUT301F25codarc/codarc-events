@@ -131,4 +131,15 @@
     <string name="choose_poster_button">Choose Poster</string>
     <string name="cancel_button">Cancel</string>
     <string name="create_event_button">Create Event</string>
+
+    <!-- Lottery Info Strings -->
+    <string name="lottery_info">Lottery Info</string>
+    <string name="got_it">Got it</string>
+    
+    <!-- Event Card Strings -->
+    <string name="status_open">Status: Open</string>
+    <string name="status_closed">Status: Closed</string>
+    <string name="waitlist_loading">Waitlist: …</string>
+    <string name="waitlist_count">Waitlist: %d</string>
+    <string name="waitlist_unavailable">Waitlist: N/A</string>
 </resources>
