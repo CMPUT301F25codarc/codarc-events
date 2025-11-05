@@ -2,7 +2,7 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
-    
+
     <!-- Landing Page Colors -->
     <color name="landing_background">#F3E5F5</color>
     <color name="landing_text_primary">#7B1FA2</color>
@@ -11,7 +11,7 @@
     <color name="landing_button_background">#FFFFFF</color>
     <color name="landing_button_text">#7B1FA2</color>
     <color name="landing_icon_background">#FFC107</color>
-    
+
     <!-- General App Colors -->
     <color name="primary_purple">#7B1FA2</color>
     <color name="primary_purple_light">#BA68C8</color>
@@ -20,7 +20,7 @@
     <color name="text_primary">#212121</color>
     <color name="text_secondary">#757575</color>
     <color name="divider">#BDBDBD</color>
-    
+
     <!-- Entrant Dashboard Colors -->
     <color name="entrant_background">#F8F8F8</color>
     <color name="entrant_header_pink">#FCE4EC</color>
@@ -32,7 +32,11 @@
     <color name="entrant_bottom_nav_active">#7B1FA2</color>
     <color name="entrant_bottom_nav_inactive">#757575</color>
     <color name="entrant_action_button_purple">#7B1FA2</color>
-    
+
+    <!-- Notification specific colors -->
+    <color name="notification_card_unread">#FFE1F5</color>
+    <color name="notification_card_read">#FFFFFFFF</color>
+
     <!-- Organizer Dashboard Colors -->
     <color name="organizer_background">#F5F5F5</color>
     <color name="organizer_header_purple">#4A148C</color>
@@ -45,7 +49,7 @@
     <color name="organizer_bottom_nav_active">#FFFFFF</color>
     <color name="organizer_bottom_nav_inactive">#BA68C8</color>
     <color name="organizer_action_text">#7B1FA2</color>
-    
+
     <!-- Admin Dashboard Colors -->
     <color name="admin_background">#F8F8F8</color>
     <color name="admin_header_purple">#BA68C8</color>

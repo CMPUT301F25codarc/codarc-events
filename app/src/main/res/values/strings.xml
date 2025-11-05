@@ -1,32 +1,32 @@
 <resources>
     <string name="app_name">codarc-events</string>
     <string name="action_settings">Settings</string>
-    
+
     <!-- Landing Page Strings -->
     <string name="app_title">EventFlow</string>
     <string name="app_tagline">Seamless event management</string>
     <string name="continue_button">Continue</string>
     <string name="device_recognized">Device automatically recognised</string>
     <string name="powered_by">Powered by EventFlow Management</string>
-    
+
     <!-- Role Selection Strings -->
     <string name="select_role_title">Select your Role !</string>
     <string name="role_organizer">Organizer</string>
     <string name="role_entrant">Entrant</string>
     <string name="role_admin">Admin</string>
-    
+
     <!-- Login Strings -->
     <string name="login_title">Login</string>
     <string name="login_button">LOGIN</string>
     <string name="debug_organizer">Debug Organizer</string>
     <string name="debug_admin">Debug Admin</string>
-    
+
     <!-- Strings used for fragments for navigation -->
     <string name="first_fragment_label">First Fragment</string>
     <string name="second_fragment_label">Second Fragment</string>
     <string name="next">Next</string>
     <string name="previous">Previous</string>
-    
+
     <!-- Entrant Dashboard Strings -->
     <string name="entrant_dashboard_title">Event List</string>
     <string name="search_events_hint">Search events...</string>
@@ -49,7 +49,7 @@
     <string name="paharchura">Paharchura</string>
     <string name="oct_20">Oct 20</string>
     <string name="entrants_134">134 entrants • 2 hours</string>
-    
+
     <!-- Organizer Dashboard Strings -->
     <string name="organizer_dashboard_title">Organizer Dashboard</string>
     <string name="search_events_organizer">Search events...</string>
@@ -75,7 +75,7 @@
     <string name="registered_45_60">45/60 registered</string>
     <string name="registered_32_50">32/50 registered</string>
     <string name="registered_120_200">120/200 registered</string>
-    
+
     <!-- Admin Dashboard Strings -->
     <string name="admin_panel_title">Admin Panel</string>
     <string name="system_overview_title">System Overview</string>
@@ -131,7 +131,30 @@
     <string name="choose_poster_button">Choose Poster</string>
     <string name="cancel_button">Cancel</string>
     <string name="create_event_button">Create Event</string>
-
+  
+    <!-- Notification Strings -->
+    <string name="notify_winners_button">Notify Winners</string>
+    <string name="notify_cancelled_button">Notify Cancelled</string>
+    <string name="notification_message_winner">Congratulations! You won. Proceed to signup.</string>
+    <string name="notification_message_cancelled">Sorry. You were not selected. Try again next time.</string>
+    <string name="notification_sent_winners">Winner notifications sent.</string>
+    <string name="notification_sent_cancelled">Cancelled entrants notified.</string>
+    <string name="notification_partial_failure">Some notifications failed (%1$d).</string>
+    <string name="notification_all_failed">Failed to send notifications.</string>
+    <string name="notification_none_available">No entrants to notify.</string>
+    <string name="notification_title">Notifications</string>
+    <string name="notification_back">Go back</string>
+    <string name="notification_empty">No notifications yet. Check back after organizers reach out.</string>
+    <string name="notification_accept">Accept</string>
+    <string name="notification_decline">Decline</string>
+    <string name="notification_status_accepted">Invitation accepted</string>
+    <string name="notification_status_declined">Invitation declined</string>
+    <string name="notification_status_acknowledged">Notification acknowledged</string>
+    <string name="notification_accept_success">You are successfully registered for this event.</string>
+    <string name="notification_decline_success">Invitation to join the event rejected.</string>
+    <string name="notification_unknown_event">Event update</string>
+    <string name="notification_response_error">Unable to update invitation. Please try again.</string>
+  
     <!-- Lottery Info Strings -->
     <string name="lottery_info">Lottery Info</string>
     <string name="got_it">Got it</string>
