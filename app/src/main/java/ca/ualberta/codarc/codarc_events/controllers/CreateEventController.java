@@ -8,15 +8,10 @@ import ca.ualberta.codarc.codarc_events.data.EventDB;
 import ca.ualberta.codarc.codarc_events.models.Event;
 
 /**
- * Controller for creating events.
- * Handles validation and business logic for event creation.
- * Separated from UI to enable unit testing.
+ * Handles event creation - validation and business logic.
  */
 public class CreateEventController {
 
-    /**
-     * Result class for event creation validation.
-     */
     public static class CreateEventResult {
         private final boolean isValid;
         private final String errorMessage;
@@ -52,30 +47,12 @@ public class CreateEventController {
     private final EventDB eventDB;
     private final String organizerId;
 
-    /**
-     * Constructs a CreateEventController.
-     *
-     * @param eventDB the EventDB instance for database operations
-     * @param organizerId the ID of the organizer creating the event
-     */
     public CreateEventController(EventDB eventDB, String organizerId) {
         this.eventDB = eventDB;
         this.organizerId = organizerId;
     }
 
-    /**
-     * Validates event data and creates an Event object.
-     * Does not persist to database - caller should call persistEvent() after validation.
-     *
-     * @param name event name
-     * @param description event description
-     * @param dateTime event date/time (ISO format string)
-     * @param location event location
-     * @param regOpen registration open date/time (ISO format string)
-     * @param regClose registration close date/time (ISO format string)
-     * @param capacityStr capacity as string (can be empty/null)
-     * @return CreateEventResult containing validation status and Event if valid
-     */
+    // Validates and creates Event object (doesn't save to DB yet)
     public CreateEventResult validateAndCreateEvent(String name, String description,
                                                      String dateTime, String location,
                                                      String regOpen, String regClose,
@@ -126,12 +103,7 @@ public class CreateEventController {
         return CreateEventResult.success(event);
     }
 
-    /**
-     * Persists an event to the database.
-     *
-     * @param event the event to persist
-     * @param callback callback for success/error
-     */
+    // Saves event to Firestore
     public void persistEvent(Event event, EventDB.Callback<Void> callback) {
         if (event == null) {
             callback.onError(new IllegalArgumentException("Event cannot be null"));

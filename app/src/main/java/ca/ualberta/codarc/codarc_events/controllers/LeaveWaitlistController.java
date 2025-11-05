@@ -6,15 +6,10 @@ import ca.ualberta.codarc.codarc_events.data.EventDB;
 import ca.ualberta.codarc.codarc_events.models.Event;
 
 /**
- * Controller for leaving waitlists.
- * Handles validation and business logic for leaving waitlist operations.
- * Separated from UI to enable unit testing.
+ * Handles leaving waitlists.
  */
 public class LeaveWaitlistController {
 
-    /**
-     * Result class for leave waitlist operations.
-     */
     public static class LeaveResult {
         private final boolean success;
         private final String message;
@@ -43,22 +38,10 @@ public class LeaveWaitlistController {
 
     private final EventDB eventDB;
 
-    /**
-     * Constructs a LeaveWaitlistController.
-     *
-     * @param eventDB the EventDB instance for event operations
-     */
     public LeaveWaitlistController(EventDB eventDB) {
         this.eventDB = eventDB;
     }
 
-    /**
-     * Validates and performs the leave waitlist operation.
-     *
-     * @param event the event to leave
-     * @param deviceId the device ID of the entrant
-     * @param callback callback with LeaveResult
-     */
     public void leaveWaitlist(Event event, String deviceId, Callback callback) {
         if (event == null) {
             callback.onResult(LeaveResult.failure("Event is required"));
@@ -99,9 +82,6 @@ public class LeaveWaitlistController {
         });
     }
 
-    /**
-     * Callback interface for leave waitlist operations.
-     */
     public interface Callback {
         void onResult(LeaveResult result);
     }
