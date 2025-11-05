@@ -9,14 +9,8 @@ import ca.ualberta.codarc.codarc_events.data.EntrantDB;
 import ca.ualberta.codarc.codarc_events.data.EventDB;
 
 /**
- * Encapsulates the business logic for entrant invitation responses.
- *
- * <p>Activities delegate to this controller so that the UI layer stays free
- * from Firestore specifics. The controller coordinates the required writes:</p>
- * <ol>
- *     <li>Update the entrant's enrolled status within the event document.</li>
- *     <li>Persist the entrant's response on their notification record.</li>
- * </ol>
+ * Handles invitation accept/decline responses.
+ * Updates event status and notification.
  */
 public class InvitationResponseController {
 

@@ -21,20 +21,31 @@ import java.util.Locale;
 import ca.ualberta.codarc.codarc_events.R;
 import ca.ualberta.codarc.codarc_events.controllers.CreateEventController;
 import ca.ualberta.codarc.codarc_events.data.EventDB;
+import ca.ualberta.codarc.codarc_events.data.OrganizerDB;
+import ca.ualberta.codarc.codarc_events.data.UserDB;
 import ca.ualberta.codarc.codarc_events.models.Event;
 import ca.ualberta.codarc.codarc_events.utils.Identity;
 
 /**
  * Create Event screen that lets organizers fill event info.
  * Includes date/time pickers and writes to Firestore.
+ * 
+ * In the refactored structure:
+ * - Creates event in Events collection
+ * - Creates Organizer document (if first event)
+ * - Sets isOrganizer = true in Users collection (if first event)
+ * - Adds event to Organizer's events subcollection
  */
 public class CreateEventActivity extends AppCompatActivity {
 
     private TextInputEditText title, description, eventDateTime,
             regOpen, regClose, location, capacity;
     private EventDB eventDB;
+    private OrganizerDB organizerDB;
+    private UserDB userDB;
     private CreateEventController controller;
     private ProgressBar progressBar;
+    private String organizerId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,7 +53,9 @@ public class CreateEventActivity extends AppCompatActivity {
         setContentView(R.layout.activity_create_event);
 
         eventDB = new EventDB();
-        String organizerId = Identity.getOrCreateDeviceId(this);
+        organizerDB = new OrganizerDB();
+        userDB = new UserDB();
+        organizerId = Identity.getOrCreateDeviceId(this);
         controller = new CreateEventController(eventDB, organizerId);
 
         progressBar = findViewById(R.id.progress_bar);
@@ -139,12 +152,12 @@ public class CreateEventActivity extends AppCompatActivity {
         progressBar.setVisibility(View.VISIBLE);
 
         // Persist event using controller
-        controller.persistEvent(result.getEvent(), new EventDB.Callback<Void>() {
+        Event event = result.getEvent();
+        controller.persistEvent(event, new EventDB.Callback<Void>() {
             @Override
             public void onSuccess(Void value) {
-                Toast.makeText(CreateEventActivity.this, "Event created", Toast.LENGTH_SHORT).show();
-                progressBar.setVisibility(View.GONE);
-                finish();
+                // Event created successfully, now handle organizer setup
+                handleOrganizerSetup(event);
             }
 
             @Override
@@ -152,6 +165,90 @@ public class CreateEventActivity extends AppCompatActivity {
                 Log.e("CreateEventActivity", "Failed to create event", e);
                 Toast.makeText(CreateEventActivity.this, "Failed to create event. Please try again.", Toast.LENGTH_SHORT).show();
                 progressBar.setVisibility(View.GONE);
+            }
+        });
+    }
+    
+    /**
+     * Handles organizer setup after event creation.
+     * Checks if organizer document exists, creates it if needed,
+     * sets isOrganizer flag in Users, and adds event to organizer's events.
+     */
+    private void handleOrganizerSetup(Event event) {
+        organizerDB.organizerExists(organizerId, new OrganizerDB.Callback<Boolean>() {
+            @Override
+            public void onSuccess(Boolean exists) {
+                if (!exists) {
+                    // First event - create Organizer document and set role
+                    createNewOrganizer(event);
+                } else {
+                    // Already an organizer - just add event to their list
+                    addEventToOrganizer(event);
+                }
+            }
+
+            @Override
+            public void onError(@NonNull Exception e) {
+                // If check fails, try to create anyway (safer)
+                createNewOrganizer(event);
+            }
+        });
+    }
+    
+    /**
+     * Creates a new Organizer document and sets isOrganizer flag in Users.
+     * Then adds the event to the organizer's events subcollection.
+     */
+    private void createNewOrganizer(Event event) {
+        organizerDB.createOrganizer(organizerId, new OrganizerDB.Callback<Void>() {
+            @Override
+            public void onSuccess(Void value) {
+                // Set isOrganizer = true in Users collection
+                userDB.setOrganizerRole(organizerId, true, new UserDB.Callback<Void>() {
+                    @Override
+                    public void onSuccess(Void v) {
+                        // Now add event to organizer's events
+                        addEventToOrganizer(event);
+                    }
+
+                    @Override
+                    public void onError(@NonNull Exception e) {
+                        // Organizer created but role flag failed - not critical
+                        addEventToOrganizer(event);
+                    }
+                });
+            }
+
+            @Override
+            public void onError(@NonNull Exception e) {
+                // Organizer creation failed - still show success for event creation
+                Log.e("CreateEventActivity", "Failed to create organizer document", e);
+                Toast.makeText(CreateEventActivity.this, "Event created", Toast.LENGTH_SHORT).show();
+                progressBar.setVisibility(View.GONE);
+                finish();
+            }
+        });
+    }
+    
+    /**
+     * Adds the event to the organizer's events subcollection.
+     */
+    private void addEventToOrganizer(Event event) {
+        organizerDB.addEventToOrganizer(organizerId, event.getId(), new OrganizerDB.Callback<Void>() {
+            @Override
+            public void onSuccess(Void value) {
+                Toast.makeText(CreateEventActivity.this, "Event created successfully", Toast.LENGTH_SHORT).show();
+                progressBar.setVisibility(View.GONE);
+                finish();
+            }
+
+            @Override
+            public void onError(@NonNull Exception e) {
+                // Event created but couldn't add to organizer's list - still show success
+                Log.e("CreateEventActivity", "Failed to add event to organizer's list", e);
+                Toast.makeText(CreateEventActivity.this, "Event created", Toast.LENGTH_SHORT).show();
+                progressBar.setVisibility(View.GONE);
+                finish();
             }
         });
     }

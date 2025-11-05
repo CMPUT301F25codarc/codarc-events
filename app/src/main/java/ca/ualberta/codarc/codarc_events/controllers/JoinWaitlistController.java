@@ -8,15 +8,10 @@ import ca.ualberta.codarc.codarc_events.models.Entrant;
 import ca.ualberta.codarc.codarc_events.models.Event;
 
 /**
- * Controller for joining waitlists.
- * Handles validation and business logic for waitlist operations.
- * Separated from UI to enable unit testing.
+ * Handles joining waitlists - validation and business logic.
  */
 public class JoinWaitlistController {
 
-    /**
-     * Result class for join waitlist operations.
-     */
     public static class JoinResult {
         private final boolean success;
         private final String message;
@@ -56,23 +51,12 @@ public class JoinWaitlistController {
     private final EventDB eventDB;
     private final EntrantDB entrantDB;
 
-    /**
-     * Constructs a JoinWaitlistController.
-     *
-     * @param eventDB the EventDB instance for event operations
-     * @param entrantDB the EntrantDB instance for entrant operations
-     */
     public JoinWaitlistController(EventDB eventDB, EntrantDB entrantDB) {
         this.eventDB = eventDB;
         this.entrantDB = entrantDB;
     }
 
-    /**
-     * Checks if an entrant is registered (has completed profile).
-     *
-     * @param deviceId the device ID of the entrant
-     * @param callback callback with true if registered, false otherwise
-     */
+    // Check if user has completed profile registration
     public void checkProfileRegistration(String deviceId, EntrantDB.Callback<Boolean> callback) {
         if (deviceId == null || deviceId.isEmpty()) {
             callback.onError(new IllegalArgumentException("deviceId cannot be null or empty"));
@@ -93,13 +77,7 @@ public class JoinWaitlistController {
         });
     }
 
-    /**
-     * Validates conditions for joining a waitlist and performs the join operation.
-     *
-     * @param event the event to join
-     * @param deviceId the device ID of the entrant
-     * @param callback callback with JoinResult
-     */
+    // Main join waitlist logic - validates and joins
     public void joinWaitlist(Event event, String deviceId, Callback callback) {
         if (event == null) {
             callback.onResult(JoinResult.failure("Event is required"));
@@ -178,19 +156,10 @@ public class JoinWaitlistController {
         });
     }
 
-    /**
-     * Retrieves the total number of entrants currently on the waitlist for an event.
-     *
-     * @param eventId the ID of the event
-     * @param cb callback returning the count as Integer
-     */
     public void getWaitlistCount(String eventId, EventDB.Callback<Integer> cb) {
         eventDB.getWaitlistCount(eventId, cb);
     }
 
-    /**
-     * Callback interface for join waitlist operations.
-     */
     public interface Callback {
         void onResult(JoinResult result);
     }

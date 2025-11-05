@@ -23,6 +23,8 @@ import ca.ualberta.codarc.codarc_events.utils.Identity;
 
 /**
  * Organizer screen to run the lottery draw.
+ * The lottery creates a pool of winners and a replacement pool (default: 3 entrants).
+ * Replacements can be promoted when winners decline their invitation.
  */
 public class DrawActivity extends AppCompatActivity {
 
@@ -55,6 +57,7 @@ public class DrawActivity extends AppCompatActivity {
         tvResultSummary = findViewById(R.id.tv_result_summary);
         tvEntrantCount = findViewById(R.id.tv_total_registrants);
         tvEventName = findViewById(R.id.tv_event_name);
+        // Note: tv_replacement_info might not exist in layout - that's okay, we'll show info in summary
         btnRunDraw = findViewById(R.id.btn_run_draw);
         ivBack = findViewById(R.id.iv_back);
 
@@ -110,8 +113,16 @@ public class DrawActivity extends AppCompatActivity {
 
         drawController.runDraw(eventId, numWinners, new DrawController.DrawCallback() {
             @Override
-            public void onSuccess(List<String> winners) {
-                runOnUiThread(() -> tvResultSummary.setText("✅ Winners drawn: " + winners.size()));
+            public void onSuccess(List<String> winners, List<String> replacements) {
+                runOnUiThread(() -> {
+                    String summary = String.format("✅ Winners drawn: %d\n📋 Replacement pool: %d", 
+                            winners.size(), replacements.size());
+                    tvResultSummary.setText(summary);
+                    Toast.makeText(DrawActivity.this, 
+                            "Lottery complete! " + winners.size() + " winners selected with " + 
+                            replacements.size() + " replacements", 
+                            Toast.LENGTH_LONG).show();
+                });
             }
 
             @Override

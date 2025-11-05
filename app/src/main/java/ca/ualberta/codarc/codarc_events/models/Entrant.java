@@ -3,8 +3,8 @@ package ca.ualberta.codarc.codarc_events.models;
 import com.google.firebase.firestore.PropertyName;
 
 /**
- * Represents an Entrant user identified by their device ID.
- * Used for Firestore storage and local profile management.
+ * Entrant model - profile info for users who join waitlists.
+ * Created when user joins first waitlist and provides info.
  */
 public class Entrant {
 
@@ -14,18 +14,11 @@ public class Entrant {
     private String email;
     private String phone;
     private boolean isRegistered;
-    private String isOrganizer;
-    private boolean isAdmin;
+    private boolean banned;
 
-    /**
-     * Empty constructor required by Firestore for deserialization.
-     */
+    // Firestore needs empty constructor
     public Entrant() { }
 
-    /**
-     * Constructs an Entrant with the given device id, name, and timestamp.
-     * Profile fields (email, phone, flags) are initialized to defaults.
-     */
     public Entrant(String deviceId, String name, long createdAtUtc) {
         this.deviceId = deviceId;
         this.name = name;
@@ -33,8 +26,7 @@ public class Entrant {
         this.email = "";
         this.phone = "";
         this.isRegistered = false;
-        this.isOrganizer = "";
-        this.isAdmin = false;
+        this.banned = false;
     }
 
     public String getDeviceId() {
@@ -99,24 +91,14 @@ public class Entrant {
     public void setIsRegistered(boolean isRegistered) {
         this.isRegistered = isRegistered;
     }
-
-    @PropertyName("is_organizer")
-    public String getIsOrganizer() {
-        return isOrganizer;
+    
+    @PropertyName("banned")
+    public boolean isBanned() {
+        return banned;
     }
-
-    @PropertyName("is_organizer")
-    public void setIsOrganizer(String isOrganizer) {
-        this.isOrganizer = isOrganizer;
-    }
-
-    @PropertyName("is_admin")
-    public boolean getIsAdmin() {
-        return isAdmin;
-    }
-
-    @PropertyName("is_admin")
-    public void setIsAdmin(boolean isAdmin) {
-        this.isAdmin = isAdmin;
+    
+    @PropertyName("banned")
+    public void setBanned(boolean banned) {
+        this.banned = banned;
     }
 }

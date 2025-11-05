@@ -19,17 +19,10 @@ import java.util.Map;
 import ca.ualberta.codarc.codarc_events.models.Entrant;
 
 /**
- * Small helper around Firestore operations related to entrants/profiles.
- *
- * The app keeps one profile document per device under the `profiles` collection
- * using the local deviceId as the document id. This class exposes only the
- * reads/writes we need for Stage 0/1 flows – nothing fancy, just straight calls.
+ * Handles Entrants collection - profile info and notifications.
  */
 public class EntrantDB {
 
-    /**
-     * Minimal async callback used across the data layer.
-     */
     public interface Callback<T> {
         void onSuccess(T value);
         void onError(@NonNull Exception e);
@@ -41,41 +34,46 @@ public class EntrantDB {
         this.db = FirebaseFirestore.getInstance();
     }
 
-    /**
-     * Backwards-compatible alias used by early screens. Creates the profile doc if missing.
-     * This keeps older calls working while we migrate to the `profiles` collection.
-     */
+    // Backwards compat - just checks if exists
     public void getOrCreateEntrant(String deviceId, Callback<Void> cb) {
-        ensureProfileDefaults(deviceId, cb);
+        entrantExists(deviceId, new Callback<Boolean>() {
+            @Override
+            public void onSuccess(Boolean exists) {
+                cb.onSuccess(null);
+            }
+
+            @Override
+            public void onError(@NonNull Exception e) {
+                cb.onError(e);
+            }
+        });
     }
 
-    /**
-     * Ensures a `profiles/<deviceId>` document exists.
-     * If it doesn't, writes a document with default fields and flags.
-     */
-    public void ensureProfileDefaults(String deviceId, Callback<Void> cb) {
+    public void entrantExists(String deviceId, Callback<Boolean> cb) {
         if (deviceId == null || deviceId.isEmpty()) {
             cb.onError(new IllegalArgumentException("deviceId is empty"));
             return;
         }
+        
+        db.collection("entrants").document(deviceId)
+            .get()
+            .addOnSuccessListener(snapshot -> {
+                cb.onSuccess(snapshot != null && snapshot.exists());
+            })
+            .addOnFailureListener(cb::onError);
+    }
 
-        DocumentReference docRef = db.collection("profiles").document(deviceId);
-        docRef.get().addOnCompleteListener(task -> {
-            if (!task.isSuccessful()) {
-                cb.onError(task.getException() != null ? task.getException() : new RuntimeException("Unknown error"));
-                return;
-            }
-            DocumentSnapshot snapshot = task.getResult();
-            if (snapshot != null && snapshot.exists()) {
-                cb.onSuccess(null);
-            } else {
-                // Constructor already sets all defaults (empty strings, false flags)
-                Entrant defaultEntrant = new Entrant(deviceId, "", System.currentTimeMillis());
-                Task<Void> setTask = docRef.set(defaultEntrant);
-                setTask.addOnSuccessListener(unused -> cb.onSuccess(null))
-                        .addOnFailureListener(cb::onError);
-            }
-        });
+    // Creates entrant doc (called when user joins first waitlist)
+    public void createEntrant(Entrant entrant, Callback<Void> cb) {
+        if (entrant == null || entrant.getDeviceId() == null || entrant.getDeviceId().isEmpty()) {
+            cb.onError(new IllegalArgumentException("entrant or deviceId is invalid"));
+            return;
+        }
+        
+        db.collection("entrants").document(entrant.getDeviceId())
+            .set(entrant)
+            .addOnSuccessListener(unused -> cb.onSuccess(null))
+            .addOnFailureListener(cb::onError);
     }
 
     public void getProfile(String deviceId, Callback<Entrant> cb) {
@@ -83,14 +81,14 @@ public class EntrantDB {
             cb.onError(new IllegalArgumentException("deviceId is empty"));
             return;
         }
-        db.collection("profiles").document(deviceId)
+        db.collection("entrants").document(deviceId)
                 .get()
                 .addOnSuccessListener(snapshot -> {
                     if (snapshot != null && snapshot.exists()) {
                         Entrant entrant = snapshot.toObject(Entrant.class);
                         cb.onSuccess(entrant);
                     } else {
-                        cb.onError(new RuntimeException("Profile not found"));
+                        cb.onError(new RuntimeException("Entrant not found"));
                     }
                 })
                 .addOnFailureListener(cb::onError);
@@ -107,25 +105,13 @@ public class EntrantDB {
             return;
         }
         entrant.setDeviceId(deviceId);
-        db.collection("profiles").document(deviceId)
+        db.collection("entrants").document(deviceId)
                 .set(entrant, SetOptions.merge())
                 .addOnSuccessListener(unused -> cb.onSuccess(null))
                 .addOnFailureListener(cb::onError);
     }
 
-    /**
-     * Appends a notification entry for the given entrant profile.
-     *
-     * <p>The notification is stored under <code>profiles/&lt;deviceId&gt;/notifications</code>
-     * with a generated id so multiple notifications can coexist. Each entry records the
-     * associated event, message, category, creation timestamp, and read state.</p>
-     *
-     * @param deviceId the entrant's device identifier
-     * @param eventId the related event identifier
-     * @param message the human-readable notification body
-     * @param category short label (e.g., "winner" or "cancelled") for filtering
-     * @param cb callback invoked once the write completes
-     */
+    // Adds notification to entrant's notifications subcollection
     public void addNotification(String deviceId,
                                 String eventId,
                                 String message,
@@ -140,7 +126,7 @@ public class EntrantDB {
             return;
         }
 
-        DocumentReference profileRef = db.collection("profiles").document(deviceId);
+        DocumentReference entrantRef = db.collection("entrants").document(deviceId);
 
         Map<String, Object> data = new HashMap<>();
         data.put("eventId", eventId);
@@ -149,22 +135,19 @@ public class EntrantDB {
         data.put("createdAt", System.currentTimeMillis());
         data.put("read", false);
 
-        profileRef.collection("notifications")
+        entrantRef.collection("notifications")
                 .add(data)
                 .addOnSuccessListener(unused -> cb.onSuccess(null))
                 .addOnFailureListener(cb::onError);
     }
 
-    /**
-     * Retrieves all notifications for an entrant ordered by most recent first.
-     */
     public void getNotifications(String deviceId, Callback<List<Map<String, Object>>> cb) {
         if (deviceId == null || deviceId.isEmpty()) {
             cb.onError(new IllegalArgumentException("deviceId is empty"));
             return;
         }
 
-        db.collection("profiles").document(deviceId)
+        db.collection("entrants").document(deviceId)
                 .collection("notifications")
                 .orderBy("createdAt", Query.Direction.DESCENDING)
                 .get()
@@ -182,10 +165,7 @@ public class EntrantDB {
                 .addOnFailureListener(cb::onError);
     }
 
-    /**
-     * Updates arbitrary state on a notification document. Used by controllers
-     * to persist read/response fields after an entrant acts on an invite.
-     */
+    // Updates notification (read status, response, etc.)
     public void updateNotificationState(String deviceId,
                                         String notificationId,
                                         Map<String, Object> updates,
@@ -203,7 +183,7 @@ public class EntrantDB {
             return;
         }
 
-        DocumentReference notificationRef = db.collection("profiles")
+        DocumentReference notificationRef = db.collection("entrants")
                 .document(deviceId)
                 .collection("notifications")
                 .document(notificationId);
@@ -213,24 +193,113 @@ public class EntrantDB {
                 .addOnFailureListener(cb::onError);
     }
 
-    /**
-     * Clears an entrant's profile information and sets registration status to false.
-     *
-     * <p>Rather than deleting the profile document, this method clears the user's
-     * personal information (name, email, phone) and sets isRegistered to false.
-     * This preserves the device identity document and prevents issues when
-     * checking profile registration status during waitlist operations.</p>
-     *
-     * @param deviceId The unique device identifier whose profile should be cleared.
-     * @param cb       Callback invoked on successful update or with an exception if it fails.
-     */
+    // Adds event to entrant's events subcollection
+    public void addEventToEntrant(String deviceId, String eventId, Callback<Void> cb) {
+        if (deviceId == null || deviceId.isEmpty()) {
+            cb.onError(new IllegalArgumentException("deviceId is empty"));
+            return;
+        }
+        if (eventId == null || eventId.isEmpty()) {
+            cb.onError(new IllegalArgumentException("eventId is empty"));
+            return;
+        }
+        
+        Map<String, Object> data = new HashMap<>();
+        data.put("eventId", eventId);
+        
+        db.collection("entrants").document(deviceId)
+            .collection("events").document(eventId)
+            .set(data)
+            .addOnSuccessListener(unused -> cb.onSuccess(null))
+            .addOnFailureListener(cb::onError);
+    }
+
+    public void getEntrantEvents(String deviceId, Callback<List<String>> cb) {
+        if (deviceId == null || deviceId.isEmpty()) {
+            cb.onError(new IllegalArgumentException("deviceId is empty"));
+            return;
+        }
+        
+        db.collection("entrants").document(deviceId)
+            .collection("events")
+            .get()
+            .addOnSuccessListener(querySnapshot -> {
+                List<String> eventIds = new ArrayList<>();
+                if (querySnapshot != null) {
+                    for (QueryDocumentSnapshot doc : querySnapshot) {
+                        String eventId = doc.getString("eventId");
+                        if (eventId != null) {
+                            eventIds.add(eventId);
+                        }
+                    }
+                }
+                cb.onSuccess(eventIds);
+            })
+            .addOnFailureListener(cb::onError);
+    }
+
+    public void removeEventFromEntrant(String deviceId, String eventId, Callback<Void> cb) {
+        if (deviceId == null || deviceId.isEmpty()) {
+            cb.onError(new IllegalArgumentException("deviceId is empty"));
+            return;
+        }
+        if (eventId == null || eventId.isEmpty()) {
+            cb.onError(new IllegalArgumentException("eventId is empty"));
+            return;
+        }
+        
+        db.collection("entrants").document(deviceId)
+            .collection("events").document(eventId)
+            .delete()
+            .addOnSuccessListener(unused -> cb.onSuccess(null))
+            .addOnFailureListener(cb::onError);
+    }
+    
+    // Bans/unbans an entrant (admin only)
+    public void setBannedStatus(String deviceId, boolean banned, Callback<Void> cb) {
+        if (deviceId == null || deviceId.isEmpty()) {
+            cb.onError(new IllegalArgumentException("deviceId is empty"));
+            return;
+        }
+        
+        db.collection("entrants").document(deviceId)
+            .update("banned", banned)
+            .addOnSuccessListener(unused -> cb.onSuccess(null))
+            .addOnFailureListener(cb::onError);
+    }
+    
+    public void isBanned(String deviceId, Callback<Boolean> cb) {
+        if (deviceId == null || deviceId.isEmpty()) {
+            cb.onError(new IllegalArgumentException("deviceId is empty"));
+            return;
+        }
+        
+        getProfile(deviceId, new Callback<Entrant>() {
+            @Override
+            public void onSuccess(Entrant entrant) {
+                if (entrant != null) {
+                    cb.onSuccess(entrant.isBanned());
+                } else {
+                    cb.onSuccess(false); // Not an entrant, so not banned as entrant
+                }
+            }
+
+            @Override
+            public void onError(@NonNull Exception e) {
+                // If entrant doesn't exist, they're not banned
+                cb.onSuccess(false);
+            }
+        });
+    }
+
+    // Clears profile data but keeps the document (don't delete it)
     public void deleteProfile(String deviceId, Callback<Void> cb) {
         if (deviceId == null || deviceId.isEmpty()) {
             cb.onError(new IllegalArgumentException("deviceId is empty"));
             return;
         }
 
-        // Get existing profile to preserve createdAtUtc
+        // Get existing entrant to preserve createdAtUtc
         getProfile(deviceId, new Callback<Entrant>() {
             @Override
             public void onSuccess(Entrant existing) {
@@ -244,7 +313,7 @@ public class EntrantDB {
 
             @Override
             public void onError(@NonNull Exception e) {
-                // Profile doesn't exist, create new one
+                // Entrant doesn't exist, create new one with cleared data
                 Entrant cleared = new Entrant(deviceId, "", System.currentTimeMillis());
                 cleared.setEmail("");
                 cleared.setPhone("");
