@@ -16,7 +16,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Fair and Random Selection"
+            android:text="@string/lottery_info_title"
             android:textColor="@color/primary_purple"
             android:textSize="18sp"
             android:textStyle="bold"
@@ -39,20 +39,13 @@
             android:textSize="15sp"
             android:textColor="@color/black"
             android:textAlignment="viewStart"
-            android:text="
-            Selection is performed through a random lottery to ensure fairness and equal opportunity.
-
-            All entrants in the waiting list have an equal chance of being selected once registration closes.
-
-            The selection does not depend on when you joined or on any personal details.
-
-            Every participant is treated equally, making the lottery process transparent and unbiased." />
+            android:text="@string/lottery_info_description" />
 
         <!-- Subtle Footer Note -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="\nFor transparency, organizers cannot influence the lottery results."
+            android:text="@string/lottery_info_footer"
             android:textColor="@color/primary_purple"
             android:textSize="13sp"
             android:gravity="center"
