@@ -85,14 +85,14 @@ public class EntrantDB {
                 .get()
                 .addOnSuccessListener(snapshot -> {
                     if (snapshot != null && snapshot.exists()) {
-                        Entrant entrant = snapshot.toObject(Entrant.class);
-                        cb.onSuccess(entrant);
+                        cb.onSuccess(snapshot.toObject(Entrant.class));
                     } else {
-                        cb.onError(new RuntimeException("Entrant not found"));
+                        cb.onSuccess(null);
                     }
                 })
                 .addOnFailureListener(cb::onError);
     }
+
 
     // merge update so we don't lose existing fields
     public void upsertProfile(String deviceId, Entrant entrant, Callback<Void> cb) {
