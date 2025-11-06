@@ -8,19 +8,13 @@ import java.util.Locale;
 import ca.ualberta.codarc.codarc_events.models.Event;
 
 /**
- * Helper class for validating event-related business rules.
- * Contains pure validation logic that can be easily unit tested.
+ * Validation helper for events.
  */
 public class EventValidationHelper {
 
     private static final String TAG = "EventValidationHelper";
 
-    /**
-     * Validates if the current time is within the event's registration window.
-     *
-     * @param event the event to validate
-     * @return true if current time is within registration window, false otherwise
-     */
+    // Check if current time is within registration window
     public static boolean isWithinRegistrationWindow(Event event) {
         if (event == null) {
             return false;
@@ -50,13 +44,7 @@ public class EventValidationHelper {
         }
     }
 
-    /**
-     * Validates if an event has reached its capacity limit.
-     *
-     * @param event the event to validate
-     * @param currentWaitlistCount the current number of entrants on the waitlist
-     * @return true if event has capacity (or no limit), false if full
-     */
+    // Check if event has capacity (returns true if no limit set)
     public static boolean hasCapacity(Event event, int currentWaitlistCount) {
         if (event == null) {
             return false;

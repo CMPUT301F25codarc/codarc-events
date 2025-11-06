@@ -8,12 +8,15 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.button.MaterialButton;
 import ca.ualberta.codarc.codarc_events.R;
 import ca.ualberta.codarc.codarc_events.utils.Identity;
-import ca.ualberta.codarc.codarc_events.data.EntrantDB;
+import ca.ualberta.codarc.codarc_events.data.UserDB;
 
 /**
  * Launcher activity that verifies identity and routes to the event browser.
- * Identity setup is a quick Firestore write ensuring the profile document
- * exists for this device.
+ * 
+ * In the refactored structure:
+ * - Creates a User document in the users collection (base identity)
+ * - User document has role flags (all false by default)
+ * - Entrants and Organizers documents are created later when user performs actions
  */
 public class LandingActivity extends AppCompatActivity {
 
@@ -22,10 +25,10 @@ public class LandingActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_landing);
 
-        // Stage 0: device identification
+        // Stage 0: device identification - create User document
         String deviceId = Identity.getOrCreateDeviceId(this);
-        EntrantDB entrantDB = new EntrantDB();
-        entrantDB.ensureProfileDefaults(deviceId, new EntrantDB.Callback<Void>() {
+        UserDB userDB = new UserDB();
+        userDB.ensureUserExists(deviceId, new UserDB.Callback<Void>() {
             @Override
             public void onSuccess(Void value) {
                 // Optional: brief confirmation toast per user story

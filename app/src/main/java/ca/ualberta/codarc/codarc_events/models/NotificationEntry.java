@@ -6,7 +6,7 @@ import java.io.Serializable;
  * Represents a single notification sent to an entrant.
  *
  * <p>The entry mirrors the structure stored under
- * {@code profiles/<deviceId>/notifications} in Firestore and carries
+ * {@code entrants/<deviceId>/notifications} in Firestore and carries
  * a couple of transient flags used by the UI layer (such as the
  * {@code processing} flag).</p>
  */
