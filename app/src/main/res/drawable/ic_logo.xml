@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Flowing circular arrows -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#FFD54F"
+        android:strokeWidth="4"
+        android:pathData="M54,10
+            a44,44 0 1,1 0,88
+            a44,44 0 1,1 0,-88z" />
+
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#FFD54F"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:pathData="M78,24 l8,-4 -4,8" />
+
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#FFD54F"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:pathData="M30,84 l-8,4 4,-8" />
+
+    <!-- Calendar body -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M34,38h40v40h-40z" />
+
+    <!-- Calendar top bar -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M34,34h40v6h-40z" />
+
+    <!-- Calendar dots -->
+    <path
+        android:fillColor="#FFD54F"
+        android:pathData="M42,46h4v4h-4zM50,46h4v4h-4zM58,46h4v4h-4z
+                          M42,54h4v4h-4zM50,54h4v4h-4zM58,54h4v4h-4z
+                          M42,62h4v4h-4zM50,62h4v4h-4zM58,62h4v4h-4z" />
+
+</vector>

@@ -18,15 +18,17 @@
         android:layout_height="wrap_content"
         android:background="@color/entrant_header_pink"
         android:orientation="horizontal"
-        android:padding="16dp">
+        android:padding="16dp"
+        android:gravity="center_vertical">
 
         <!-- Profile Picture Placeholder -->
-        <View
+        <ImageView
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:layout_marginEnd="16dp"
-            android:background="@color/white"
-            android:backgroundTint="@color/white" />
+            android:background="@drawable/ic_logo"
+            android:src="@drawable/ic_logo"
+            android:contentDescription="EventFlow Logo"/>
 
         <!-- Title -->
         <TextView
@@ -43,8 +45,8 @@
         <!-- Admin Lock Button -->
         <ImageButton
             android:id="@+id/btn_admin"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
             android:layout_marginEnd="12dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="Admin Functions"
@@ -54,8 +56,8 @@
         <!-- Plus Button for Organizer Menu -->
         <ImageButton
             android:id="@+id/btn_plus"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
             android:layout_marginEnd="12dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="Organizer Menu"
@@ -65,12 +67,11 @@
         <!-- Profile/Settings Icon -->
         <ImageView
             android:id="@+id/iv_profile_settings"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:background="@drawable/ic_join_circle"
-            android:backgroundTint="@color/entrant_action_button_purple"
-            android:contentDescription="Profile Settings" />
-
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:src="@drawable/ic_profile"
+            android:contentDescription="Profile Settings"
+            app:tint="@color/entrant_action_button_purple" />
     </LinearLayout>
 
     <!-- Search and Filter Bar -->
@@ -112,7 +113,6 @@
             android:layout_marginStart="8dp"
             android:src="@drawable/ic_filter"
             app:tint="@color/entrant_action_button_purple" />
-
     </LinearLayout>
 
     <!-- Events List -->
@@ -122,8 +122,7 @@
         android:layout_height="0dp"
         android:layout_weight="1"
         android:clipToPadding="false"
-        android:paddingBottom="80dp"
-        />
+        android:paddingBottom="80dp" />
 
     <!-- Bottom Navigation -->
     <LinearLayout
@@ -157,7 +156,6 @@
                 android:text="@string/bottom_nav_history"
                 android:textColor="@color/entrant_bottom_nav_inactive"
                 android:textSize="12sp" />
-
         </LinearLayout>
 
         <!-- Scan QR Tab (Active) -->
@@ -170,7 +168,6 @@
             android:orientation="vertical"
             android:padding="8dp">
 
-            <!-- Proper icon -->
             <ImageView
                 android:layout_width="28dp"
                 android:layout_height="28dp"
@@ -185,9 +182,7 @@
                 android:text="@string/bottom_nav_scan_qr"
                 android:textColor="@color/entrant_bottom_nav_active"
                 android:textSize="12sp" />
-
         </LinearLayout>
-
 
         <!-- Notifications Tab -->
         <LinearLayout
@@ -212,11 +207,8 @@
                 android:text="@string/bottom_nav_notifications"
                 android:textColor="@color/entrant_bottom_nav_inactive"
                 android:textSize="12sp" />
-
         </LinearLayout>
-
     </LinearLayout>
-
 </LinearLayout>
 
 

@@ -7,15 +7,17 @@
     android:layout_marginTop="8dp"
     android:layout_marginEnd="16dp"
     android:layout_marginBottom="8dp"
-    android:background="@color/entrant_event_card_background"
     app:cardCornerRadius="12dp"
-    app:cardElevation="2dp">
+    app:cardElevation="2dp"
+    android:background="@color/entrant_event_card_background"
+    app:useCompatPadding="true">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:padding="16dp"
+        android:gravity="center_horizontal">
 
         <!-- Event Title -->
         <TextView
@@ -23,178 +25,83 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center"
+            android:text="Event Title"
             android:textColor="@color/entrant_event_card_text"
             android:textSize="18sp"
             android:textStyle="bold" />
 
-        <!-- Event Details -->
-        <LinearLayout
+        <!-- Lottery End Date (must stay VISIBLE if adapter updates it) -->
+        <TextView
+            android:id="@+id/tv_lottery_ends"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:orientation="vertical">
+            android:layout_marginTop="6dp"
+            android:gravity="center"
+            android:textColor="@color/entrant_event_card_location"
+            android:textSize="14sp"
+            android:text="" />
 
-            <!-- Location -->
-            <TextView
-                android:id="@+id/tv_event_location"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center"
-                android:textColor="@color/entrant_event_card_location"
-                android:textSize="14sp" />
+        <!-- Entrants / Duration / (sometimes) Waitlist text target -->
+        <TextView
+            android:id="@+id/tv_entrants_info"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:gravity="center"
+            android:textColor="@color/entrant_event_card_location"
+            android:textSize="14sp"
+            android:text="" />
 
-            <!-- Lottery End Date -->
-            <TextView
-                android:id="@+id/tv_lottery_ends"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:gravity="center"
-                android:textColor="@color/entrant_event_card_location"
-                android:textSize="14sp" />
+        <!-- Live Waitlist Count (if your code updates this id directly) -->
+        <TextView
+            android:id="@+id/tv_waitlist_count"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:layout_marginTop="6dp"
+            android:text="Waitlist: …"
+            android:textColor="@color/entrant_event_card_text"
+            android:textStyle="italic"
+            android:textSize="14sp" />
 
-            <!-- Entrants Count and Duration -->
-            <TextView
-                android:id="@+id/tv_entrants_info"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:gravity="center"
-                android:textColor="@color/entrant_event_card_location"
-                android:textSize="14sp" />
-
-            <!-- Waitlist Count -->
-            <TextView
-                android:id="@+id/tv_waitlist_count"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:gravity="center"
-                android:text="Waitlist: ..."
-                android:textColor="@color/entrant_event_card_text"
-                android:textStyle="italic"
-                android:textSize="14sp" />
-        </LinearLayout>
-
-        <!-- Separator Line -->
+        <!-- Divider -->
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
             android:layout_marginTop="12dp"
             android:background="@color/divider" />
 
-        <!-- Action Buttons -->
+        <!-- Lottery Info Button -->
         <LinearLayout
-            android:layout_width="match_parent"
+            android:id="@+id/btn_lottery_info"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             android:orientation="horizontal"
-            android:weightSum="4">
+            android:gravity="center"
+            android:padding="8dp">
 
-            <!-- View Entrants Button -->
-            <LinearLayout
-                android:id="@+id/btn_view_entrants"
-                android:layout_width="0dp"
+            <ImageView
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:layout_marginEnd="4dp"
+                android:src="@drawable/ic_info"
+                android:tint="@color/entrant_action_button_purple" />
+
+            <TextView
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:gravity="center"
-                android:orientation="horizontal"
-                android:padding="8dp">
-
-                <ImageView
-                    android:layout_width="16dp"
-                    android:layout_height="16dp"
-                    android:layout_marginEnd="4dp"
-                    android:src="@drawable/ic_people"
-                    android:tint="@color/entrant_action_button_purple" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/view_entrants"
-                    android:textColor="@color/entrant_action_button_purple"
-                    android:textSize="12sp" />
-
-            </LinearLayout>
-
-            <!-- Join List Button -->
-            <LinearLayout
-                android:id="@+id/btn_join_list"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:gravity="center"
-                android:orientation="horizontal"
-                android:padding="8dp">
-
-                <ImageView
-                    android:layout_width="16dp"
-                    android:layout_height="16dp"
-                    android:layout_marginEnd="4dp"
-                    android:src="@drawable/ic_join_circle"
-                    android:tint="@color/entrant_action_button_purple" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/join_list"
-                    android:textColor="@color/entrant_action_button_purple"
-                    android:textSize="12sp" />
-
-            </LinearLayout>
-
-            <!-- Leave List Button -->
-            <LinearLayout
-                android:id="@+id/btn_leave_list"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:gravity="center"
-                android:orientation="horizontal"
-                android:padding="8dp">
-
-                <ImageView
-                    android:layout_width="16dp"
-                    android:layout_height="16dp"
-                    android:layout_marginEnd="4dp"
-                    android:src="@drawable/ic_arrow_right_small"
-                    android:tint="@color/entrant_action_button_purple" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/leave_list"
-                    android:textColor="@color/entrant_action_button_purple"
-                    android:textSize="12sp" />
-
-            </LinearLayout>
-
-            <!-- Lottery Info Button -->
-            <LinearLayout
-                android:id="@+id/btn_lottery_info"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:gravity="center"
-                android:orientation="horizontal"
-                android:padding="8dp">
-
-                <ImageView
-                    android:layout_width="16dp"
-                    android:layout_height="16dp"
-                    android:layout_marginEnd="4dp"
-                    android:src="@drawable/ic_info"
-                    android:tint="@color/entrant_action_button_purple" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/lottery_info"
-                    android:textColor="@color/entrant_action_button_purple"
-                    android:textSize="12sp" />
-            </LinearLayout>
+                android:text="@string/lottery_info"
+                android:textColor="@color/entrant_action_button_purple"
+                android:textSize="12sp" />
         </LinearLayout>
 
+        <!-- Keep join button node present (in case code binds listeners by id) -->
+        <LinearLayout
+            android:id="@+id/btn_join_list"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:visibility="gone" />
     </LinearLayout>
-
 </androidx.cardview.widget.CardView>
+
