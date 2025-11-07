@@ -38,12 +38,15 @@ android {
         unitTests {
             isIncludeAndroidResources = true
         }
+        // Use legacy test runner instead of UTP
+        animationsDisabled = true
     }
 }
 
 dependencies {
     // --- Firebase + ZXing ---
-    implementation(platform("com.google.firebase:firebase-bom:34.4.0"))
+    // Using older stable BOM version with known protobuf compatibility
+    implementation(platform("com.google.firebase:firebase-bom:32.3.1"))
     implementation("com.google.firebase:firebase-firestore")
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.zxing:core:3.4.1")
@@ -73,10 +76,14 @@ dependencies {
     androidTestImplementation("androidx.test.espresso:espresso-intents:3.6.1")
     androidTestImplementation("androidx.test.espresso:espresso-contrib:3.6.1")
     androidTestImplementation("androidx.test.espresso:espresso-idling-resource:3.6.1")
+    
+    // Ensure protobuf compatibility in instrumented tests
+    androidTestImplementation("com.google.protobuf:protobuf-javalite:3.21.9")
 
     // --- Optional for stable instrumentation ---
     androidTestUtil("androidx.test:orchestrator:1.5.1")
 
+    // Additional dependencies from version catalog
     implementation(libs.appcompat)
     implementation(libs.material)
     implementation(libs.constraintlayout)
@@ -85,16 +92,14 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
-    implementation(platform("com.google.firebase:firebase-bom:34.4.0"))
-    implementation("com.google.firebase:firebase-firestore")
-    implementation("com.google.firebase:firebase-analytics")
-    implementation("com.google.zxing:core:3.4.1")
-    implementation("com.journeyapps:zxing-android-embedded:4.3.0")
-    testImplementation("junit:junit:4.13.2")
-    testImplementation("org.mockito:mockito-core:5.14.2")
-    testImplementation("org.robolectric:robolectric:4.11.1")
-    testImplementation("junit:junit:4.13.2")
-    testImplementation("org.mockito:mockito-core:5.14.2")
-    testImplementation("org.mockito:mockito-inline:5.2.0")
 }
+
+// Force consistent protobuf version across all configurations
+configurations.all {
+    resolutionStrategy {
+        force("com.google.protobuf:protobuf-javalite:3.21.9")
+        force("com.google.protobuf:protobuf-java:3.21.9")
+    }
+}
+
 
