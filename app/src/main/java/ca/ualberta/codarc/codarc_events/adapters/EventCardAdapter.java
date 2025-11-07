@@ -6,7 +6,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
@@ -19,9 +18,7 @@ import ca.ualberta.codarc.codarc_events.controllers.JoinWaitlistController;
 import ca.ualberta.codarc.codarc_events.data.EntrantDB;
 import ca.ualberta.codarc.codarc_events.data.EventDB;
 import ca.ualberta.codarc.codarc_events.models.Event;
-import ca.ualberta.codarc.codarc_events.utils.Identity;
 import ca.ualberta.codarc.codarc_events.views.EventDetailsActivity;
-import ca.ualberta.codarc.codarc_events.views.ProfileCreationActivity;
 
 /**
  * RecyclerView adapter for simple event cards.
@@ -33,7 +30,6 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.View
     private final Context context;
     private final List<Event> events;
     private final JoinWaitlistController joinWaitlistController;
-    private final String currentDeviceId;
 
     /**
      * Creates an adapter for displaying event cards in a RecyclerView.
@@ -44,7 +40,6 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.View
     public EventCardAdapter(Context context, List<Event> events) {
         this.context = context;
         this.events = events;
-        this.currentDeviceId = Identity.getOrCreateDeviceId(context);
         this.joinWaitlistController = new JoinWaitlistController(new EventDB(), new EntrantDB());
     }
 
@@ -66,35 +61,6 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.View
 
         // Fetch and display waitlist count
         fetchAndDisplayWaitlistCount(holder, eventId);
-
-        // Hide join button if user is the organizer
-        if (e.getOrganizerId() != null && e.getOrganizerId().equals(currentDeviceId)) {
-            holder.joinBtn.setVisibility(View.GONE);
-        } else {
-            holder.joinBtn.setVisibility(View.VISIBLE);
-        }
-
-        // Join Waitlist - use controller for proper validation and business logic
-        holder.joinBtn.setOnClickListener(v -> {
-            int adapterPosition = holder.getAdapterPosition();
-            if (adapterPosition == RecyclerView.NO_POSITION) {
-                return;
-            }
-            String deviceId = Identity.getOrCreateDeviceId(v.getContext());
-            Event event = events.get(adapterPosition);
-            joinWaitlistController.joinWaitlist(event, deviceId, result -> {
-                if (result.needsProfileRegistration()) {
-                    Intent intent = new Intent(context, ProfileCreationActivity.class);
-                    context.startActivity(intent);
-                } else if (result.isSuccess()) {
-                    Toast.makeText(context, result.getMessage(), Toast.LENGTH_SHORT).show();
-                    // Refresh waitlist count after successful join
-                    fetchAndDisplayWaitlistCount(holder, event.getId());
-                } else {
-                    Toast.makeText(context, result.getMessage(), Toast.LENGTH_SHORT).show();
-                }
-            });
-        });
 
         // Lottery Info popup
         holder.lotteryInfoBtn.setOnClickListener(v -> {
@@ -152,7 +118,7 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.View
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
         TextView title, date, status, waitlistCount;
-        View joinBtn, lotteryInfoBtn;
+        View lotteryInfoBtn;
 
         ViewHolder(View itemView) {
             super(itemView);
@@ -160,7 +126,6 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.View
             date = itemView.findViewById(R.id.tv_lottery_ends);
             status = itemView.findViewById(R.id.tv_entrants_info);
             waitlistCount = itemView.findViewById(R.id.tv_waitlist_count);
-            joinBtn = itemView.findViewById(R.id.btn_join_list);
             lotteryInfoBtn = itemView.findViewById(R.id.btn_lottery_info);
         }
     }
