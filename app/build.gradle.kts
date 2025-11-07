@@ -49,4 +49,10 @@ dependencies {
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.zxing:core:3.4.1")
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.mockito:mockito-core:5.14.2")
+    testImplementation("org.robolectric:robolectric:4.11.1")
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.mockito:mockito-core:5.14.2")
+    testImplementation("org.mockito:mockito-inline:5.2.0")
 }
