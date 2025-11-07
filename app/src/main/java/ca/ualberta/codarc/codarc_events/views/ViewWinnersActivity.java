@@ -2,7 +2,6 @@ package ca.ualberta.codarc.codarc_events.views;
 
 import android.os.Bundle;
 import android.util.Log;
-import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -27,7 +26,8 @@ import ca.ualberta.codarc.codarc_events.models.Event;
 import ca.ualberta.codarc.codarc_events.utils.Identity;
 
 /**
- * Displays list of winners for an event and allows organizer to notify them.
+ * Displays list of winners for an event.
+ * Notifications are automatically sent when the lottery draw is completed.
  */
 public class ViewWinnersActivity extends AppCompatActivity {
 
@@ -38,8 +38,6 @@ public class ViewWinnersActivity extends AppCompatActivity {
     private EntrantDB entrantDB;
     private String eventId;
     private List<WinnersAdapter.WinnerItem> itemList;
-    private Button notifyButton;
-    private boolean isNotifying;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,16 +57,10 @@ public class ViewWinnersActivity extends AppCompatActivity {
 
         recyclerView = findViewById(R.id.rv_entrants);
         emptyState = findViewById(R.id.tv_empty_state);
-        notifyButton = findViewById(R.id.btn_notify_winners);
 
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         adapter = new WinnersAdapter(itemList);
         recyclerView.setAdapter(adapter);
-
-        if (notifyButton != null) {
-            notifyButton.setOnClickListener(v -> notifyWinners());
-        }
-        updateNotifyButtonState();
 
         verifyOrganizerAccess();
         loadWinners();
@@ -182,67 +174,11 @@ public class ViewWinnersActivity extends AppCompatActivity {
     private void showEmptyState() {
         recyclerView.setVisibility(android.view.View.GONE);
         emptyState.setVisibility(android.view.View.VISIBLE);
-        updateNotifyButtonState();
     }
 
     private void hideEmptyState() {
         recyclerView.setVisibility(android.view.View.VISIBLE);
         emptyState.setVisibility(android.view.View.GONE);
-        updateNotifyButtonState();
-    }
-
-    private void notifyWinners() {
-        if (itemList == null || itemList.isEmpty()) {
-            Toast.makeText(this, R.string.notification_none_available, Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        isNotifying = true;
-        updateNotifyButtonState();
-
-        final int total = itemList.size();
-        final int[] completed = {0};
-        final int[] failed = {0};
-        String message = getString(R.string.notification_message_winner);
-
-        for (WinnersAdapter.WinnerItem item : itemList) {
-            entrantDB.addNotification(item.getDeviceId(), eventId, message, "winner", new EntrantDB.Callback<Void>() {
-                @Override
-                public void onSuccess(Void value) {
-                    handleNotificationCompletion(completed, failed, total, R.string.notification_sent_winners);
-                }
-
-                @Override
-                public void onError(@NonNull Exception e) {
-                    failed[0]++;
-                    handleNotificationCompletion(completed, failed, total, R.string.notification_sent_winners);
-                }
-            });
-        }
-    }
-
-    private void handleNotificationCompletion(int[] completed, int[] failed, int total, int successMessageRes) {
-        completed[0]++;
-        if (completed[0] == total) {
-            runOnUiThread(() -> {
-                isNotifying = false;
-                updateNotifyButtonState();
-                if (failed[0] == 0) {
-                    Toast.makeText(ViewWinnersActivity.this, successMessageRes, Toast.LENGTH_SHORT).show();
-                } else if (failed[0] == total) {
-                    Toast.makeText(ViewWinnersActivity.this, R.string.notification_all_failed, Toast.LENGTH_SHORT).show();
-                } else {
-                    String message = getString(R.string.notification_partial_failure, failed[0]);
-                    Toast.makeText(ViewWinnersActivity.this, message, Toast.LENGTH_SHORT).show();
-                }
-            });
-        }
-    }
-
-    private void updateNotifyButtonState() {
-        if (notifyButton == null) return;
-        boolean hasEntries = itemList != null && !itemList.isEmpty();
-        notifyButton.setEnabled(hasEntries && !isNotifying);
     }
 }
 

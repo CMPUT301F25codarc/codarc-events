@@ -33,6 +33,7 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.View
     private final Context context;
     private final List<Event> events;
     private final JoinWaitlistController joinWaitlistController;
+    private final String currentDeviceId;
 
     /**
      * Creates an adapter for displaying event cards in a RecyclerView.
@@ -43,6 +44,7 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.View
     public EventCardAdapter(Context context, List<Event> events) {
         this.context = context;
         this.events = events;
+        this.currentDeviceId = Identity.getOrCreateDeviceId(context);
         this.joinWaitlistController = new JoinWaitlistController(new EventDB(), new EntrantDB());
     }
 
@@ -62,27 +64,15 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.View
         holder.date.setText(e.getEventDateTime() != null ? e.getEventDateTime() : "");
         holder.status.setText(e.isOpen() ? context.getString(R.string.status_open) : context.getString(R.string.status_closed));
 
-        // Waitlist count - use one-time fetch to avoid memory leaks
-        holder.waitlistCount.setTag(eventId);
-        holder.waitlistCount.setText(context.getString(R.string.waitlist_loading));
+        // Fetch and display waitlist count
+        fetchAndDisplayWaitlistCount(holder, eventId);
 
-        joinWaitlistController.getWaitlistCount(eventId, new EventDB.Callback<Integer>() {
-            @Override
-            public void onSuccess(Integer count) {
-                Object tag = holder.waitlistCount.getTag();
-                if (tag != null && tag.equals(eventId)) {
-                    holder.waitlistCount.setText(context.getString(R.string.waitlist_count, count));
-                }
-            }
-
-            @Override
-            public void onError(@NonNull Exception ex) {
-                Object tag = holder.waitlistCount.getTag();
-                if (tag != null && tag.equals(eventId)) {
-                    holder.waitlistCount.setText(context.getString(R.string.waitlist_unavailable));
-                }
-            }
-        });
+        // Hide join button if user is the organizer
+        if (e.getOrganizerId() != null && e.getOrganizerId().equals(currentDeviceId)) {
+            holder.joinBtn.setVisibility(View.GONE);
+        } else {
+            holder.joinBtn.setVisibility(View.VISIBLE);
+        }
 
         // Join Waitlist - use controller for proper validation and business logic
         holder.joinBtn.setOnClickListener(v -> {
@@ -98,6 +88,8 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.View
                     context.startActivity(intent);
                 } else if (result.isSuccess()) {
                     Toast.makeText(context, result.getMessage(), Toast.LENGTH_SHORT).show();
+                    // Refresh waitlist count after successful join
+                    fetchAndDisplayWaitlistCount(holder, event.getId());
                 } else {
                     Toast.makeText(context, result.getMessage(), Toast.LENGTH_SHORT).show();
                 }
@@ -126,6 +118,36 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.View
     @Override
     public int getItemCount() {
         return events.size();
+    }
+
+    /**
+     * Fetches and displays the waitlist count for a specific event.
+     * Uses tagging to ensure we only update the correct ViewHolder.
+     *
+     * @param holder  the ViewHolder to update
+     * @param eventId the event ID to fetch the count for
+     */
+    private void fetchAndDisplayWaitlistCount(@NonNull ViewHolder holder, String eventId) {
+        holder.waitlistCount.setTag(eventId);
+        holder.waitlistCount.setText(context.getString(R.string.waitlist_loading));
+
+        joinWaitlistController.getWaitlistCount(eventId, new EventDB.Callback<Integer>() {
+            @Override
+            public void onSuccess(Integer count) {
+                Object tag = holder.waitlistCount.getTag();
+                if (tag != null && tag.equals(eventId)) {
+                    holder.waitlistCount.setText(context.getString(R.string.waitlist_count, count));
+                }
+            }
+
+            @Override
+            public void onError(@NonNull Exception ex) {
+                Object tag = holder.waitlistCount.getTag();
+                if (tag != null && tag.equals(eventId)) {
+                    holder.waitlistCount.setText(context.getString(R.string.waitlist_unavailable));
+                }
+            }
+        });
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {

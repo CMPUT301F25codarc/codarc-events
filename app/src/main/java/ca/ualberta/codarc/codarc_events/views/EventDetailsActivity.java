@@ -114,7 +114,7 @@ public class EventDetailsActivity extends AppCompatActivity {
         // Check waitlist status on load
         checkWaitlistStatus();
 
-        // Show settings icon if organizer
+        // Show settings icon if organizer, hide join button
         setupOrganizerSettings();
     }
 
@@ -141,6 +141,15 @@ public class EventDetailsActivity extends AppCompatActivity {
      */
     private void checkWaitlistStatus() {
         if (event == null || deviceId == null) {
+            return;
+        }
+
+        // Hide join button if user is the organizer
+        if (event.getOrganizerId() != null && event.getOrganizerId().equals(deviceId)) {
+            runOnUiThread(() -> {
+                joinBtn.setVisibility(View.GONE);
+                leaveBtn.setVisibility(View.GONE);
+            });
             return;
         }
 
@@ -171,8 +180,14 @@ public class EventDetailsActivity extends AppCompatActivity {
                         public void onError(@NonNull Exception e) {
                             Log.e("EventDetailsActivity", "Failed to check if can join", e);
                             runOnUiThread(() -> {
-                                joinBtn.setVisibility(View.VISIBLE);
-                                leaveBtn.setVisibility(View.GONE);
+                                // Double-check organizer status before showing button
+                                if (event.getOrganizerId() != null && event.getOrganizerId().equals(deviceId)) {
+                                    joinBtn.setVisibility(View.GONE);
+                                    leaveBtn.setVisibility(View.GONE);
+                                } else {
+                                    joinBtn.setVisibility(View.VISIBLE);
+                                    leaveBtn.setVisibility(View.GONE);
+                                }
                             });
                         }
                     });
@@ -183,8 +198,14 @@ public class EventDetailsActivity extends AppCompatActivity {
             public void onError(@NonNull Exception e) {
                 Log.e("EventDetailsActivity", "Failed to check waitlist status", e);
                 runOnUiThread(() -> {
-                    joinBtn.setVisibility(View.VISIBLE);
-                    leaveBtn.setVisibility(View.GONE);
+                    // Double-check organizer status before showing button
+                    if (event.getOrganizerId() != null && event.getOrganizerId().equals(deviceId)) {
+                        joinBtn.setVisibility(View.GONE);
+                        leaveBtn.setVisibility(View.GONE);
+                    } else {
+                        joinBtn.setVisibility(View.VISIBLE);
+                        leaveBtn.setVisibility(View.GONE);
+                    }
                 });
             }
         });

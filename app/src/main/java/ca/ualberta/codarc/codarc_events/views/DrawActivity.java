@@ -24,6 +24,7 @@ import ca.ualberta.codarc.codarc_events.utils.Identity;
 /**
  * Organizer screen to run the lottery draw.
  * The lottery creates a pool of winners and a replacement pool (default: 3 entrants).
+ * Notifications are automatically sent to winners when the draw completes.
  * Replacements can be promoted when winners decline their invitation.
  */
 public class DrawActivity extends AppCompatActivity {
@@ -115,12 +116,11 @@ public class DrawActivity extends AppCompatActivity {
             @Override
             public void onSuccess(List<String> winners, List<String> replacements) {
                 runOnUiThread(() -> {
-                    String summary = String.format("✅ Winners drawn: %d\n📋 Replacement pool: %d", 
+                    String summary = String.format("✅ Winners drawn: %d\n📋 Replacement pool: %d\n📧 Notifications sent automatically", 
                             winners.size(), replacements.size());
                     tvResultSummary.setText(summary);
                     Toast.makeText(DrawActivity.this, 
-                            "Lottery complete! " + winners.size() + " winners selected with " + 
-                            replacements.size() + " replacements", 
+                            "Lottery complete! " + winners.size() + " winners selected. Notifications sent automatically.", 
                             Toast.LENGTH_LONG).show();
                 });
             }
