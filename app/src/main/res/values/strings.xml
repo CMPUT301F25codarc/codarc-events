@@ -131,7 +131,7 @@
     <string name="choose_poster_button">Choose Poster</string>
     <string name="cancel_button">Cancel</string>
     <string name="create_event_button">Create Event</string>
-
+  
     <!-- Notification Strings -->
     <string name="notify_winners_button">Notify Winners</string>
     <string name="notify_cancelled_button">Notify Cancelled</string>
@@ -154,5 +154,19 @@
     <string name="notification_decline_success">Invitation to join the event rejected.</string>
     <string name="notification_unknown_event">Event update</string>
     <string name="notification_response_error">Unable to update invitation. Please try again.</string>
-</resources>
+  
+    <!-- Lottery Info Strings -->
+    <string name="lottery_info">Lottery Info</string>
+    <string name="got_it">Got it</string>
+    <string name="lottery_info_title">Fair and Random Selection</string>
+    <string name="lottery_info_description">Selection is performed through a random lottery to ensure fairness and equal opportunity. All entrants in the waiting list have an equal chance of being selected once registration closes. The selection does not depend on when you joined or on any personal details. Every participant is treated equally, making the lottery process transparent and unbiased.</string>
+    <string name="lottery_info_footer">For transparency, organizers cannot influence the lottery results.</string>
+    
+    <!-- Event Card Strings -->
+    <string name="status_open">Status: Open</string>
+    <string name="status_closed">Status: Closed</string>
+    <string name="waitlist_loading">Waitlist: …</string>
+    <string name="waitlist_count">Waitlist: %d</string>
+    <string name="waitlist_unavailable">Waitlist: N/A</string>
 
+</resources>

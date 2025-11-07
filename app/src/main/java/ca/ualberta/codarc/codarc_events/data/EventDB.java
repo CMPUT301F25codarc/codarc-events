@@ -100,146 +100,146 @@ public class EventDB {
                 .addOnFailureListener(cb::onError);
     }
 
-    /**
-     * Checks if an entrant is currently on the waitlist for an event.
-     * Returns true if entrant exists with is_winner=false and is_enrolled=null.
-     */
     public void isEntrantOnWaitlist(String eventId, String deviceId, Callback<Boolean> cb) {
         if (eventId == null || eventId.isEmpty() || deviceId == null || deviceId.isEmpty()) {
             cb.onError(new IllegalArgumentException("eventId or deviceId is empty"));
             return;
         }
         db.collection("events").document(eventId)
-                .collection("entrants").document(deviceId)
+                .collection("waitingList").document(deviceId)
                 .get()
                 .addOnSuccessListener(snapshot -> {
-                    if (snapshot != null && snapshot.exists()) {
-                        Boolean isWinner = snapshot.getBoolean("is_winner");
-                        Boolean isEnrolled = snapshot.getBoolean("is_enrolled");
-                        boolean onWaitlist = (isWinner == null || !isWinner) && isEnrolled == null;
-                        cb.onSuccess(onWaitlist);
-                    } else {
-                        cb.onSuccess(false);
-                    }
+                    cb.onSuccess(snapshot != null && snapshot.exists());
                 })
                 .addOnFailureListener(cb::onError);
     }
 
-    /**
-     * Checks if an entrant can join the waitlist.
-     */
+    // Checks if user can join (not already in any list)
     public void canJoinWaitlist(String eventId, String deviceId, Callback<Boolean> cb) {
         if (eventId == null || eventId.isEmpty() || deviceId == null || deviceId.isEmpty()) {
             cb.onError(new IllegalArgumentException("eventId or deviceId is empty"));
             return;
         }
+        
+        // Check if already in waitingList
         db.collection("events").document(eventId)
-                .collection("entrants").document(deviceId)
+                .collection("waitingList").document(deviceId)
                 .get()
                 .addOnSuccessListener(snapshot -> {
-                    if (snapshot == null || !snapshot.exists()) {
-                        cb.onSuccess(true);
+                    if (snapshot != null && snapshot.exists()) {
+                        cb.onSuccess(false); // Already on waitlist
                         return;
                     }
-                    Boolean isWinner = snapshot.getBoolean("is_winner");
-                    Boolean isEnrolled = snapshot.getBoolean("is_enrolled");
-
-                    boolean onWaitlist = (isWinner == null || !isWinner) && isEnrolled == null;
-                    boolean winnerDeclined = Boolean.TRUE.equals(isWinner) && Boolean.FALSE.equals(isEnrolled);
-
-                    cb.onSuccess(!onWaitlist && winnerDeclined);
+                    
+                    // Check if in winners list
+                    db.collection("events").document(eventId)
+                            .collection("winners").document(deviceId)
+                            .get()
+                            .addOnSuccessListener(winnerSnapshot -> {
+                                if (winnerSnapshot != null && winnerSnapshot.exists()) {
+                                    cb.onSuccess(false); // Already a winner
+                                    return;
+                                }
+                                
+                                // Check if in accepted list
+                                db.collection("events").document(eventId)
+                                        .collection("accepted").document(deviceId)
+                                        .get()
+                                        .addOnSuccessListener(acceptedSnapshot -> {
+                                            if (acceptedSnapshot != null && acceptedSnapshot.exists()) {
+                                                cb.onSuccess(false); // Already accepted
+                                            } else {
+                                                // Can join if cancelled or not in any list
+                                                cb.onSuccess(true);
+                                            }
+                                        })
+                                        .addOnFailureListener(cb::onError);
+                            })
+                            .addOnFailureListener(cb::onError);
                 })
                 .addOnFailureListener(cb::onError);
     }
 
-    /**
-     * Counts the number of entrants on waitlist (is_winner=false or null, is_enrolled=null).
-     */
     public void getWaitlistCount(String eventId, Callback<Integer> cb) {
         if (eventId == null || eventId.isEmpty()) {
             cb.onError(new IllegalArgumentException("eventId is empty"));
             return;
         }
-        getWaitlist(eventId, new Callback<List<Map<String, Object>>>() {
-            @Override
-            public void onSuccess(List<Map<String, Object>> waitlist) {
-                cb.onSuccess(waitlist != null ? waitlist.size() : 0);
-            }
-
-            @Override
-            public void onError(@NonNull Exception e) {
-                cb.onError(e);
-            }
-        });
+        db.collection("events").document(eventId)
+                .collection("waitingList")
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    int count = querySnapshot != null ? querySnapshot.size() : 0;
+                    cb.onSuccess(count);
+                })
+                .addOnFailureListener(cb::onError);
     }
 
-    /**
-     * Adds or updates an entrant document in the event's entrants subcollection.
-     * Sets is_winner=false, is_enrolled=null and records request_time timestamp.
-     * Idempotent: if already on waitlist, no error.
-     */
+    // Real-time count (creates listener - remember to remove it!)
+    public void fetchAccurateWaitlistCount(String eventId, Callback<Integer> cb) {
+        if (eventId == null || eventId.isEmpty()) {
+            cb.onError(new IllegalArgumentException("eventId is empty"));
+            return;
+        }
+
+        db.collection("events").document(eventId)
+                .collection("waitingList")
+                .addSnapshotListener((querySnapshot, e) -> {
+                    if (e != null) {
+                        cb.onError(e);
+                        return;
+                    }
+
+                    int count = querySnapshot != null ? querySnapshot.size() : 0;
+                    cb.onSuccess(count);
+                });
+    }
+
     public void joinWaitlist(String eventId, String deviceId, Callback<Void> cb) {
         if (eventId == null || eventId.isEmpty() || deviceId == null || deviceId.isEmpty()) {
             cb.onError(new IllegalArgumentException("eventId or deviceId is empty"));
             return;
         }
         Map<String, Object> data = new HashMap<>();
-        data.put("is_winner", false);
-        data.put("is_enrolled", null);
+        data.put("deviceId", deviceId);
         data.put("request_time", FieldValue.serverTimestamp());
 
         db.collection("events").document(eventId)
-                .collection("entrants").document(deviceId)
+                .collection("waitingList").document(deviceId)
                 .set(data)
                 .addOnSuccessListener(unused -> cb.onSuccess(null))
                 .addOnFailureListener(cb::onError);
     }
 
-    /**
-     * Removes an entrant from the waitlist by deleting their document.
-     * If document doesn't exist, still succeeds (idempotent).
-     */
+    // Removes from waitlist (idempotent - safe to call multiple times)
     public void leaveWaitlist(String eventId, String deviceId, Callback<Void> cb) {
         if (eventId == null || eventId.isEmpty() || deviceId == null || deviceId.isEmpty()) {
             cb.onError(new IllegalArgumentException("eventId or deviceId is empty"));
             return;
         }
         db.collection("events").document(eventId)
-                .collection("entrants").document(deviceId)
+                .collection("waitingList").document(deviceId)
                 .delete()
                 .addOnSuccessListener(unused -> cb.onSuccess(null))
                 .addOnFailureListener(cb::onError);
     }
 
-    /**
-     * Fetches all entrants on the waitlist for an event.
-     * Returns entrants with is_winner=false (or null) and is_enrolled=null.
-     *
-     * @param eventId the event ID to get waitlist for
-     * @param cb callback with list of maps: {deviceId: String, requestTime: Object}
-     */
     public void getWaitlist(String eventId, Callback<List<Map<String, Object>>> cb) {
         if (eventId == null || eventId.isEmpty()) {
             cb.onError(new IllegalArgumentException("eventId is empty"));
             return;
         }
         db.collection("events").document(eventId)
-                .collection("entrants")
+                .collection("waitingList")
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
                     List<Map<String, Object>> entries = new ArrayList<>();
                     if (querySnapshot != null) {
                         for (QueryDocumentSnapshot doc : querySnapshot) {
-                            Boolean isWinner = doc.getBoolean("is_winner");
-                            Boolean isEnrolled = doc.getBoolean("is_enrolled");
-                            boolean onWaitlist = (isWinner == null || !isWinner) && isEnrolled == null;
-
-                            if (onWaitlist) {
-                                Map<String, Object> entry = new HashMap<>();
-                                entry.put("deviceId", doc.getId());
-                                entry.put("requestTime", doc.get("request_time"));
-                                entries.add(entry);
-                            }
+                            Map<String, Object> entry = new HashMap<>();
+                            entry.put("deviceId", doc.getId());
+                            entry.put("requestTime", doc.get("request_time"));
+                            entries.add(entry);
                         }
                     }
                     cb.onSuccess(entries);
@@ -247,94 +247,174 @@ public class EventDB {
                 .addOnFailureListener(cb::onError);
     }
 
-    
-    /**
-     * Sets is_winner=true for selected entrants.
-     */
-    public void markWinners(String eventId, List<String> entrantIds, Callback<Void> cb) {
+    // Moves winners from waitlist to winners, creates replacement pool
+    public void markWinners(String eventId, List<String> winnerIds, List<String> replacementIds, Callback<Void> cb) {
         if (eventId == null || eventId.isEmpty()) {
             cb.onError(new IllegalArgumentException("eventId is empty"));
             return;
         }
-        if (entrantIds == null || entrantIds.isEmpty()) {
-            cb.onError(new IllegalArgumentException("entrantIds is empty"));
+        if (winnerIds == null || winnerIds.isEmpty()) {
+            cb.onError(new IllegalArgumentException("winnerIds is empty"));
             return;
         }
 
         WriteBatch batch = db.batch();
+        long timestamp = System.currentTimeMillis();
 
-        for (String entrantId : entrantIds) {
-            DocumentReference ref = db.collection("events")
+        // Move winners from waitingList to winners
+        for (String winnerId : winnerIds) {
+            // Remove from waitingList
+            DocumentReference waitlistRef = db.collection("events")
                     .document(eventId)
-                    .collection("entrants")
-                    .document(entrantId);
+                    .collection("waitingList")
+                    .document(winnerId);
+            batch.delete(waitlistRef);
 
+            // Add to winners
+            DocumentReference winnersRef = db.collection("events")
+                    .document(eventId)
+                    .collection("winners")
+                    .document(winnerId);
             Map<String, Object> data = new HashMap<>();
-            data.put("is_winner", true);
-            data.put("invitedAt", System.currentTimeMillis());
-            batch.set(ref, data, SetOptions.merge());
+            data.put("deviceId", winnerId);
+            data.put("invitedAt", timestamp);
+            batch.set(winnersRef, data);
+        }
+
+        // Move replacement pool from waitingList to replacementPool
+        if (replacementIds != null && !replacementIds.isEmpty()) {
+            for (String replacementId : replacementIds) {
+                // Remove from waitingList
+                DocumentReference waitlistRef = db.collection("events")
+                        .document(eventId)
+                        .collection("waitingList")
+                        .document(replacementId);
+                batch.delete(waitlistRef);
+
+                // Add to replacementPool
+                DocumentReference poolRef = db.collection("events")
+                        .document(eventId)
+                        .collection("replacementPool")
+                        .document(replacementId);
+                Map<String, Object> data = new HashMap<>();
+                data.put("deviceId", replacementId);
+                data.put("addedToPoolAt", timestamp);
+                batch.set(poolRef, data);
+            }
         }
 
         batch.commit()
                 .addOnSuccessListener(unused -> cb.onSuccess(null))
                 .addOnFailureListener(cb::onError);
     }
+    
+    // Legacy - no replacement pool
+    public void markWinners(String eventId, List<String> entrantIds, Callback<Void> cb) {
+        markWinners(eventId, entrantIds, new ArrayList<>(), cb);
+    }
 
-    /**
-     * Sets is_winner=true for a replacement entrant.
-     */
+    // Promotes replacement from pool to winners (picks first if entrantId is null)
     public void markReplacement(String eventId, String entrantId, Callback<Void> cb) {
         if (eventId == null || eventId.isEmpty()) {
             cb.onError(new IllegalArgumentException("eventId is empty"));
             return;
         }
-        if (entrantId == null || entrantId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("entrantId is empty"));
-            return;
-        }
 
+        if (entrantId != null && !entrantId.isEmpty()) {
+            // Specific entrant requested
+            promoteReplacementToWinner(eventId, entrantId, cb);
+        } else {
+            // Pick first available from replacement pool
+            getReplacementPool(eventId, new Callback<List<Map<String, Object>>>() {
+                @Override
+                public void onSuccess(List<Map<String, Object>> pool) {
+                    if (pool == null || pool.isEmpty()) {
+                        cb.onError(new IllegalStateException("Replacement pool is empty"));
+                        return;
+                    }
+                    String firstReplacementId = (String) pool.get(0).get("deviceId");
+                    promoteReplacementToWinner(eventId, firstReplacementId, cb);
+                }
+
+                @Override
+                public void onError(@NonNull Exception e) {
+                    cb.onError(e);
+                }
+            });
+        }
+    }
+    
+    private void promoteReplacementToWinner(String eventId, String entrantId, Callback<Void> cb) {
+        // Check if entrant is in replacement pool
         db.collection("events").document(eventId)
-                .collection("entrants").document(entrantId)
+                .collection("replacementPool").document(entrantId)
                 .get()
                 .addOnSuccessListener(snapshot -> {
                     if (snapshot == null || !snapshot.exists()) {
-                        cb.onError(new IllegalArgumentException("Entrant not found"));
-                        return;
-                    }
-                    Boolean isWinner = snapshot.getBoolean("is_winner");
-                    if (Boolean.TRUE.equals(isWinner)) {
-                        cb.onError(new IllegalStateException("Entrant already a winner"));
+                        cb.onError(new IllegalArgumentException("Entrant not in replacement pool"));
                         return;
                     }
 
-                    db.collection("events").document(eventId)
-                            .collection("entrants").document(entrantId)
-                            .update("is_winner", true, "invitedAt", System.currentTimeMillis())
+                    WriteBatch batch = db.batch();
+
+                    // Remove from replacementPool
+                    DocumentReference poolRef = db.collection("events")
+                            .document(eventId)
+                            .collection("replacementPool")
+                            .document(entrantId);
+                    batch.delete(poolRef);
+
+                    // Add to winners
+                    DocumentReference winnersRef = db.collection("events")
+                            .document(eventId)
+                            .collection("winners")
+                            .document(entrantId);
+                    Map<String, Object> data = new HashMap<>();
+                    data.put("deviceId", entrantId);
+                    data.put("invitedAt", System.currentTimeMillis());
+                    data.put("isReplacement", true); // Mark as replacement for tracking
+                    batch.set(winnersRef, data);
+
+                    batch.commit()
                             .addOnSuccessListener(unused -> cb.onSuccess(null))
                             .addOnFailureListener(cb::onError);
                 })
                 .addOnFailureListener(cb::onError);
     }
 
-    /**
-     * Sets is_enrolled status for an entrant.
-     */
+    // Moves winner to accepted or cancelled based on enrolled flag
     public void setEnrolledStatus(String eventId, String deviceId, Boolean enrolled, Callback<Void> cb) {
         if (eventId == null || eventId.isEmpty() || deviceId == null || deviceId.isEmpty()) {
             cb.onError(new IllegalArgumentException("eventId or deviceId is empty"));
             return;
         }
 
-        db.collection("events").document(eventId)
-                .collection("entrants").document(deviceId)
-                .update("is_enrolled", enrolled)
+        WriteBatch batch = db.batch();
+
+        // Remove from winners
+        DocumentReference winnersRef = db.collection("events")
+                .document(eventId)
+                .collection("winners")
+                .document(deviceId);
+        batch.delete(winnersRef);
+
+        // Add to appropriate list based on enrollment status
+        String targetCollection = enrolled ? "accepted" : "cancelled";
+        DocumentReference targetRef = db.collection("events")
+                .document(eventId)
+                .collection(targetCollection)
+                .document(deviceId);
+        
+        Map<String, Object> data = new HashMap<>();
+        data.put("deviceId", deviceId);
+        data.put("respondedAt", System.currentTimeMillis());
+        batch.set(targetRef, data);
+
+        batch.commit()
                 .addOnSuccessListener(unused -> cb.onSuccess(null))
                 .addOnFailureListener(cb::onError);
     }
 
-    /**
-     * Retrieves entrants with is_winner=true.
-     */
     public void getWinners(String eventId, Callback<List<Map<String, Object>>> cb) {
         if (eventId == null || eventId.isEmpty()) {
             cb.onError(new IllegalArgumentException("eventId is empty"));
@@ -342,8 +422,7 @@ public class EventDB {
         }
 
         db.collection("events").document(eventId)
-                .collection("entrants")
-                .whereEqualTo("is_winner", true)
+                .collection("winners")
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
                     List<Map<String, Object>> winners = new ArrayList<>();
@@ -352,7 +431,6 @@ public class EventDB {
                             Map<String, Object> data = new HashMap<>();
                             data.put("deviceId", doc.getId());
                             data.put("invitedAt", doc.get("invitedAt"));
-                            data.put("is_enrolled", doc.get("is_enrolled"));
                             winners.add(data);
                         }
                     }
@@ -361,9 +439,6 @@ public class EventDB {
                 .addOnFailureListener(cb::onError);
     }
 
-    /**
-     * Retrieves entrants with is_enrolled=false.
-     */
     public void getCancelled(String eventId, Callback<List<Map<String, Object>>> cb) {
         if (eventId == null || eventId.isEmpty()) {
             cb.onError(new IllegalArgumentException("eventId is empty"));
@@ -371,8 +446,7 @@ public class EventDB {
         }
 
         db.collection("events").document(eventId)
-                .collection("entrants")
-                .whereEqualTo("is_enrolled", false)
+                .collection("cancelled")
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
                     List<Map<String, Object>> cancelled = new ArrayList<>();
@@ -380,7 +454,7 @@ public class EventDB {
                         for (QueryDocumentSnapshot doc : querySnapshot) {
                             Map<String, Object> data = new HashMap<>();
                             data.put("deviceId", doc.getId());
-                            data.put("invitedAt", doc.get("invitedAt"));
+                            data.put("respondedAt", doc.get("respondedAt"));
                             cancelled.add(data);
                         }
                     }
@@ -389,9 +463,6 @@ public class EventDB {
                 .addOnFailureListener(cb::onError);
     }
 
-    /**
-     * Retrieves entrants with is_enrolled=true.
-     */
     public void getEnrolled(String eventId, Callback<List<Map<String, Object>>> cb) {
         if (eventId == null || eventId.isEmpty()) {
             cb.onError(new IllegalArgumentException("eventId is empty"));
@@ -399,8 +470,7 @@ public class EventDB {
         }
 
         db.collection("events").document(eventId)
-                .collection("entrants")
-                .whereEqualTo("is_enrolled", true)
+                .collection("accepted")
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
                     List<Map<String, Object>> enrolled = new ArrayList<>();
@@ -408,7 +478,7 @@ public class EventDB {
                         for (QueryDocumentSnapshot doc : querySnapshot) {
                             Map<String, Object> data = new HashMap<>();
                             data.put("deviceId", doc.getId());
-                            data.put("invitedAt", doc.get("invitedAt"));
+                            data.put("respondedAt", doc.get("respondedAt"));
                             enrolled.add(data);
                         }
                     }
@@ -416,14 +486,48 @@ public class EventDB {
                 })
                 .addOnFailureListener(cb::onError);
     }
+    
+    public void getReplacementPool(String eventId, Callback<List<Map<String, Object>>> cb) {
+        if (eventId == null || eventId.isEmpty()) {
+            cb.onError(new IllegalArgumentException("eventId is empty"));
+            return;
+        }
 
-    /**
-     * Parses an Event from a Firestore DocumentSnapshot.
-     * Handles conversion of Timestamp objects to String format.
-     *
-     * @param doc the document snapshot
-     * @return Event or null if parsing fails
-     */
+        db.collection("events").document(eventId)
+                .collection("replacementPool")
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    List<Map<String, Object>> pool = new ArrayList<>();
+                    if (querySnapshot != null) {
+                        for (QueryDocumentSnapshot doc : querySnapshot) {
+                            Map<String, Object> data = new HashMap<>();
+                            data.put("deviceId", doc.getId());
+                            data.put("addedToPoolAt", doc.get("addedToPoolAt"));
+                            pool.add(data);
+                        }
+                    }
+                    cb.onSuccess(pool);
+                })
+                .addOnFailureListener(cb::onError);
+    }
+    
+    public void getReplacementPoolCount(String eventId, Callback<Integer> cb) {
+        if (eventId == null || eventId.isEmpty()) {
+            cb.onError(new IllegalArgumentException("eventId is empty"));
+            return;
+        }
+        
+        db.collection("events").document(eventId)
+                .collection("replacementPool")
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    int count = querySnapshot != null ? querySnapshot.size() : 0;
+                    cb.onSuccess(count);
+                })
+                .addOnFailureListener(cb::onError);
+    }
+
+    // Helper to parse event from Firestore doc
     private Event parseEventFromDocument(DocumentSnapshot doc) {
         try {
             Event event = new Event();
@@ -448,12 +552,7 @@ public class EventDB {
         }
     }
 
-    /**
-     * Converts a Firestore Timestamp to ISO format string.
-     * If the value is already a String, returns it as-is.
-     * If it's a Timestamp, converts to ISO format.
-     * If null, returns null.
-     */
+    // Converts Firestore Timestamp to ISO string
     private String convertTimestampToString(Object value) {
         if (value == null) {
             return null;
