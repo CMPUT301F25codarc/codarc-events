@@ -98,6 +98,14 @@ public class EventBrowserActivity extends AppCompatActivity {
         }
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Refresh events when returning to this activity
+        // This ensures waitlist counts are updated if user joined from EventDetailsActivity
+        loadEvents();
+    }
+
     /**
      * Loads all events from Firestore and updates the adapter list.
      */
