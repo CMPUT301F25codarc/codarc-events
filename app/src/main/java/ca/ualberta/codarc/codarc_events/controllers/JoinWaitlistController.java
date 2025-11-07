@@ -88,6 +88,12 @@ public class JoinWaitlistController {
             return;
         }
 
+        // Check if user is the organizer of this event
+        if (event.getOrganizerId() != null && event.getOrganizerId().equals(deviceId)) {
+            callback.onResult(JoinResult.failure("You cannot join your own event"));
+            return;
+        }
+
         // First check profile registration
         checkProfileRegistration(deviceId, new EntrantDB.Callback<Boolean>() {
             @Override

@@ -33,6 +33,7 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.View
     private final Context context;
     private final List<Event> events;
     private final JoinWaitlistController joinWaitlistController;
+    private final String currentDeviceId;
 
     /**
      * Creates an adapter for displaying event cards in a RecyclerView.
@@ -43,6 +44,7 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.View
     public EventCardAdapter(Context context, List<Event> events) {
         this.context = context;
         this.events = events;
+        this.currentDeviceId = Identity.getOrCreateDeviceId(context);
         this.joinWaitlistController = new JoinWaitlistController(new EventDB(), new EntrantDB());
     }
 
@@ -64,6 +66,13 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.View
 
         // Fetch and display waitlist count
         fetchAndDisplayWaitlistCount(holder, eventId);
+
+        // Hide join button if user is the organizer
+        if (e.getOrganizerId() != null && e.getOrganizerId().equals(currentDeviceId)) {
+            holder.joinBtn.setVisibility(View.GONE);
+        } else {
+            holder.joinBtn.setVisibility(View.VISIBLE);
+        }
 
         // Join Waitlist - use controller for proper validation and business logic
         holder.joinBtn.setOnClickListener(v -> {

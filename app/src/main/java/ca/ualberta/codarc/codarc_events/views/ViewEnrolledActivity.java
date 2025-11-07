@@ -122,7 +122,7 @@ public class ViewEnrolledActivity extends AppCompatActivity {
 
         for (Map<String, Object> entry : entries) {
             String deviceId = (String) entry.get("deviceId");
-            Object invitedAtObj = entry.get("invitedAt");
+            Object respondedAtObj = entry.get("respondedAt");
 
             entrantDB.getProfile(deviceId, new EntrantDB.Callback<Entrant>() {
                 @Override
@@ -131,7 +131,7 @@ public class ViewEnrolledActivity extends AppCompatActivity {
                     if (entrant != null && entrant.getName() != null && !entrant.getName().isEmpty()) {
                         name = entrant.getName();
                     }
-                    long timestamp = parseTimestamp(invitedAtObj);
+                    long timestamp = parseTimestamp(respondedAtObj);
                     itemList.add(new WaitlistAdapter.WaitlistItem(deviceId, name, timestamp));
 
                     checkAndUpdateUI(completed, totalEntries);
@@ -139,7 +139,8 @@ public class ViewEnrolledActivity extends AppCompatActivity {
 
                 @Override
                 public void onError(@NonNull Exception e) {
-                    long timestamp = parseTimestamp(invitedAtObj);
+                    Log.w("ViewEnrolledActivity", "Failed to fetch profile for " + deviceId, e);
+                    long timestamp = parseTimestamp(respondedAtObj);
                     itemList.add(new WaitlistAdapter.WaitlistItem(deviceId, deviceId, timestamp));
 
                     checkAndUpdateUI(completed, totalEntries);
