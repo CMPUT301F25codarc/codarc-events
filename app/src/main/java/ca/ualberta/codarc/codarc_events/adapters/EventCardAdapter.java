@@ -14,6 +14,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import java.util.List;
 
 import ca.ualberta.codarc.codarc_events.R;
+import ca.ualberta.codarc.codarc_events.utils.DateHelper;
 import ca.ualberta.codarc.codarc_events.controllers.JoinWaitlistController;
 import ca.ualberta.codarc.codarc_events.data.EntrantDB;
 import ca.ualberta.codarc.codarc_events.data.EventDB;
@@ -56,7 +57,7 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.View
         String eventId = e.getId();
 
         holder.title.setText(e.getName() != null ? e.getName() : "");
-        holder.date.setText(e.getEventDateTime() != null ? e.getEventDateTime() : "");
+        holder.date.setText(DateHelper.formatEventDate(e.getEventDateTime()));
         holder.status.setText(e.isOpen() ? context.getString(R.string.status_open) : context.getString(R.string.status_closed));
 
         // Fetch and display waitlist count
