@@ -21,6 +21,7 @@ import ca.ualberta.codarc.codarc_events.controllers.LeaveWaitlistController;
 import ca.ualberta.codarc.codarc_events.data.EntrantDB;
 import ca.ualberta.codarc.codarc_events.data.EventDB;
 import ca.ualberta.codarc.codarc_events.models.Event;
+import ca.ualberta.codarc.codarc_events.utils.DateHelper;
 import ca.ualberta.codarc.codarc_events.utils.Identity;
 import com.google.android.material.button.MaterialButton;
 import com.google.zxing.BarcodeFormat;
@@ -79,14 +80,14 @@ public class EventDetailsActivity extends AppCompatActivity {
         title.setText(event.getName() != null ? event.getName() : "");
         desc.setText(event.getDescription() != null ? event.getDescription() : "");
         String eventDateTime = event.getEventDateTime();
-        dateTime.setText(eventDateTime != null ? eventDateTime : "");
-        
+        dateTime.setText(DateHelper.formatEventDate(eventDateTime));
+
         TextView location = findViewById(R.id.event_location);
         String eventLocation = event.getLocation();
         location.setText("Location: " + (eventLocation != null && !eventLocation.isEmpty() ? eventLocation : "TBD"));
-        
-        String regOpen = event.getRegistrationOpen();
-        String regClose = event.getRegistrationClose();
+
+        String regOpen  = DateHelper.formatEventDate(event.getRegistrationOpen());
+        String regClose = DateHelper.formatEventDate(event.getRegistrationClose());
         regWindow.setText("Registration: " + (regOpen != null ? regOpen : "") + " → " + (regClose != null ? regClose : ""));
 
         // Generate QR code with null safety
