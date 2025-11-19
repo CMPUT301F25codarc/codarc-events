@@ -124,12 +124,6 @@ public class Event implements Serializable {
     public void setLocation(String location) { this.location = location; }
 
     /** @param tags sets the tags for the event */
-    public void setTags(List<String> tags) {
-        if (tags == null) {
-            this.tags = new ArrayList<>();
-        } else {
-            this.tags = new ArrayList<>(tags);
-        }
-    }
+    public void setTags(List<String> tags) { this.tags = new ArrayList<>(tags); }
 }
 
