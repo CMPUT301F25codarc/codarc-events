@@ -42,11 +42,99 @@ public class EventDB {
         this.db = FirebaseFirestore.getInstance();
     }
 
-    /** Add or update an event in Firestore. */
+    /**
+     * Add or update an event in Firestore.
+     * Explicitly handles all fields including tags to ensure proper serialization.
+     * Also maintains the tags collection for efficient tag queries.
+     */
     public void addEvent(Event event, Callback<Void> cb) {
+        if (event == null || event.getId() == null) {
+            cb.onError(new IllegalArgumentException("Event or event ID is null"));
+            return;
+        }
+
+        Map<String, Object> eventData = new HashMap<>();
+        eventData.put("name", event.getName());
+        eventData.put("description", event.getDescription());
+        eventData.put("location", event.getLocation());
+        eventData.put("open", event.isOpen());
+        eventData.put("organizerId", event.getOrganizerId());
+        eventData.put("qrCode", event.getQrCode());
+        eventData.put("maxCapacity", event.getMaxCapacity());
+        eventData.put("eventDateTime", event.getEventDateTime());
+        eventData.put("registrationOpen", event.getRegistrationOpen());
+        eventData.put("registrationClose", event.getRegistrationClose());
+        
+        // Explicitly save tags as an array
+        if (event.getTags() != null && !event.getTags().isEmpty()) {
+            eventData.put("tags", event.getTags());
+        } else {
+            eventData.put("tags", new ArrayList<String>());
+        }
+
+        // Check if event already exists to handle tag updates
         db.collection("events").document(event.getId())
-                .set(event)
-                .addOnSuccessListener(aVoid -> cb.onSuccess(null))
+                .get()
+                .addOnSuccessListener(existingDoc -> {
+                    // Extract old tags before lambda (must be final or effectively final)
+                    final List<String> oldTags;
+                    if (existingDoc != null && existingDoc.exists()) {
+                        // Event exists - get old tags for update
+                        Object tagsObj = existingDoc.get("tags");
+                        if (tagsObj instanceof List) {
+                            @SuppressWarnings("unchecked")
+                            List<String> tags = (List<String>) tagsObj;
+                            oldTags = tags;
+                        } else {
+                            oldTags = null;
+                        }
+                    } else {
+                        oldTags = null;
+                    }
+
+                    // Store event tags in final variable for lambda
+                    final List<String> eventTags = event.getTags();
+
+                    // Save event
+                    db.collection("events").document(event.getId())
+                            .set(eventData)
+                            .addOnSuccessListener(aVoid -> {
+                                // Update tags collection
+                                TagDB tagDB = new TagDB();
+                                if (oldTags == null) {
+                                    // New event - just add tags
+                                    tagDB.addTags(eventTags, new TagDB.Callback<Void>() {
+                                        @Override
+                                        public void onSuccess(Void value) {
+                                            cb.onSuccess(null);
+                                        }
+
+                                        @Override
+                                        public void onError(@NonNull Exception e) {
+                                            // Log but don't fail event creation
+                                            android.util.Log.w("EventDB", "Failed to update tags collection", e);
+                                            cb.onSuccess(null);
+                                        }
+                                    });
+                                } else {
+                                    // Existing event - update tags
+                                    tagDB.updateTags(oldTags, eventTags, new TagDB.Callback<Void>() {
+                                        @Override
+                                        public void onSuccess(Void value) {
+                                            cb.onSuccess(null);
+                                        }
+
+                                        @Override
+                                        public void onError(@NonNull Exception e) {
+                                            // Log but don't fail event update
+                                            android.util.Log.w("EventDB", "Failed to update tags collection", e);
+                                            cb.onSuccess(null);
+                                        }
+                                    });
+                                }
+                            })
+                            .addOnFailureListener(cb::onError);
+                })
                 .addOnFailureListener(cb::onError);
     }
 
@@ -167,6 +255,28 @@ public class EventDB {
         }
         db.collection("events").document(eventId)
                 .collection("waitingList")
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    int count = querySnapshot != null ? querySnapshot.size() : 0;
+                    cb.onSuccess(count);
+                })
+                .addOnFailureListener(cb::onError);
+    }
+
+    /**
+     * Gets the count of accepted participants for an event.
+     * This is used to check if the event has reached capacity.
+     *
+     * @param eventId the event ID
+     * @param cb callback with the accepted count
+     */
+    public void getAcceptedCount(String eventId, Callback<Integer> cb) {
+        if (eventId == null || eventId.isEmpty()) {
+            cb.onError(new IllegalArgumentException("eventId is empty"));
+            return;
+        }
+        db.collection("events").document(eventId)
+                .collection("accepted")
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
                     int count = querySnapshot != null ? querySnapshot.size() : 0;
@@ -544,6 +654,16 @@ public class EventDB {
             event.setEventDateTime(convertTimestampToString(doc.get("eventDateTime")));
             event.setRegistrationOpen(convertTimestampToString(doc.get("registrationOpen")));
             event.setRegistrationClose(convertTimestampToString(doc.get("registrationClose")));
+
+            // Parse tags array from Firestore
+            Object tagsObj = doc.get("tags");
+            if (tagsObj instanceof List) {
+                @SuppressWarnings("unchecked")
+                List<String> tags = (List<String>) tagsObj;
+                event.setTags(tags);
+            } else {
+                event.setTags(null);
+            }
 
             return event;
         } catch (Exception e) {

@@ -64,6 +64,16 @@
             android:textStyle="italic"
             android:textSize="14sp" />
 
+        <!-- Tags Display -->
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/chip_group_tags"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center"
+            app:chipSpacing="4dp"
+            app:singleLine="true" />
+
         <!-- Divider -->
         <View
             android:layout_width="match_parent"

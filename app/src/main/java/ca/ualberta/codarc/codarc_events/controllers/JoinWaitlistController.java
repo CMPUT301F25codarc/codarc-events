@@ -118,11 +118,11 @@ public class JoinWaitlistController {
                             return;
                         }
 
-                        // Validate capacity
-                        eventDB.getWaitlistCount(event.getId(), new EventDB.Callback<Integer>() {
+                        // Validate capacity (check accepted participants, not waitlist)
+                        eventDB.getAcceptedCount(event.getId(), new EventDB.Callback<Integer>() {
                             @Override
-                            public void onSuccess(Integer currentCount) {
-                                if (!EventValidationHelper.hasCapacity(event, currentCount)) {
+                            public void onSuccess(Integer acceptedCount) {
+                                if (!EventValidationHelper.hasCapacity(event, acceptedCount)) {
                                     callback.onResult(JoinResult.failure("Event is full"));
                                     return;
                                 }

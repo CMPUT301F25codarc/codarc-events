@@ -14,6 +14,8 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
 
 import ca.ualberta.codarc.codarc_events.R;
 import ca.ualberta.codarc.codarc_events.controllers.JoinWaitlistController;
@@ -89,6 +91,9 @@ public class EventDetailsActivity extends AppCompatActivity {
         String regOpen  = DateHelper.formatEventDate(event.getRegistrationOpen());
         String regClose = DateHelper.formatEventDate(event.getRegistrationClose());
         regWindow.setText("Registration: " + (regOpen != null ? regOpen : "") + " → " + (regClose != null ? regClose : ""));
+
+        // Display tags
+        displayTags();
 
         // Generate QR code with null safety
         try {
@@ -278,6 +283,36 @@ public class EventDetailsActivity extends AppCompatActivity {
                 });
             }
         });
+    }
+
+    /**
+     * Displays tags on the event details page.
+     */
+    private void displayTags() {
+        ChipGroup tagGroup = findViewById(R.id.chip_group_tags);
+        if (tagGroup == null) {
+            return;
+        }
+
+        if (event.getTags() == null || event.getTags().isEmpty()) {
+            tagGroup.setVisibility(View.GONE);
+            return;
+        }
+
+        tagGroup.setVisibility(View.VISIBLE);
+        tagGroup.removeAllViews();
+
+        for (String tag : event.getTags()) {
+            if (tag != null && !tag.trim().isEmpty()) {
+                Chip chip = new Chip(this);
+                chip.setText(tag);
+                chip.setChipBackgroundColorResource(R.color.chip_background);
+                chip.setTextColor(getColor(R.color.chip_text));
+                chip.setClickable(false);
+                chip.setFocusable(false);
+                tagGroup.addView(chip);
+            }
+        }
     }
 
 }

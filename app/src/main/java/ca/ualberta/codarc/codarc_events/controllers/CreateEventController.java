@@ -2,6 +2,7 @@ package ca.ualberta.codarc.codarc_events.controllers;
 
 import androidx.annotation.NonNull;
 
+import java.util.List;
 import java.util.UUID;
 
 import ca.ualberta.codarc.codarc_events.data.EventDB;
@@ -56,7 +57,7 @@ public class CreateEventController {
     public CreateEventResult validateAndCreateEvent(String name, String description,
                                                      String dateTime, String location,
                                                      String regOpen, String regClose,
-                                                     String capacityStr) {
+                                                     String capacityStr, List<String> tags) {
         // Validate required fields
         if (name == null || name.trim().isEmpty()) {
             return CreateEventResult.failure("Event name is required");
@@ -100,6 +101,9 @@ public class CreateEventController {
             event.setMaxCapacity(null);
         }
 
+        // Set tags (optional field)
+        event.setTags(tags);
+
         return CreateEventResult.success(event);
     }
 
@@ -110,5 +114,34 @@ public class CreateEventController {
             return;
         }
         eventDB.addEvent(event, callback);
+    }
+
+    /**
+     * Validates that a tag can be added (not duplicate).
+     * Business logic for tag validation.
+     *
+     * @param tag the tag to validate
+     * @param existingTags list of already selected tags
+     * @return true if tag is valid to add, false if duplicate
+     */
+    public boolean canAddTag(String tag, List<String> existingTags) {
+        if (tag == null || tag.trim().isEmpty()) {
+            return false;
+        }
+
+        String normalizedTag = ca.ualberta.codarc.codarc_events.utils.TagHelper.normalizeTag(tag);
+
+        if (existingTags == null || existingTags.isEmpty()) {
+            return true;
+        }
+
+        // Check if tag already exists (case-insensitive)
+        for (String existingTag : existingTags) {
+            if (ca.ualberta.codarc.codarc_events.utils.TagHelper.normalizeTag(existingTag).equals(normalizedTag)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

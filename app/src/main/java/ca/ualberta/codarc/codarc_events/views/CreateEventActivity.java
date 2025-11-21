@@ -3,19 +3,31 @@ package ca.ualberta.codarc.codarc_events.views;
 import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.View;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
+import androidx.appcompat.widget.AppCompatAutoCompleteTextView;
+
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.List;
 import java.util.Locale;
 
 import ca.ualberta.codarc.codarc_events.R;
@@ -25,6 +37,7 @@ import ca.ualberta.codarc.codarc_events.data.OrganizerDB;
 import ca.ualberta.codarc.codarc_events.data.UserDB;
 import ca.ualberta.codarc.codarc_events.models.Event;
 import ca.ualberta.codarc.codarc_events.utils.Identity;
+import ca.ualberta.codarc.codarc_events.utils.TagHelper;
 
 /**
  * Create Event screen that lets organizers fill event info.
@@ -40,6 +53,10 @@ public class CreateEventActivity extends AppCompatActivity {
 
     private TextInputEditText title, description, eventDateTime,
             regOpen, regClose, location, capacity;
+    private TextInputLayout tagInputLayout;
+    private AppCompatAutoCompleteTextView tagInput;
+    private ChipGroup tagChipGroup;
+    private List<String> selectedTags;
     private EventDB eventDB;
     private OrganizerDB organizerDB;
     private UserDB userDB;
@@ -67,6 +84,13 @@ public class CreateEventActivity extends AppCompatActivity {
         regOpen = findViewById(R.id.et_reg_open);
         regClose = findViewById(R.id.et_reg_close);
         capacity = findViewById(R.id.et_capacity);
+
+        // Tag input setup
+        selectedTags = new ArrayList<>();
+        tagInputLayout = findViewById(R.id.til_tag_input);
+        tagInput = findViewById(R.id.et_tag_input);
+        tagChipGroup = findViewById(R.id.chip_group_tags);
+        setupTagInput();
 
         Button createButton = findViewById(R.id.btn_create_event);
         Button cancelButton = findViewById(R.id.btn_cancel);
@@ -141,7 +165,7 @@ public class CreateEventActivity extends AppCompatActivity {
 
         // Use controller to validate and create event
         CreateEventController.CreateEventResult result = controller.validateAndCreateEvent(
-                name, desc, dateTime, loc, open, close, capacityStr
+                name, desc, dateTime, loc, open, close, capacityStr, selectedTags
         );
 
         if (!result.isValid()) {
@@ -251,5 +275,113 @@ public class CreateEventActivity extends AppCompatActivity {
                 finish();
             }
         });
+    }
+
+    /**
+     * Sets up the tag input field with autocomplete functionality.
+     * Supports both predefined tags (via autocomplete) and custom tags (by typing and pressing Enter).
+     */
+    private void setupTagInput() {
+        List<String> predefinedTags = TagHelper.getPredefinedTags();
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
+                android.R.layout.simple_dropdown_item_1line, predefinedTags);
+        
+        tagInput.setAdapter(adapter);
+        tagInput.setThreshold(1);
+
+        // Add tag when user presses Enter (works for both predefined and custom tags)
+        tagInput.setOnKeyListener((v, keyCode, event) -> {
+            if (keyCode == KeyEvent.KEYCODE_ENTER && event.getAction() == KeyEvent.ACTION_DOWN) {
+                addTagFromInput();
+                return true;
+            }
+            return false;
+        });
+
+        // Add tag when user selects from autocomplete dropdown
+        tagInput.setOnItemClickListener((parent, view, position, id) -> {
+            String selectedTag = (String) parent.getItemAtPosition(position);
+            addTag(selectedTag);
+            tagInput.setText("");
+        });
+
+        // Filter autocomplete suggestions based on input
+        // Note: Users can still add custom tags by typing and pressing Enter even if no matches
+        tagInput.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                String query = s.toString();
+                if (query.isEmpty()) {
+                    adapter.getFilter().filter(null);
+                } else {
+                    List<String> matches = TagHelper.filterMatchingTags(query, predefinedTags);
+                    // If no matches, show empty adapter (user can still add custom tag by pressing Enter)
+                    ArrayAdapter<String> filteredAdapter = new ArrayAdapter<>(CreateEventActivity.this,
+                            android.R.layout.simple_dropdown_item_1line, matches);
+                    tagInput.setAdapter(filteredAdapter);
+                }
+            }
+        });
+    }
+
+    /**
+     * Adds a tag from the input field if it's not empty.
+     */
+    private void addTagFromInput() {
+        String tagText = tagInput.getText() != null ? tagInput.getText().toString().trim() : "";
+        if (!tagText.isEmpty()) {
+            addTag(tagText);
+            tagInput.setText("");
+        }
+    }
+
+    /**
+     * Adds a tag to the selected tags list and updates the UI.
+     * Delegates validation to controller.
+     *
+     * @param tag the tag string to add
+     */
+    private void addTag(String tag) {
+        // Use controller to validate tag (business logic)
+        if (!controller.canAddTag(tag, selectedTags)) {
+            Toast.makeText(this, "Tag already added", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        selectedTags.add(tag);
+        updateTagChips();
+    }
+
+    /**
+     * Removes a tag from the selected tags list.
+     *
+     * @param tag the tag string to remove
+     */
+    private void removeTag(String tag) {
+        selectedTags.remove(tag);
+        updateTagChips();
+    }
+
+    /**
+     * Updates the chip group to display all selected tags.
+     */
+    private void updateTagChips() {
+        tagChipGroup.removeAllViews();
+
+        for (String tag : selectedTags) {
+            Chip chip = new Chip(this);
+            chip.setText(tag);
+            chip.setCloseIconVisible(true);
+            chip.setOnCloseIconClickListener(v -> removeTag(tag));
+            chip.setChipBackgroundColorResource(R.color.chip_background);
+            chip.setTextColor(getColor(R.color.chip_text));
+            tagChipGroup.addView(chip);
+        }
     }
 }

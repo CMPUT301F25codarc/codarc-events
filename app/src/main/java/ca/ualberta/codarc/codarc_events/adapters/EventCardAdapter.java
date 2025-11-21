@@ -11,6 +11,9 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
+
 import java.util.List;
 
 import ca.ualberta.codarc.codarc_events.R;
@@ -60,6 +63,9 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.View
         holder.date.setText(DateHelper.formatEventDate(e.getEventDateTime()));
         holder.status.setText(e.isOpen() ? context.getString(R.string.status_open) : context.getString(R.string.status_closed));
 
+        // Display tags
+        displayTags(holder, e);
+
         // Fetch and display waitlist count
         fetchAndDisplayWaitlistCount(holder, eventId);
 
@@ -85,6 +91,51 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.View
     @Override
     public int getItemCount() {
         return events.size();
+    }
+
+    /**
+     * Displays tags on the event card.
+     *
+     * @param holder the ViewHolder containing the tag chip group
+     * @param event  the event to display tags for
+     */
+    private void displayTags(@NonNull ViewHolder holder, Event event) {
+        holder.tagChipGroup.removeAllViews();
+
+        if (event.getTags() == null || event.getTags().isEmpty()) {
+            holder.tagChipGroup.setVisibility(View.GONE);
+            return;
+        }
+
+        holder.tagChipGroup.setVisibility(View.VISIBLE);
+        List<String> tags = event.getTags();
+        int maxTags = Math.min(tags.size(), 4); // Show max 4 tags
+
+        for (int i = 0; i < maxTags; i++) {
+            String tag = tags.get(i);
+            if (tag != null && !tag.trim().isEmpty()) {
+                Chip chip = new Chip(context);
+                chip.setText(tag);
+                chip.setChipBackgroundColorResource(R.color.chip_background);
+                chip.setTextColor(context.getColor(R.color.chip_text));
+                chip.setTextSize(10f);
+                chip.setClickable(false);
+                chip.setFocusable(false);
+                holder.tagChipGroup.addView(chip);
+            }
+        }
+
+        // Show "+X more" indicator if there are more tags
+        if (tags.size() > 4) {
+            Chip moreChip = new Chip(context);
+            moreChip.setText("+" + (tags.size() - 4) + " more");
+            moreChip.setChipBackgroundColorResource(R.color.chip_background);
+            moreChip.setTextColor(context.getColor(R.color.chip_text));
+            moreChip.setTextSize(10f);
+            moreChip.setClickable(false);
+            moreChip.setFocusable(false);
+            holder.tagChipGroup.addView(moreChip);
+        }
     }
 
     /**
@@ -120,6 +171,7 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.View
     public static class ViewHolder extends RecyclerView.ViewHolder {
         TextView title, date, status, waitlistCount;
         View lotteryInfoBtn;
+        ChipGroup tagChipGroup;
 
         ViewHolder(View itemView) {
             super(itemView);
@@ -128,6 +180,7 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.View
             status = itemView.findViewById(R.id.tv_entrants_info);
             waitlistCount = itemView.findViewById(R.id.tv_waitlist_count);
             lotteryInfoBtn = itemView.findViewById(R.id.btn_lottery_info);
+            tagChipGroup = itemView.findViewById(R.id.chip_group_tags);
         }
     }
 }

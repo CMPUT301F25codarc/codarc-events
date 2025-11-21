@@ -20,6 +20,12 @@
     <color name="text_primary">#212121</color>
     <color name="text_secondary">#757575</color>
     <color name="divider">#BDBDBD</color>
+    <color name="chip_background">#E1BEE7</color>
+    <color name="chip_text">#4A148C</color>
+    <color name="chip_background_selected">#7B1FA2</color>
+    <color name="chip_text_selected">#FFFFFF</color>
+    <color name="chip_background_unselected">#FFFFFF</color>
+    <color name="chip_text_unselected">#212121</color>
 
     <!-- Entrant Dashboard Colors -->
     <color name="entrant_background">#F8F8F8</color>
