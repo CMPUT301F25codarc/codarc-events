@@ -1,6 +1,7 @@
 package ca.ualberta.codarc.codarc_events.models;
 
 import java.io.Serializable;
+import java.util.List;
 
 /**
  * Plain data holder for events.
@@ -19,6 +20,7 @@ public class Event implements Serializable {
     private String qrCode;
     private Integer maxCapacity;
     private String location;
+    private List<String> tags;
 
     public Event() { }
 
@@ -85,6 +87,9 @@ public class Event implements Serializable {
     /** @return the event location */
     public String getLocation() { return location; }
 
+    /** @return the list of tags associated with this event */
+    public List<String> getTags() { return tags; }
+
     // Setters
 
     /** @param id sets the event ID */
@@ -115,5 +120,8 @@ public class Event implements Serializable {
 
     /** @param location sets the event location */
     public void setLocation(String location) { this.location = location; }
+
+    /** @param tags sets the list of tags associated with this event */
+    public void setTags(List<String> tags) { this.tags = tags; }
 }
 

@@ -44,8 +44,15 @@ public class EventValidationHelper {
         }
     }
 
-    // Check if event has capacity (returns true if no limit set)
-    public static boolean hasCapacity(Event event, int currentWaitlistCount) {
+    /**
+     * Check if event has capacity based on accepted participants.
+     * Returns true if no limit is set or if accepted count is below capacity.
+     *
+     * @param event the event to check
+     * @param acceptedCount the number of accepted participants
+     * @return true if event has capacity available, false otherwise
+     */
+    public static boolean hasCapacity(Event event, int acceptedCount) {
         if (event == null) {
             return false;
         }
@@ -56,6 +63,6 @@ public class EventValidationHelper {
             return true;
         }
 
-        return currentWaitlistCount < maxCapacity;
+        return acceptedCount < maxCapacity;
     }
 }
