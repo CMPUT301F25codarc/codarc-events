@@ -11,6 +11,7 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.recyclerview.widget.RecyclerView;
 
+import java.util.HashMap;
 import java.util.List;
 
 import ca.ualberta.codarc.codarc_events.R;
@@ -99,6 +100,11 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.View
         holder.waitlistCount.setText(context.getString(R.string.waitlist_loading));
 
         joinWaitlistController.getWaitlistCount(eventId, new EventDB.Callback<Integer>() {
+            @Override
+            public void onSuccess(List<HashMap<String, Object>> waitlist) {
+
+            }
+
             @Override
             public void onSuccess(Integer count) {
                 Object tag = holder.waitlistCount.getTag();

@@ -31,6 +31,8 @@ public class EventDB {
 
     /** Lightweight async callback used by the data layer. */
     public interface Callback<T> {
+        void onSuccess(List<HashMap<String, Object>> waitlist);
+
         void onSuccess(T value);
         void onError(@NonNull Exception e);
     }
