@@ -2,6 +2,9 @@ package ca.ualberta.codarc.codarc_events.controllers;
 
 import androidx.annotation.NonNull;
 
+import android.util.Log;
+
+import ca.ualberta.codarc.codarc_events.data.EntrantDB;
 import ca.ualberta.codarc.codarc_events.data.EventDB;
 import ca.ualberta.codarc.codarc_events.models.Event;
 
@@ -37,9 +40,16 @@ public class LeaveWaitlistController {
     }
 
     private final EventDB eventDB;
+    private final EntrantDB entrantDB;
 
     public LeaveWaitlistController(EventDB eventDB) {
         this.eventDB = eventDB;
+        this.entrantDB = new EntrantDB();
+    }
+
+    public LeaveWaitlistController(EventDB eventDB, EntrantDB entrantDB) {
+        this.eventDB = eventDB;
+        this.entrantDB = entrantDB;
     }
 
     public void leaveWaitlist(Event event, String deviceId, Callback callback) {
@@ -65,6 +75,19 @@ public class LeaveWaitlistController {
                 eventDB.leaveWaitlist(event.getId(), deviceId, new EventDB.Callback<Void>() {
                     @Override
                     public void onSuccess(Void value) {
+                        // Remove from registration history (graceful degradation - don't fail leave if this fails)
+                        entrantDB.removeEventFromEntrant(deviceId, event.getId(), new EntrantDB.Callback<Void>() {
+                            @Override
+                            public void onSuccess(Void v) {
+                                // History updated successfully
+                            }
+
+                            @Override
+                            public void onError(@NonNull Exception e) {
+                                // Log but don't fail the leave operation
+                                Log.w("LeaveWaitlistController", "Failed to update registration history", e);
+                            }
+                        });
                         callback.onResult(LeaveResult.success("You have left this event"));
                     }
 

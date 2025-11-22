@@ -238,6 +238,17 @@ public class EntrantDB {
             .addOnFailureListener(cb::onError);
     }
 
+    /**
+     * Retrieves the list of event IDs from the entrant's registration history.
+     * Queries the events subcollection under entrants/{deviceId}/events.
+     *
+     * @param deviceId the device ID of the entrant
+     * @param cb       callback that receives the list of event IDs
+     */
+    public void getRegistrationHistory(String deviceId, Callback<List<String>> cb) {
+        getEntrantEvents(deviceId, cb);
+    }
+
     public void removeEventFromEntrant(String deviceId, String eventId, Callback<Void> cb) {
         if (deviceId == null || deviceId.isEmpty()) {
             cb.onError(new IllegalArgumentException("deviceId is empty"));

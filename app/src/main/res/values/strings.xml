@@ -169,4 +169,15 @@
     <string name="waitlist_count">Waitlist: %d</string>
     <string name="waitlist_unavailable">Waitlist: N/A</string>
 
+    <!-- Registration History Strings -->
+    <string name="registration_history_title">Registration History</string>
+    <string name="registration_history_empty">No registration history found</string>
+    <string name="registration_history_waitlisted">Waitlisted</string>
+    <string name="registration_history_invited">Invited</string>
+    <string name="registration_history_accepted">Accepted</string>
+    <string name="registration_history_cancelled">Cancelled</string>
+    <string name="registration_history_not_selected">Not Selected</string>
+    <string name="view_history">View History</string>
+    <string name="back">Back</string>
+
 </resources>

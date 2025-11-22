@@ -78,6 +78,11 @@
             android:exported="false"
             android:theme="@style/Theme.Codarcevents"/>
 
+        <activity
+            android:name=".views.RegistrationHistoryActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Codarcevents"/>
+
 
     </application>
 

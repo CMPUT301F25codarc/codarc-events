@@ -2,6 +2,8 @@ package ca.ualberta.codarc.codarc_events.controllers;
 
 import androidx.annotation.NonNull;
 
+import android.util.Log;
+
 import ca.ualberta.codarc.codarc_events.data.EntrantDB;
 import ca.ualberta.codarc.codarc_events.data.EventDB;
 import ca.ualberta.codarc.codarc_events.models.Entrant;
@@ -131,6 +133,19 @@ public class JoinWaitlistController {
                                 eventDB.joinWaitlist(event.getId(), deviceId, new EventDB.Callback<Void>() {
                                     @Override
                                     public void onSuccess(Void value) {
+                                        // Track in registration history (graceful degradation - don't fail join if this fails)
+                                        entrantDB.addEventToEntrant(deviceId, event.getId(), new EntrantDB.Callback<Void>() {
+                                            @Override
+                                            public void onSuccess(Void v) {
+                                                // History updated successfully
+                                            }
+
+                                            @Override
+                                            public void onError(@NonNull Exception e) {
+                                                // Log but don't fail the join operation
+                                                Log.w("JoinWaitlistController", "Failed to update registration history", e);
+                                            }
+                                        });
                                         callback.onResult(JoinResult.success("Joined successfully"));
                                     }
 

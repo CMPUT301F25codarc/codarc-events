@@ -202,6 +202,90 @@ public class EventDB {
                 .addOnFailureListener(cb::onError);
     }
 
+    /**
+     * Checks if an entrant is a winner for a specific event.
+     * Verifies if the entrant exists in the winners collection.
+     *
+     * @param eventId  the event ID
+     * @param deviceId the device ID of the entrant
+     * @param cb       callback that receives true if the entrant is a winner, false otherwise
+     */
+    public void isEntrantWinner(String eventId, String deviceId, Callback<Boolean> cb) {
+        if (eventId == null || eventId.isEmpty() || deviceId == null || deviceId.isEmpty()) {
+            cb.onError(new IllegalArgumentException("eventId or deviceId is empty"));
+            return;
+        }
+        db.collection("events").document(eventId)
+                .collection("winners").document(deviceId)
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    cb.onSuccess(snapshot != null && snapshot.exists());
+                })
+                .addOnFailureListener(cb::onError);
+    }
+
+    /**
+     * Checks if an event document exists in Firestore.
+     * Used to filter out deleted events when loading registration history.
+     *
+     * @param eventId the event ID to check
+     * @param cb      callback that receives true if the event exists, false otherwise
+     */
+    public void eventExists(String eventId, Callback<Boolean> cb) {
+        if (eventId == null || eventId.isEmpty()) {
+            cb.onError(new IllegalArgumentException("eventId is empty"));
+            return;
+        }
+        db.collection("events").document(eventId)
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    cb.onSuccess(snapshot != null && snapshot.exists());
+                })
+                .addOnFailureListener(cb::onError);
+    }
+
+    /**
+     * Checks if an entrant is in the accepted collection for a specific event.
+     *
+     * @param eventId  the event ID
+     * @param deviceId the device ID of the entrant
+     * @param cb       callback that receives true if the entrant is accepted, false otherwise
+     */
+    public void isEntrantAccepted(String eventId, String deviceId, Callback<Boolean> cb) {
+        if (eventId == null || eventId.isEmpty() || deviceId == null || deviceId.isEmpty()) {
+            cb.onError(new IllegalArgumentException("eventId or deviceId is empty"));
+            return;
+        }
+        db.collection("events").document(eventId)
+                .collection("accepted").document(deviceId)
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    cb.onSuccess(snapshot != null && snapshot.exists());
+                })
+                .addOnFailureListener(cb::onError);
+    }
+
+    /**
+     * Checks if an entrant is in the cancelled collection for a specific event.
+     *
+     * @param eventId  the event ID
+     * @param deviceId the device ID of the entrant
+     * @param cb       callback that receives true if the entrant is cancelled, false otherwise
+     */
+    public void isEntrantCancelled(String eventId, String deviceId, Callback<Boolean> cb) {
+        if (eventId == null || eventId.isEmpty() || deviceId == null || deviceId.isEmpty()) {
+            cb.onError(new IllegalArgumentException("eventId or deviceId is empty"));
+            return;
+        }
+        db.collection("events").document(eventId)
+                .collection("cancelled").document(deviceId)
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    cb.onSuccess(snapshot != null && snapshot.exists());
+                })
+                .addOnFailureListener(cb::onError);
+    }
+
     // Checks if user can join (not already in any list)
     public void canJoinWaitlist(String eventId, String deviceId, Callback<Boolean> cb) {
         if (eventId == null || eventId.isEmpty() || deviceId == null || deviceId.isEmpty()) {
