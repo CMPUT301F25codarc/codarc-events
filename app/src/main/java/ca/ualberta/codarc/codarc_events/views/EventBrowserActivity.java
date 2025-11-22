@@ -117,6 +117,15 @@ public class EventBrowserActivity extends AppCompatActivity {
             });
         }
 
+        View historyTab = findViewById(R.id.tab_history);
+        if (historyTab != null) {
+            historyTab.setOnClickListener(v -> {
+                Intent intent = new Intent(EventBrowserActivity.this, RegistrationHistoryActivity.class);
+                startActivity(intent);
+                overridePendingTransition(android.R.anim.slide_in_left, android.R.anim.slide_out_right);
+            });
+        }
+
         View notificationsTab = findViewById(R.id.tab_notifications);
         if (notificationsTab != null) {
             notificationsTab.setOnClickListener(v -> {
