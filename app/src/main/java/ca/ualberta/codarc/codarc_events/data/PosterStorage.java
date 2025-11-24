@@ -19,7 +19,7 @@ public class PosterStorage {
 
     private static final String TAG = "PosterStorage";
     private static final String POSTERS_PATH = "posters";
-    private static final long MAX_FILE_SIZE = 15 * 1024 * 1024; // 15MB (supports paper-sized images: 2400x3300)
+    private static final long MAX_FILE_SIZE = 5 * 1024 * 1024;
 
     /** Lightweight async callback used by the data layer. */
     public interface Callback<T> {
