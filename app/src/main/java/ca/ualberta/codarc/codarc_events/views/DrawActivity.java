@@ -78,7 +78,7 @@ public class DrawActivity extends AppCompatActivity {
                 .setPositiveButton("Confirm", (d, w) -> runDraw())
                 .setNegativeButton("Cancel", (d, w) -> d.dismiss())
                 .show();
-    }
+}
 
     private void loadEntrantCount() {
         drawController.loadEntrantCount(eventId, new DrawController.CountCallback() {
