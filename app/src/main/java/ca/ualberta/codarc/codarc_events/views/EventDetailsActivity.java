@@ -140,6 +140,61 @@ public class EventDetailsActivity extends AppCompatActivity {
         setupOrganizerSettings();
     }
 
+    /**
+     * Refreshes the event data when returning to this activity.
+     * This ensures the poster is updated if it was changed in EventSettingsActivity.
+     */
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (event != null && event.getId() != null) {
+            refreshEventData();
+        }
+    }
+
+    /**
+     * Reloads the event from Firestore and updates the UI, particularly the poster image.
+     * This ensures the display reflects any changes made in EventSettingsActivity.
+     */
+    private void refreshEventData() {
+        eventDB.getEvent(event.getId(), new EventDB.Callback<Event>() {
+            @Override
+            public void onSuccess(Event updatedEvent) {
+                if (updatedEvent != null) {
+                    String oldPosterUrl = event.getPosterUrl();
+                    event = updatedEvent;
+                    String newPosterUrl = event.getPosterUrl();
+                    
+                    // Refresh poster image if URL changed or if we need to force refresh
+                    ImageView eventBanner = findViewById(R.id.event_banner);
+                    if (eventBanner != null) {
+                        // Invalidate Glide cache if URL changed to ensure fresh image loads
+                        if (oldPosterUrl != null && !oldPosterUrl.equals(newPosterUrl)) {
+                            Glide.with(EventDetailsActivity.this).clear(eventBanner);
+                        }
+                        loadPosterImage(eventBanner, event.getPosterUrl());
+                        // Update click listener if poster exists
+                        if (event.getPosterUrl() != null && !event.getPosterUrl().isEmpty()) {
+                            eventBanner.setClickable(true);
+                            eventBanner.setFocusable(true);
+                            eventBanner.setContentDescription("Event Poster - Tap to view full screen");
+                            eventBanner.setOnClickListener(v -> openFullScreenImage(event.getPosterUrl()));
+                        } else {
+                            eventBanner.setClickable(false);
+                            eventBanner.setFocusable(false);
+                        }
+                    }
+                }
+            }
+
+            @Override
+            public void onError(@NonNull Exception e) {
+                // Silently fail - event data might not have changed
+                Log.d("EventDetailsActivity", "Could not refresh event data", e);
+            }
+        });
+    }
+
     private void setupOrganizerSettings() {
         settingsBtn = findViewById(R.id.btn_event_settings);
         if (settingsBtn == null) {

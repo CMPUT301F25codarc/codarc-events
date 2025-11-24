@@ -244,7 +244,7 @@ public class CreateEventActivity extends AppCompatActivity {
                     uploadPosterAndUpdateEvent(event);
                 } else {
                     // No image selected, proceed with organizer setup
-                    handleOrganizerSetup(event);
+                handleOrganizerSetup(event);
                 }
             }
 
@@ -252,8 +252,8 @@ public class CreateEventActivity extends AppCompatActivity {
             public void onError(@NonNull Exception e) {
                 Log.e("CreateEventActivity", "Failed to create event", e);
                 runOnUiThread(() -> {
-                    Toast.makeText(CreateEventActivity.this, "Failed to create event. Please try again.", Toast.LENGTH_SHORT).show();
-                    progressBar.setVisibility(View.GONE);
+                Toast.makeText(CreateEventActivity.this, "Failed to create event. Please try again.", Toast.LENGTH_SHORT).show();
+                progressBar.setVisibility(View.GONE);
                 });
             }
         });
