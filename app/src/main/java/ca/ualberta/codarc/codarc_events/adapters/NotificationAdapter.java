@@ -33,7 +33,7 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
     private final NotificationActionListener listener;
     private final DateFormat dateFormat;
 
-    
+
     public NotificationAdapter(NotificationActionListener listener) {
         this.listener = listener;
         this.dateFormat = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT, Locale.getDefault());
