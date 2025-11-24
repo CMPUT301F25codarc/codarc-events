@@ -110,13 +110,16 @@ public class InvitationResponseController {
         eventDB.getReplacementPool(eventId, new EventDB.Callback<List<Map<String, Object>>>() {
             @Override
             public void onSuccess(List<Map<String, Object>> pool) {
-                String replacementId = null;
-                String source = null;
-
                 if (pool != null && !pool.isEmpty()) {
                     // Use first entry from replacement pool
-                    replacementId = (String) pool.get(0).get("deviceId");
-                    source = "replacementPool";
+                    Object deviceIdObj = pool.get(0).get("deviceId");
+                    if (deviceIdObj == null || !(deviceIdObj instanceof String)) {
+                        android.util.Log.w("InvitationResponseController", "Invalid deviceId in replacement pool, trying waitlist");
+                        tryWaitlistSelection(eventId, declinedEntrantId, cb);
+                        return;
+                    }
+                    String replacementId = (String) deviceIdObj;
+                    String source = "replacementPool";
                     promoteAndNotifyReplacement(eventId, declinedEntrantId, replacementId, source, cb);
                 } else {
                     // Pool empty, try waitlist
@@ -147,7 +150,13 @@ public class InvitationResponseController {
                 if (waitlist != null && !waitlist.isEmpty()) {
                     // Randomly select from waitlist
                     Collections.shuffle(waitlist);
-                    String replacementId = (String) waitlist.get(0).get("deviceId");
+                    Object deviceIdObj = waitlist.get(0).get("deviceId");
+                    if (deviceIdObj == null || !(deviceIdObj instanceof String)) {
+                        android.util.Log.w("InvitationResponseController", "Invalid deviceId in waitlist, no replacement available");
+                        logDeclineOnly(eventId, declinedEntrantId, cb);
+                        return;
+                    }
+                    String replacementId = (String) deviceIdObj;
                     String source = "waitlist";
                     promoteAndNotifyReplacement(eventId, declinedEntrantId, replacementId, source, cb);
                 } else {

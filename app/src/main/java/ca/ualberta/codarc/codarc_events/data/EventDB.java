@@ -807,6 +807,7 @@ public class EventDB {
         logData.put("declinedEntrantId", declinedEntrantId);
         logData.put("eventId", eventId);
         logData.put("declinedAt", declinedAt);
+        // For automatic reselection, replacedAt equals declinedAt since replacement happens immediately
         logData.put("replacedAt", declinedAt);
         logData.put("replacementNotified", replacementNotified);
 
