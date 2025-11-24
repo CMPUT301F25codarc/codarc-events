@@ -21,6 +21,7 @@ public class Event implements Serializable {
     private Integer maxCapacity;
     private String location;
     private List<String> tags;
+    private String posterUrl;
 
     public Event() { }
 
@@ -90,6 +91,9 @@ public class Event implements Serializable {
     /** @return the list of tags associated with this event */
     public List<String> getTags() { return tags; }
 
+    /** @return the poster image URL */
+    public String getPosterUrl() { return posterUrl; }
+
     // Setters
 
     /** @param id sets the event ID */
@@ -123,5 +127,8 @@ public class Event implements Serializable {
 
     /** @param tags sets the list of tags associated with this event */
     public void setTags(List<String> tags) { this.tags = tags; }
+
+    /** @param posterUrl sets the poster image URL */
+    public void setPosterUrl(String posterUrl) { this.posterUrl = posterUrl; }
 }
 

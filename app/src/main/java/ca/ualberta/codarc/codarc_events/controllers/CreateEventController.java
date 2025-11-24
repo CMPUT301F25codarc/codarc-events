@@ -53,11 +53,25 @@ public class CreateEventController {
         this.organizerId = organizerId;
     }
 
-    // Validates and creates Event object (doesn't save to DB yet)
+    /**
+     * Validates and creates Event object (doesn't save to DB yet).
+     *
+     * @param name event name
+     * @param description event description
+     * @param dateTime event date and time
+     * @param location event location
+     * @param regOpen registration open date
+     * @param regClose registration close date
+     * @param capacityStr maximum capacity as string
+     * @param tags list of tags
+     * @param posterUrl optional poster image URL
+     * @return CreateEventResult with validation result
+     */
     public CreateEventResult validateAndCreateEvent(String name, String description,
                                                      String dateTime, String location,
                                                      String regOpen, String regClose,
-                                                     String capacityStr, List<String> tags) {
+                                                     String capacityStr, List<String> tags,
+                                                     String posterUrl) {
         // Validate required fields
         if (name == null || name.trim().isEmpty()) {
             return CreateEventResult.failure("Event name is required");
@@ -103,6 +117,9 @@ public class CreateEventController {
 
         // Set tags (optional field)
         event.setTags(tags);
+
+        // Set poster URL (optional field)
+        event.setPosterUrl(posterUrl);
 
         return CreateEventResult.success(event);
     }

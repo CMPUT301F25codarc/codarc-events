@@ -2,6 +2,8 @@ package ca.ualberta.codarc.codarc_events.views;
 
 import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -9,11 +11,13 @@ import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.widget.ArrayAdapter;
-import android.widget.AutoCompleteTextView;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.widget.AppCompatAutoCompleteTextView;
 
 import androidx.annotation.NonNull;
@@ -34,6 +38,7 @@ import ca.ualberta.codarc.codarc_events.R;
 import ca.ualberta.codarc.codarc_events.controllers.CreateEventController;
 import ca.ualberta.codarc.codarc_events.data.EventDB;
 import ca.ualberta.codarc.codarc_events.data.OrganizerDB;
+import ca.ualberta.codarc.codarc_events.data.PosterStorage;
 import ca.ualberta.codarc.codarc_events.data.UserDB;
 import ca.ualberta.codarc.codarc_events.models.Event;
 import ca.ualberta.codarc.codarc_events.utils.Identity;
@@ -63,6 +68,11 @@ public class CreateEventActivity extends AppCompatActivity {
     private CreateEventController controller;
     private ProgressBar progressBar;
     private String organizerId;
+    private ImageView ivPoster;
+    private Button btnChoosePoster;
+    private Uri selectedImageUri;
+    private PosterStorage posterStorage;
+    private ActivityResultLauncher<Intent> imagePickerLauncher;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -72,6 +82,7 @@ public class CreateEventActivity extends AppCompatActivity {
         eventDB = new EventDB();
         organizerDB = new OrganizerDB();
         userDB = new UserDB();
+        posterStorage = new PosterStorage();
         organizerId = Identity.getOrCreateDeviceId(this);
         controller = new CreateEventController(eventDB, organizerId);
 
@@ -84,6 +95,12 @@ public class CreateEventActivity extends AppCompatActivity {
         regOpen = findViewById(R.id.et_reg_open);
         regClose = findViewById(R.id.et_reg_close);
         capacity = findViewById(R.id.et_capacity);
+
+        // Poster UI setup
+        ivPoster = findViewById(R.id.iv_poster);
+        btnChoosePoster = findViewById(R.id.btn_choose_poster);
+        selectedImageUri = null;
+        setupImagePicker();
 
         // Tag input setup
         selectedTags = new ArrayList<>();
@@ -98,6 +115,7 @@ public class CreateEventActivity extends AppCompatActivity {
         eventDateTime.setOnClickListener(v -> showDateTimePicker(eventDateTime));
         regOpen.setOnClickListener(v -> showDateTimePicker(regOpen));
         regClose.setOnClickListener(v -> showDateTimePicker(regClose));
+        btnChoosePoster.setOnClickListener(v -> openImagePicker());
 
         cancelButton.setOnClickListener(v -> finish());
         createButton.setOnClickListener(v -> createEvent());
@@ -151,7 +169,36 @@ public class CreateEventActivity extends AppCompatActivity {
     }
 
     /**
+     * Sets up the image picker using Activity Result API.
+     */
+    private void setupImagePicker() {
+        imagePickerLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                        Uri imageUri = result.getData().getData();
+                        if (imageUri != null) {
+                            selectedImageUri = imageUri;
+                            ivPoster.setImageURI(imageUri);
+                        }
+                    }
+                }
+        );
+    }
+
+    /**
+     * Opens the image picker to select a poster image.
+     */
+    private void openImagePicker() {
+        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+        intent.setType("image/*");
+        imagePickerLauncher.launch(intent);
+    }
+
+    /**
      * Validates form inputs and creates a new event in Firestore.
+     * If a poster image is selected, creates the event first, then uploads the poster,
+     * then updates the event with the poster URL.
      * Uses CreateEventController to handle business logic.
      */
     private void createEvent() {
@@ -163,9 +210,9 @@ public class CreateEventActivity extends AppCompatActivity {
         String close = getDateValue(regClose);
         String capacityStr = get(capacity);
 
-        // Use controller to validate and create event
+        // Use controller to validate and create event (without posterUrl for now)
         CreateEventController.CreateEventResult result = controller.validateAndCreateEvent(
-                name, desc, dateTime, loc, open, close, capacityStr, selectedTags
+                name, desc, dateTime, loc, open, close, capacityStr, selectedTags, null
         );
 
         if (!result.isValid()) {
@@ -175,20 +222,97 @@ public class CreateEventActivity extends AppCompatActivity {
 
         progressBar.setVisibility(View.VISIBLE);
 
-        // Persist event using controller
         Event event = result.getEvent();
+
+        // Create event in Firestore first (required by Firebase Storage rules)
+        // Then upload poster if selected, then update event with posterUrl
+        createEventFirst(event);
+    }
+
+    /**
+     * Creates the event in Firestore first, then handles poster upload if needed.
+     *
+     * @param event the event object to create
+     */
+    private void createEventFirst(Event event) {
+        // Persist event using controller (without posterUrl initially)
         controller.persistEvent(event, new EventDB.Callback<Void>() {
             @Override
             public void onSuccess(Void value) {
-                // Event created successfully, now handle organizer setup
-                handleOrganizerSetup(event);
+                // Event created successfully, now upload poster if selected
+                if (selectedImageUri != null) {
+                    uploadPosterAndUpdateEvent(event);
+                } else {
+                    // No image selected, proceed with organizer setup
+                    handleOrganizerSetup(event);
+                }
             }
 
             @Override
             public void onError(@NonNull Exception e) {
                 Log.e("CreateEventActivity", "Failed to create event", e);
-                Toast.makeText(CreateEventActivity.this, "Failed to create event. Please try again.", Toast.LENGTH_SHORT).show();
-                progressBar.setVisibility(View.GONE);
+                runOnUiThread(() -> {
+                    Toast.makeText(CreateEventActivity.this, "Failed to create event. Please try again.", Toast.LENGTH_SHORT).show();
+                    progressBar.setVisibility(View.GONE);
+                });
+            }
+        });
+    }
+
+    /**
+     * Uploads the selected poster image, then updates the event with the poster URL.
+     *
+     * @param event the event object (already created in Firestore)
+     */
+    private void uploadPosterAndUpdateEvent(Event event) {
+        posterStorage.uploadPoster(event.getId(), selectedImageUri, new PosterStorage.Callback<String>() {
+            @Override
+            public void onSuccess(String posterUrl) {
+                // Upload successful, now update event with poster URL
+                event.setPosterUrl(posterUrl);
+                updateEventWithPosterUrl(event, posterUrl);
+            }
+
+            @Override
+            public void onError(@NonNull Exception e) {
+                Log.e("CreateEventActivity", "Failed to upload poster", e);
+                final String errorMessage = (e.getMessage() != null && !e.getMessage().isEmpty())
+                        ? e.getMessage()
+                        : "Failed to upload poster. Please try again.";
+                runOnUiThread(() -> {
+                    Toast.makeText(CreateEventActivity.this, errorMessage, Toast.LENGTH_SHORT).show();
+                    // Event was created but poster upload failed - still proceed
+                    handleOrganizerSetup(event);
+                });
+            }
+        });
+    }
+
+    /**
+     * Updates the event in Firestore with the poster URL.
+     *
+     * @param event the event object to update
+     * @param posterUrl the poster image URL
+     */
+    private void updateEventWithPosterUrl(Event event, String posterUrl) {
+        // Update event with poster URL
+        event.setPosterUrl(posterUrl);
+
+        // Persist updated event using controller
+        controller.persistEvent(event, new EventDB.Callback<Void>() {
+            @Override
+            public void onSuccess(Void value) {
+                // Event updated successfully, now handle organizer setup
+                handleOrganizerSetup(event);
+            }
+
+            @Override
+            public void onError(@NonNull Exception e) {
+                Log.e("CreateEventActivity", "Failed to update event with poster URL", e);
+                // Event was created and poster uploaded, but update failed - still proceed
+                runOnUiThread(() -> {
+                    handleOrganizerSetup(event);
+                });
             }
         });
     }

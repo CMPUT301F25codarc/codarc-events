@@ -14,6 +14,10 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
+import com.bumptech.glide.request.RequestListener;
+import com.bumptech.glide.request.target.Target;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 
@@ -78,11 +82,23 @@ public class EventDetailsActivity extends AppCompatActivity {
         TextView dateTime = findViewById(R.id.event_datetime);
         TextView regWindow = findViewById(R.id.event_reg_window);
         ImageView qrImage = findViewById(R.id.event_qr);
+        ImageView eventBanner = findViewById(R.id.event_banner);
 
         title.setText(event.getName() != null ? event.getName() : "");
         desc.setText(event.getDescription() != null ? event.getDescription() : "");
         String eventDateTime = event.getEventDateTime();
         dateTime.setText(DateHelper.formatEventDate(eventDateTime));
+
+        // Load poster image if available
+        loadPosterImage(eventBanner, event.getPosterUrl());
+        
+        // Make poster clickable to view full screen (only if poster exists)
+        if (event.getPosterUrl() != null && !event.getPosterUrl().isEmpty()) {
+            eventBanner.setClickable(true);
+            eventBanner.setFocusable(true);
+            eventBanner.setContentDescription("Event Poster - Tap to view full screen");
+            eventBanner.setOnClickListener(v -> openFullScreenImage(event.getPosterUrl()));
+        }
 
         TextView location = findViewById(R.id.event_location);
         String eventLocation = event.getLocation();
@@ -283,6 +299,58 @@ public class EventDetailsActivity extends AppCompatActivity {
                 });
             }
         });
+    }
+
+    /**
+     * Loads and displays the event poster image using Glide.
+     * Shows placeholder if no poster URL is available or if loading fails.
+     *
+     * @param imageView the ImageView to display the poster in
+     * @param posterUrl the URL of the poster image (can be null)
+     */
+    private void loadPosterImage(ImageView imageView, String posterUrl) {
+        if (posterUrl != null && !posterUrl.trim().isEmpty()) {
+            Glide.with(this)
+                    .load(posterUrl)
+                    .diskCacheStrategy(DiskCacheStrategy.ALL)
+                    .placeholder(R.drawable.sample_event_banner)
+                    .error(R.drawable.sample_event_banner)
+                    .listener(new RequestListener<android.graphics.drawable.Drawable>() {
+                        @Override
+                        public boolean onLoadFailed(@androidx.annotation.Nullable com.bumptech.glide.load.engine.GlideException e,
+                                                   Object model, Target<android.graphics.drawable.Drawable> target,
+                                                   boolean isFirstResource) {
+                            Log.w("EventDetailsActivity", "Failed to load poster image", e);
+                            return false; // Let Glide handle error (show placeholder)
+                        }
+
+                        @Override
+                        public boolean onResourceReady(android.graphics.drawable.Drawable resource,
+                                                      Object model, Target<android.graphics.drawable.Drawable> target,
+                                                      com.bumptech.glide.load.DataSource dataSource,
+                                                      boolean isFirstResource) {
+                            return false; // Let Glide handle display
+                        }
+                    })
+                    .into(imageView);
+        } else {
+            // No poster URL, use placeholder
+            imageView.setImageResource(R.drawable.sample_event_banner);
+        }
+    }
+
+    /**
+     * Opens the full-screen image viewer to display the poster.
+     *
+     * @param imageUrl the URL of the image to display
+     */
+    private void openFullScreenImage(String imageUrl) {
+        if (imageUrl == null || imageUrl.isEmpty()) {
+            return;
+        }
+        Intent intent = new Intent(this, FullScreenImageActivity.class);
+        intent.putExtra(FullScreenImageActivity.EXTRA_IMAGE_URL, imageUrl);
+        startActivity(intent);
     }
 
     /**
