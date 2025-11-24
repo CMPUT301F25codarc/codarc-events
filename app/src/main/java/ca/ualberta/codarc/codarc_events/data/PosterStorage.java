@@ -77,7 +77,7 @@ public class PosterStorage {
                 String errorMessage = "Failed to upload poster";
                 if (e.getMessage() != null) {
                     if (e.getMessage().contains("size")) {
-                        errorMessage = "Image is too large. Maximum size is 15MB.";
+                        errorMessage = "Image is too large. Maximum size is 5MB.";
                     } else if (e.getMessage().contains("content")) {
                         errorMessage = "Invalid file type. Please select an image file.";
                     }
