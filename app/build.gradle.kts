@@ -46,8 +46,12 @@ dependencies {
     implementation(platform("com.google.firebase:firebase-bom:34.4.0"))
     implementation("com.google.firebase:firebase-firestore")
     implementation("com.google.firebase:firebase-analytics")
+    implementation("com.google.firebase:firebase-storage")
     implementation("com.google.zxing:core:3.4.1")
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
+    
+    // --- Image Loading ---
+    implementation("com.github.bumptech.glide:glide:4.16.0")
 
     // --- Navigation & UI ---
     implementation("androidx.navigation:navigation-fragment:2.8.3")

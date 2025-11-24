@@ -64,6 +64,7 @@ public class EventDB {
         eventData.put("eventDateTime", event.getEventDateTime());
         eventData.put("registrationOpen", event.getRegistrationOpen());
         eventData.put("registrationClose", event.getRegistrationClose());
+        eventData.put("posterUrl", event.getPosterUrl());
         
         // Explicitly save tags as an array
         if (event.getTags() != null && !event.getTags().isEmpty()) {
@@ -852,6 +853,9 @@ public class EventDB {
             } else {
                 event.setTags(null);
             }
+
+            // Parse poster URL
+            event.setPosterUrl(doc.getString("posterUrl"));
 
             return event;
         } catch (Exception e) {

@@ -3,6 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
 
     <uses-feature android:name="android.hardware.camera.any" android:required="false" />
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
@@ -82,6 +84,12 @@
             android:name=".views.RegistrationHistoryActivity"
             android:exported="false"
             android:theme="@style/Theme.Codarcevents"/>
+
+        <activity
+            android:name=".views.FullScreenImageActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Codarcevents"
+            android:configChanges="orientation|screenSize"/>
 
 
     </application>
