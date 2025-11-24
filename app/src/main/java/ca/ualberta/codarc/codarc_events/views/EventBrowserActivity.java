@@ -134,6 +134,15 @@ public class EventBrowserActivity extends AppCompatActivity {
                 overridePendingTransition(android.R.anim.slide_in_left, android.R.anim.slide_out_right);
             });
         }
+
+        View scanQRTab = findViewById(R.id.tab_scan_qr);
+        if (scanQRTab != null) {
+            scanQRTab.setOnClickListener(v -> {
+                Intent intent = new Intent(EventBrowserActivity.this, QRScannerActivity.class);
+                startActivity(intent);
+                overridePendingTransition(android.R.anim.slide_in_left, android.R.anim.slide_out_right);
+            });
+        }
     }
 
     @Override
