@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <!-- Title -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Send Notification to Selected Entrants"
+        android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
+        android:textColor="@color/text_primary"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Message Input -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/til_message"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Message"
+        app:helperTextEnabled="true"
+        android:layout_marginBottom="8dp">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/et_message"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="textCapSentences|textMultiLine"
+            android:maxLines="5"
+            android:maxLength="500"
+            android:minLines="3"
+            android:gravity="top|start"
+            android:contentDescription="Message input for winners notification" />
+
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Character Counter -->
+    <TextView
+        android:id="@+id/tv_char_count"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="0/500"
+        android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+        android:textColor="@color/text_secondary"
+        android:gravity="end"
+        android:layout_marginBottom="16dp" />
+
+</LinearLayout>
+
