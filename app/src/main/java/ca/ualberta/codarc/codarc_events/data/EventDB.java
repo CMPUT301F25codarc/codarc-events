@@ -721,6 +721,109 @@ public class EventDB {
                 .addOnFailureListener(cb::onError);
     }
 
+    /**
+     * Promotes an entrant from the waitlist directly to winners.
+     * Used when replacement pool is empty and we need to select from waitlist.
+     *
+     * @param eventId   the event ID
+     * @param entrantId the device ID of the entrant to promote
+     * @param cb        callback for completion
+     */
+    public void promoteFromWaitlist(String eventId, String entrantId, Callback<Void> cb) {
+        if (eventId == null || eventId.isEmpty()) {
+            cb.onError(new IllegalArgumentException("eventId is empty"));
+            return;
+        }
+        if (entrantId == null || entrantId.isEmpty()) {
+            cb.onError(new IllegalArgumentException("entrantId is empty"));
+            return;
+        }
+
+        // Check if entrant is in waitlist
+        db.collection("events").document(eventId)
+                .collection("waitingList").document(entrantId)
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    if (snapshot == null || !snapshot.exists()) {
+                        cb.onError(new IllegalArgumentException("Entrant not in waitlist"));
+                        return;
+                    }
+
+                    WriteBatch batch = db.batch();
+
+                    // Remove from waitingList
+                    DocumentReference waitlistRef = db.collection("events")
+                            .document(eventId)
+                            .collection("waitingList")
+                            .document(entrantId);
+                    batch.delete(waitlistRef);
+
+                    // Add to winners
+                    DocumentReference winnersRef = db.collection("events")
+                            .document(eventId)
+                            .collection("winners")
+                            .document(entrantId);
+                    Map<String, Object> data = new HashMap<>();
+                    data.put("deviceId", entrantId);
+                    data.put("invitedAt", System.currentTimeMillis());
+                    data.put("isReplacement", true);
+                    batch.set(winnersRef, data);
+
+                    batch.commit()
+                            .addOnSuccessListener(unused -> cb.onSuccess(null))
+                            .addOnFailureListener(cb::onError);
+                })
+                .addOnFailureListener(cb::onError);
+    }
+
+    /**
+     * Logs a decline and its replacement for audit purposes.
+     * Stores log entry in events/{eventId}/declineLogs subcollection.
+     *
+     * @param eventId            the event ID
+     * @param declinedEntrantId  the device ID of the entrant who declined
+     * @param replacementEntrantId the device ID of the replacement (null if none available)
+     * @param source            source of replacement ("replacementPool", "waitlist", or null)
+     * @param replacementNotified whether replacement was successfully notified
+     * @param cb                callback for completion
+     */
+    public void logDeclineReplacement(String eventId,
+                                      String declinedEntrantId,
+                                      String replacementEntrantId,
+                                      String source,
+                                      boolean replacementNotified,
+                                      Callback<Void> cb) {
+        if (eventId == null || eventId.isEmpty()) {
+            cb.onError(new IllegalArgumentException("eventId is empty"));
+            return;
+        }
+        if (declinedEntrantId == null || declinedEntrantId.isEmpty()) {
+            cb.onError(new IllegalArgumentException("declinedEntrantId is empty"));
+            return;
+        }
+
+        long declinedAt = System.currentTimeMillis();
+        Map<String, Object> logData = new HashMap<>();
+        logData.put("declinedEntrantId", declinedEntrantId);
+        logData.put("eventId", eventId);
+        logData.put("declinedAt", declinedAt);
+        logData.put("replacedAt", declinedAt);
+        logData.put("replacementNotified", replacementNotified);
+
+        if (replacementEntrantId != null && !replacementEntrantId.isEmpty()) {
+            logData.put("replacementEntrantId", replacementEntrantId);
+        }
+        if (source != null && !source.isEmpty()) {
+            logData.put("source", source);
+        }
+
+        db.collection("events").document(eventId)
+                .collection("declineLogs")
+                .add(logData)
+                .addOnSuccessListener(unused -> cb.onSuccess(null))
+                .addOnFailureListener(cb::onError);
+    }
+
     // Helper to parse event from Firestore doc
     private Event parseEventFromDocument(DocumentSnapshot doc) {
         try {
