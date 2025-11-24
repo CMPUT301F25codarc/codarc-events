@@ -14,6 +14,15 @@
         android:textStyle="bold"
         android:layout_marginBottom="16dp" />
 
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_notify_waitlist"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Send to Waiting List"
+        android:enabled="false"
+        android:layout_marginBottom="16dp"
+        android:contentDescription="Send notification to all entrants on waiting list" />
+
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rv_entrants"
         android:layout_width="match_parent"

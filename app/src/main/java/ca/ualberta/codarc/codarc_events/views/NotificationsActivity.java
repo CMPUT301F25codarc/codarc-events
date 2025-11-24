@@ -1,7 +1,9 @@
 package ca.ualberta.codarc.codarc_events.views;
 
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.ProgressBar;
@@ -67,17 +69,25 @@ public class NotificationsActivity extends AppCompatActivity {
         }
 
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new NotificationAdapter(new NotificationAdapter.NotificationActionListener() {
-            @Override
-            public void onAccept(@NonNull NotificationEntry entry) {
-                handleInvitationResponse(entry, true);
-            }
+        adapter = new NotificationAdapter(
+                new NotificationAdapter.NotificationActionListener() {
+                    @Override
+                    public void onAccept(@NonNull NotificationEntry entry) {
+                        handleInvitationResponse(entry, true);
+                    }
 
-            @Override
-            public void onDecline(@NonNull NotificationEntry entry) {
-                handleInvitationResponse(entry, false);
-            }
-        });
+                    @Override
+                    public void onDecline(@NonNull NotificationEntry entry) {
+                        handleInvitationResponse(entry, false);
+                    }
+                },
+                new NotificationAdapter.NotificationClickListener() {
+                    @Override
+                    public void onNotificationClick(@NonNull NotificationEntry entry) {
+                        navigateToEventDetails(entry);
+                    }
+                }
+        );
         recyclerView.setAdapter(adapter);
 
         loadNotifications();
@@ -240,5 +250,38 @@ public class NotificationsActivity extends AppCompatActivity {
     private void updateEmptyState(boolean isEmpty) {
         emptyStateView.setVisibility(isEmpty ? View.VISIBLE : View.GONE);
         recyclerView.setVisibility(isEmpty ? View.GONE : View.VISIBLE);
+    }
+
+    /**
+     * Navigates to EventDetailsActivity when a notification is clicked.
+     * Fetches the event from Firestore using the notification's eventId.
+     *
+     * @param entry the notification entry that was clicked
+     */
+    private void navigateToEventDetails(@NonNull NotificationEntry entry) {
+        String eventId = entry.getEventId();
+        if (eventId == null || eventId.isEmpty()) {
+            Toast.makeText(this, "Event information not available", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        eventDB.getEvent(eventId, new EventDB.Callback<Event>() {
+            @Override
+            public void onSuccess(Event event) {
+                if (event == null) {
+                    Toast.makeText(NotificationsActivity.this, "Event not found", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                Intent intent = new Intent(NotificationsActivity.this, EventDetailsActivity.class);
+                intent.putExtra("event", event);
+                startActivity(intent);
+            }
+
+            @Override
+            public void onError(@NonNull Exception e) {
+                Log.e("NotificationsActivity", "Failed to load event for navigation", e);
+                Toast.makeText(NotificationsActivity.this, "Failed to load event details", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 }

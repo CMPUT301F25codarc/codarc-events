@@ -29,13 +29,24 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
         void onDecline(@NonNull NotificationEntry entry);
     }
 
+    public interface NotificationClickListener {
+        void onNotificationClick(@NonNull NotificationEntry entry);
+    }
+
     private final List<NotificationEntry> items = new ArrayList<>();
-    private final NotificationActionListener listener;
+    private final NotificationActionListener actionListener;
+    private final NotificationClickListener clickListener;
     private final DateFormat dateFormat;
 
-    
-    public NotificationAdapter(NotificationActionListener listener) {
-        this.listener = listener;
+    /**
+     * Creates a new NotificationAdapter.
+     *
+     * @param actionListener listener for accept/decline actions
+     * @param clickListener listener for notification item clicks
+     */
+    public NotificationAdapter(NotificationActionListener actionListener, NotificationClickListener clickListener) {
+        this.actionListener = actionListener;
+        this.clickListener = clickListener;
         this.dateFormat = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT, Locale.getDefault());
     }
 
@@ -70,7 +81,7 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
     @Override
     public void onBindViewHolder(@NonNull NotificationViewHolder holder, int position) {
         NotificationEntry entry = items.get(position);
-        holder.bind(entry, listener, dateFormat);
+        holder.bind(entry, actionListener, clickListener, dateFormat);
     }
 
     @Override
@@ -100,7 +111,8 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
         }
 
         void bind(NotificationEntry entry,
-                  NotificationActionListener listener,
+                  NotificationActionListener actionListener,
+                  NotificationClickListener clickListener,
                   DateFormat dateFormat) {
             String eventName = entry.getEventName();
             if (eventName == null || eventName.isEmpty()) {
@@ -146,13 +158,20 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
             declineButton.setEnabled(!isProcessing);
 
             acceptButton.setOnClickListener(v -> {
-                if (listener != null) {
-                    listener.onAccept(entry);
+                if (actionListener != null) {
+                    actionListener.onAccept(entry);
                 }
             });
             declineButton.setOnClickListener(v -> {
-                if (listener != null) {
-                    listener.onDecline(entry);
+                if (actionListener != null) {
+                    actionListener.onDecline(entry);
+                }
+            });
+
+            // Set click listener on root view to navigate to event details
+            root.setOnClickListener(v -> {
+                if (clickListener != null && entry.getEventId() != null && !entry.getEventId().isEmpty()) {
+                    clickListener.onNotificationClick(entry);
                 }
             });
 
