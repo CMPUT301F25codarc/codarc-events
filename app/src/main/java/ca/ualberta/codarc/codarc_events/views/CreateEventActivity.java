@@ -424,9 +424,14 @@ public class CreateEventActivity extends AppCompatActivity {
 
         // Add tag when user selects from autocomplete dropdown
         tagInput.setOnItemClickListener((parent, view, position, id) -> {
-            String selectedTag = (String) parent.getItemAtPosition(position);
-            addTag(selectedTag);
-            tagInput.setText("");
+            // Validate position to prevent IndexOutOfBoundsException
+            if (position >= 0 && position < parent.getCount()) {
+                String selectedTag = (String) parent.getItemAtPosition(position);
+                if (selectedTag != null) {
+                    addTag(selectedTag);
+                    tagInput.setText("");
+                }
+            }
         });
 
         // Filter autocomplete suggestions based on input
