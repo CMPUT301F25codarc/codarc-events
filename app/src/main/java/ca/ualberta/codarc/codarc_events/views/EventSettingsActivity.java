@@ -1,23 +1,42 @@
 package ca.ualberta.codarc.codarc_events.views;
 
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
+import android.view.View;
+import android.widget.ProgressBar;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.button.MaterialButton;
 
 import ca.ualberta.codarc.codarc_events.R;
+import ca.ualberta.codarc.codarc_events.controllers.UpdatePosterController;
+import ca.ualberta.codarc.codarc_events.data.EventDB;
+import ca.ualberta.codarc.codarc_events.data.PosterStorage;
 import ca.ualberta.codarc.codarc_events.models.Event;
 import ca.ualberta.codarc.codarc_events.utils.Identity;
 
 /**
  * Settings page for event organizers.
+ * Allows organizers to manage event settings including updating the event poster.
  */
 public class EventSettingsActivity extends AppCompatActivity {
 
+    private static final String TAG = "EventSettingsActivity";
+
     private Event event;
+    private EventDB eventDB;
+    private PosterStorage posterStorage;
+    private UpdatePosterController updatePosterController;
+    private ActivityResultLauncher<Intent> imagePickerLauncher;
+    private MaterialButton updatePosterBtn;
+    private ProgressBar progressBar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -36,6 +55,26 @@ public class EventSettingsActivity extends AppCompatActivity {
             Toast.makeText(this, "Only event organizer can access settings", Toast.LENGTH_SHORT).show();
             finish();
             return;
+        }
+
+        // Initialize data layer and controller
+        eventDB = new EventDB();
+        posterStorage = new PosterStorage();
+        updatePosterController = new UpdatePosterController(eventDB, posterStorage);
+
+        // Setup image picker
+        setupImagePicker();
+
+        // Get UI references
+        updatePosterBtn = findViewById(R.id.btn_update_poster);
+        progressBar = findViewById(R.id.progress_bar);
+        if (progressBar != null) {
+            progressBar.setVisibility(View.GONE);
+        }
+
+        // Set up update poster button
+        if (updatePosterBtn != null) {
+            updatePosterBtn.setOnClickListener(v -> openImagePicker());
         }
 
         MaterialButton manageWaitlistBtn = findViewById(R.id.btn_manage_waitlist);
@@ -72,6 +111,83 @@ public class EventSettingsActivity extends AppCompatActivity {
             Intent intent = new Intent(this, ViewEnrolledActivity.class);
             intent.putExtra("eventId", event.getId());
             startActivity(intent);
+        });
+    }
+
+    /**
+     * Sets up the image picker using Activity Result API.
+     */
+    private void setupImagePicker() {
+        imagePickerLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                        Uri imageUri = result.getData().getData();
+                        if (imageUri != null) {
+                            updatePoster(imageUri);
+                        } else {
+                            Toast.makeText(this, "Failed to select image", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                }
+        );
+    }
+
+    /**
+     * Opens the image picker to select a new poster image.
+     */
+    private void openImagePicker() {
+        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+        intent.setType("image/*");
+        imagePickerLauncher.launch(intent);
+    }
+
+    /**
+     * Updates the event poster with the selected image.
+     * Uses UpdatePosterController to handle the business logic.
+     *
+     * @param imageUri the URI of the selected image
+     */
+    private void updatePoster(Uri imageUri) {
+        if (event == null || event.getId() == null) {
+            Toast.makeText(this, "Event is invalid", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (progressBar != null) {
+            progressBar.setVisibility(View.VISIBLE);
+        }
+        if (updatePosterBtn != null) {
+            updatePosterBtn.setEnabled(false);
+        }
+
+        updatePosterController.updatePoster(event, imageUri, new UpdatePosterController.Callback() {
+            @Override
+            public void onResult(UpdatePosterController.UpdatePosterResult result) {
+                runOnUiThread(() -> {
+                    if (progressBar != null) {
+                        progressBar.setVisibility(View.GONE);
+                    }
+                    if (updatePosterBtn != null) {
+                        updatePosterBtn.setEnabled(true);
+                    }
+
+                    if (result.isSuccess()) {
+                        // Update local event object with new poster URL
+                        event = result.getUpdatedEvent();
+                        Toast.makeText(EventSettingsActivity.this,
+                                "Poster updated successfully", Toast.LENGTH_SHORT).show();
+                        Log.d(TAG, "Poster updated successfully for event: " + event.getId());
+                    } else {
+                        String errorMessage = result.getErrorMessage();
+                        if (errorMessage == null || errorMessage.isEmpty()) {
+                            errorMessage = "Failed to update poster. Please try again.";
+                        }
+                        Toast.makeText(EventSettingsActivity.this, errorMessage, Toast.LENGTH_SHORT).show();
+                        Log.e(TAG, "Failed to update poster: " + errorMessage);
+                    }
+                });
+            }
         });
     }
 }

@@ -87,7 +87,18 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="View Enrolled"
-                android:textSize="16sp" />
+                android:textSize="16sp"
+                android:layout_marginBottom="12dp" />
+
+            <!-- Update Poster -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_update_poster"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Update Event Poster"
+                android:textSize="16sp"
+                android:textColor="@color/primary_purple" />
 
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
