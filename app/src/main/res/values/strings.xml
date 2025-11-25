@@ -180,4 +180,42 @@
     <string name="view_history">View History</string>
     <string name="back">Back</string>
 
+    <!-- Admin Event List Strings -->
+    <string name="admin_remove_events_title">Remove Events</string>
+    <string name="admin_event_list_empty">No events found</string>
+    <string name="admin_event_list_error">Failed to load events. Tap to retry.</string>
+    <string name="admin_delete_event_confirm">Are you sure you want to delete \"%1$s\"?\n\nThis action cannot be undone.</string>
+    <string name="admin_delete_event_success">Event removed successfully</string>
+    <string name="admin_delete_event_error">Failed to remove event. Please try again.</string>
+    <string name="admin_access_required">Admin access required</string>
+    <string name="admin_check_status_error">Failed to check admin status</string>
+
+    <!-- Admin Profile List Strings -->
+    <string name="admin_remove_profiles_title">Remove Profiles</string>
+    <string name="admin_profile_list_empty">No profiles found</string>
+    <string name="admin_profile_list_error">Failed to load profiles. Tap to retry.</string>
+    <string name="admin_remove_profile_confirm">Are you sure you want to remove the profile for \"%1$s\"?\n\nThis will:\n- Wipe all profile information\n- Ban the user from re-registering\n- Remove them from all events\n\nThis action cannot be undone.</string>
+    <string name="admin_remove_profile_success">Profile removed successfully</string>
+    <string name="admin_remove_profile_error">Failed to remove profile. Please try again.</string>
+    <string name="profile_registered">Registered</string>
+    <string name="profile_not_registered">Not Registered</string>
+    <string name="profile_banned">Banned</string>
+    <string name="profile_banned_title">Account Banned</string>
+    <string name="profile_banned_message">Your account has been banned. You cannot create or update your profile. Please contact an administrator if you believe this is an error.</string>
+    <string name="profile_name_required">Name required</string>
+    <string name="profile_email_required">Valid email required</string>
+
+    <!-- Admin Image List Strings -->
+    <string name="admin_remove_images_title">Remove Images</string>
+    <string name="admin_image_list_empty">No events with images found</string>
+    <string name="admin_image_list_error">Failed to load events. Tap to retry.</string>
+    <string name="admin_delete_image_confirm">Are you sure you want to delete the image for \"%1$s\"?\n\nThis will:\n- Delete the image from storage\n- Remove the image from the event\n\nThis action cannot be undone.</string>
+    <string name="admin_delete_image_success">Image deleted successfully</string>
+    <string name="admin_delete_image_error">Failed to delete image. Please try again.</string>
+
+    <!-- Admin Browse/View Titles -->
+    <string name="admin_view_events_title">View Events</string>
+    <string name="admin_view_profiles_title">View Profiles</string>
+    <string name="admin_view_images_title">View Images</string>
+
 </resources>

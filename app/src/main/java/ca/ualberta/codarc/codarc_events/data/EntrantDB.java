@@ -9,6 +9,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.SetOptions;
+import com.google.firebase.firestore.WriteBatch;
 
 import java.util.ArrayList;
 
@@ -265,6 +266,70 @@ public class EntrantDB {
             .addOnSuccessListener(unused -> cb.onSuccess(null))
             .addOnFailureListener(cb::onError);
     }
+
+    /**
+     * Deletes all events from the entrant's events subcollection.
+     * Used when admin removes a profile to clean up registration history.
+     * Handles Firestore batch write limit (500 operations per batch) by batching deletions.
+     *
+     * @param deviceId the device ID of the entrant
+     * @param cb callback for completion
+     */
+    public void deleteAllEntrantEvents(String deviceId, Callback<Void> cb) {
+        if (deviceId == null || deviceId.isEmpty()) {
+            cb.onError(new IllegalArgumentException("deviceId is empty"));
+            return;
+        }
+        
+        db.collection("entrants").document(deviceId)
+            .collection("events")
+            .get()
+            .addOnSuccessListener(querySnapshot -> {
+                if (querySnapshot == null || querySnapshot.isEmpty()) {
+                    cb.onSuccess(null);
+                    return;
+                }
+                
+                // Collect all documents to delete
+                List<QueryDocumentSnapshot> docs = new ArrayList<>();
+                for (QueryDocumentSnapshot doc : querySnapshot) {
+                    docs.add(doc);
+                }
+                
+                // Delete in batches to respect Firestore's 500 operation limit
+                deleteInBatches(docs, 0, cb);
+            })
+            .addOnFailureListener(cb::onError);
+    }
+
+    /**
+     * Recursively deletes documents in batches to respect Firestore's batch write limit.
+     * Firestore allows maximum 500 operations per batch write.
+     *
+     * @param docs list of documents to delete
+     * @param startIndex starting index for this batch
+     * @param cb callback for completion
+     */
+    private void deleteInBatches(List<QueryDocumentSnapshot> docs, int startIndex, Callback<Void> cb) {
+        if (startIndex >= docs.size()) {
+            cb.onSuccess(null);
+            return;
+        }
+        
+        WriteBatch batch = db.batch();
+        int endIndex = Math.min(startIndex + 500, docs.size());
+        
+        for (int i = startIndex; i < endIndex; i++) {
+            batch.delete(docs.get(i).getReference());
+        }
+        
+        batch.commit()
+            .addOnSuccessListener(unused -> {
+                // Continue with next batch if there are more documents
+                deleteInBatches(docs, endIndex, cb);
+            })
+            .addOnFailureListener(cb::onError);
+    }
     
     // Bans/unbans an entrant (admin only)
     public void setBannedStatus(String deviceId, boolean banned, Callback<Void> cb) {
@@ -303,7 +368,13 @@ public class EntrantDB {
         });
     }
 
-    // Clears profile data but keeps the document (don't delete it)
+    /**
+     * Clears profile data but keeps the document (don't delete it).
+     * Also sets the banned flag to true to prevent re-registration.
+     *
+     * @param deviceId the device ID of the entrant
+     * @param cb callback for completion
+     */
     public void deleteProfile(String deviceId, Callback<Void> cb) {
         if (deviceId == null || deviceId.isEmpty()) {
             cb.onError(new IllegalArgumentException("deviceId is empty"));
@@ -319,19 +390,70 @@ public class EntrantDB {
                 cleared.setEmail("");
                 cleared.setPhone("");
                 cleared.setIsRegistered(false);
+                cleared.setBanned(true); // Set banned flag to prevent re-registration
                 upsertProfile(deviceId, cleared, cb);
             }
 
             @Override
             public void onError(@NonNull Exception e) {
-                // Entrant doesn't exist, create new one with cleared data
+                // Entrant doesn't exist, create new one with cleared data and banned flag
                 Entrant cleared = new Entrant(deviceId, "", System.currentTimeMillis());
                 cleared.setEmail("");
                 cleared.setPhone("");
                 cleared.setIsRegistered(false);
+                cleared.setBanned(true); // Set banned flag to prevent re-registration
                 upsertProfile(deviceId, cleared, cb);
             }
         });
+    }
+
+    /**
+     * Retrieves all entrant profiles from Firestore.
+     * Used by admin to display list of all entrants.
+     *
+     * @param cb callback that receives list of all entrants
+     */
+    public void getAllEntrants(Callback<List<Entrant>> cb) {
+        db.collection("entrants")
+            .get()
+            .addOnSuccessListener(querySnapshot -> {
+                List<Entrant> entrants = new ArrayList<>();
+                if (querySnapshot != null) {
+                    for (QueryDocumentSnapshot doc : querySnapshot) {
+                        Entrant entrant = doc.toObject(Entrant.class);
+                        if (entrant != null) {
+                            entrants.add(entrant);
+                        }
+                    }
+                }
+                cb.onSuccess(entrants);
+            })
+            .addOnFailureListener(cb::onError);
+    }
+
+    /**
+     * Removes a notification from the entrant's notifications subcollection.
+     * Used for lazy cleanup of notifications for deleted events.
+     *
+     * @param deviceId the device ID of the entrant
+     * @param notificationId the notification ID to remove
+     * @param cb callback for completion
+     */
+    public void removeNotification(String deviceId, String notificationId, Callback<Void> cb) {
+        if (deviceId == null || deviceId.isEmpty()) {
+            cb.onError(new IllegalArgumentException("deviceId is empty"));
+            return;
+        }
+        if (notificationId == null || notificationId.isEmpty()) {
+            cb.onError(new IllegalArgumentException("notificationId is empty"));
+            return;
+        }
+        
+        db.collection("entrants").document(deviceId)
+            .collection("notifications").document(notificationId)
+            .delete()
+            .addOnSuccessListener(unused -> cb.onSuccess(null))
+            .addOnFailureListener(cb::onError);
     }
 
 }
