@@ -105,25 +105,67 @@ public class JoinWaitlistController {
                     return;
                 }
 
-                // Check if entrant is banned
-                entrantDB.isBanned(deviceId, new EntrantDB.Callback<Boolean>() {
+                // Check if already joined
+                eventDB.isEntrantOnWaitlist(event.getId(), deviceId, new EventDB.Callback<Boolean>() {
                     @Override
-                    public void onSuccess(Boolean isBanned) {
-                        if (isBanned != null && isBanned) {
-                            callback.onResult(JoinResult.failure("You are banned from joining events"));
+                    public void onSuccess(Boolean alreadyJoined) {
+                        if (alreadyJoined) {
+                            callback.onResult(JoinResult.failure("Already joined"));
                             return;
                         }
 
-                        // Continue with join logic
-                        checkAlreadyJoinedAndJoin(event, deviceId, callback);
+                        // Validate registration window
+                        if (!EventValidationHelper.isWithinRegistrationWindow(event)) {
+                            callback.onResult(JoinResult.failure("Registration window is closed"));
+                            return;
+                        }
+
+                        // Validate capacity (check accepted participants, not waitlist)
+                        eventDB.getAcceptedCount(event.getId(), new EventDB.Callback<Integer>() {
+                            @Override
+                            public void onSuccess(Integer acceptedCount) {
+                                if (!EventValidationHelper.hasCapacity(event, acceptedCount)) {
+                                    callback.onResult(JoinResult.failure("Event is full"));
+                                    return;
+                                }
+
+                                // All validations passed, join waitlist
+                                eventDB.joinWaitlist(event.getId(), deviceId, new EventDB.Callback<Void>() {
+                                    @Override
+                                    public void onSuccess(Void value) {
+                                        // Track in registration history (graceful degradation - don't fail join if this fails)
+                                        entrantDB.addEventToEntrant(deviceId, event.getId(), new EntrantDB.Callback<Void>() {
+                                            @Override
+                                            public void onSuccess(Void v) {
+                                                // History updated successfully
+                                            }
+
+                                            @Override
+                                            public void onError(@NonNull Exception e) {
+                                                // Log but don't fail the join operation
+                                                Log.w("JoinWaitlistController", "Failed to update registration history", e);
+                                            }
+                                        });
+                                        callback.onResult(JoinResult.success("Joined successfully"));
+                                    }
+
+                                    @Override
+                                    public void onError(@NonNull Exception e) {
+                                        callback.onResult(JoinResult.failure("Failed to join. Please try again."));
+                                    }
+                                });
+                            }
+
+                            @Override
+                            public void onError(@NonNull Exception e) {
+                                callback.onResult(JoinResult.failure("Failed to check availability"));
+                            }
+                        });
                     }
 
                     @Override
                     public void onError(@NonNull Exception e) {
-                        // Log error but allow join (graceful degradation)
-                        Log.w("JoinWaitlistController", "Failed to check ban status", e);
-                        // Continue with join logic
-                        checkAlreadyJoinedAndJoin(event, deviceId, callback);
+                        callback.onResult(JoinResult.failure("Failed to check status. Please try again."));
                     }
                 });
             }
@@ -131,80 +173,6 @@ public class JoinWaitlistController {
             @Override
             public void onError(@NonNull Exception e) {
                 callback.onResult(JoinResult.failure("Failed to check profile"));
-            }
-        });
-    }
-
-    /**
-     * Checks if already joined and proceeds with join logic.
-     * Extracted to avoid deep nesting after ban check.
-     *
-     * @param event the event to join
-     * @param deviceId the device ID of the entrant
-     * @param callback callback for completion
-     */
-    private void checkAlreadyJoinedAndJoin(Event event, String deviceId, Callback callback) {
-        // Check if already joined
-        eventDB.isEntrantOnWaitlist(event.getId(), deviceId, new EventDB.Callback<Boolean>() {
-            @Override
-            public void onSuccess(Boolean alreadyJoined) {
-                if (alreadyJoined) {
-                    callback.onResult(JoinResult.failure("Already joined"));
-                    return;
-                }
-
-                // Validate registration window
-                if (!EventValidationHelper.isWithinRegistrationWindow(event)) {
-                    callback.onResult(JoinResult.failure("Registration window is closed"));
-                    return;
-                }
-
-                // Validate capacity (check accepted participants, not waitlist)
-                eventDB.getAcceptedCount(event.getId(), new EventDB.Callback<Integer>() {
-                    @Override
-                    public void onSuccess(Integer acceptedCount) {
-                        if (!EventValidationHelper.hasCapacity(event, acceptedCount)) {
-                            callback.onResult(JoinResult.failure("Event is full"));
-                            return;
-                        }
-
-                        // All validations passed, join waitlist
-                        eventDB.joinWaitlist(event.getId(), deviceId, new EventDB.Callback<Void>() {
-                            @Override
-                            public void onSuccess(Void value) {
-                                // Track in registration history (graceful degradation - don't fail join if this fails)
-                                entrantDB.addEventToEntrant(deviceId, event.getId(), new EntrantDB.Callback<Void>() {
-                                    @Override
-                                    public void onSuccess(Void v) {
-                                        // History updated successfully
-                                    }
-
-                                    @Override
-                                    public void onError(@NonNull Exception e) {
-                                        // Log but don't fail the join operation
-                                        Log.w("JoinWaitlistController", "Failed to update registration history", e);
-                                    }
-                                });
-                                callback.onResult(JoinResult.success("Joined successfully"));
-                            }
-
-                            @Override
-                            public void onError(@NonNull Exception e) {
-                                callback.onResult(JoinResult.failure("Failed to join. Please try again."));
-                            }
-                        });
-                    }
-
-                    @Override
-                    public void onError(@NonNull Exception e) {
-                        callback.onResult(JoinResult.failure("Failed to check availability"));
-                    }
-                });
-            }
-
-            @Override
-            public void onError(@NonNull Exception e) {
-                callback.onResult(JoinResult.failure("Failed to check status. Please try again."));
             }
         });
     }
