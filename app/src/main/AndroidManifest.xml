@@ -91,21 +91,6 @@
             android:theme="@style/Theme.Codarcevents"
             android:configChanges="orientation|screenSize"/>
 
-        <activity
-            android:name=".views.AdminEventListActivity"
-            android:exported="false"
-            android:theme="@style/Theme.Codarcevents"/>
-
-        <activity
-            android:name=".views.AdminProfileListActivity"
-            android:exported="false"
-            android:theme="@style/Theme.Codarcevents"/>
-
-        <activity
-            android:name=".views.AdminImageListActivity"
-            android:exported="false"
-            android:theme="@style/Theme.Codarcevents"/>
-
 
     </application>
 

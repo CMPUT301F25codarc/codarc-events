@@ -112,7 +112,6 @@ public class NotificationsActivity extends AppCompatActivity {
                     adapter.setItems(notifications);
                     updateEmptyState(notifications.isEmpty());
                     resolveEventNames();
-                    cleanupDeletedEventNotifications();
                 });
             }
 
@@ -251,62 +250,6 @@ public class NotificationsActivity extends AppCompatActivity {
     private void updateEmptyState(boolean isEmpty) {
         emptyStateView.setVisibility(isEmpty ? View.VISIBLE : View.GONE);
         recyclerView.setVisibility(isEmpty ? View.GONE : View.VISIBLE);
-    }
-
-    /**
-     * Cleans up notifications for events that have been deleted.
-     * Checks if each notification's eventId exists in Firestore and removes
-     * notifications for non-existent events.
-     */
-    private void cleanupDeletedEventNotifications() {
-        // Create a copy to avoid ConcurrentModificationException
-        List<NotificationEntry> entriesToCheck = new ArrayList<>(notifications);
-        List<NotificationEntry> entriesToRemove = new ArrayList<>();
-        
-        for (NotificationEntry entry : entriesToCheck) {
-            String eventId = entry.getEventId();
-            if (eventId == null || eventId.isEmpty()) {
-                continue;
-            }
-            
-            eventDB.eventExists(eventId, new EventDB.Callback<Boolean>() {
-                @Override
-                public void onSuccess(Boolean exists) {
-                    if (!exists) {
-                        // Event doesn't exist, mark for removal
-                        String notificationId = entry.getId();
-                        if (notificationId != null && !notificationId.isEmpty()) {
-                            entriesToRemove.add(entry);
-                            // Remove from database
-                            entrantDB.removeNotification(deviceId, notificationId, new EntrantDB.Callback<Void>() {
-                                @Override
-                                public void onSuccess(Void value) {
-                                    runOnUiThread(() -> {
-                                        // Remove from list and update adapter
-                                        synchronized (notifications) {
-                                            notifications.remove(entry);
-                                        }
-                                        adapter.setItems(new ArrayList<>(notifications));
-                                        updateEmptyState(notifications.isEmpty());
-                                    });
-                                }
-                                
-                                @Override
-                                public void onError(@NonNull Exception e) {
-                                    Log.w("NotificationsActivity", "Failed to remove notification for deleted event", e);
-                                }
-                            });
-                        }
-                    }
-                }
-                
-                @Override
-                public void onError(@NonNull Exception e) {
-                    // Log error but continue - don't fail cleanup if check fails
-                    Log.w("NotificationsActivity", "Failed to check if event exists: " + eventId, e);
-                }
-            });
-        }
     }
 
     /**
