@@ -197,4 +197,3 @@ public class AdminImageListActivity extends AppCompatActivity {
         }
     }
 }
-

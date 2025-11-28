@@ -322,4 +322,3 @@ public class RemoveProfileController {
         void onResult(RemoveProfileResult result);
     }
 }
-

@@ -221,4 +221,3 @@ public class RemoveImageController {
         void onResult(RemoveImageResult result);
     }
 }
-

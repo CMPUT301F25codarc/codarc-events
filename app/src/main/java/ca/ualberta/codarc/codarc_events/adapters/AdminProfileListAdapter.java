@@ -152,4 +152,3 @@ public class AdminProfileListAdapter extends RecyclerView.Adapter<AdminProfileLi
         }
     }
 }
-

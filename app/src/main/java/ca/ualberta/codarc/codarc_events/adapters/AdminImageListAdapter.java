@@ -129,4 +129,3 @@ public class AdminImageListAdapter extends RecyclerView.Adapter<AdminImageListAd
         }
     }
 }
-
