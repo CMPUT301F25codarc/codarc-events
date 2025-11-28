@@ -10,6 +10,7 @@ import org.mockito.ArgumentCaptor;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
+import java.util.Arrays;
 import java.util.Collections;
 
 public class CreateEventControllerTests {
@@ -37,7 +38,7 @@ public class CreateEventControllerTests {
     @Test
     public void validateAndCreateEvent_success_trimsFields_setsGeneratedIdAndQr_openTrue() {
         var res = controller.validateAndCreateEvent(
-                NAME, DESC, EVENT_AT, LOCATION, REG_OPEN, REG_CLOSE, "", Collections.emptyList() // capacity empty -> null
+                NAME, DESC, EVENT_AT, LOCATION, REG_OPEN, REG_CLOSE, "", Collections.emptyList(), ""
         );
 
         assertTrue(res.isValid());
@@ -71,7 +72,19 @@ public class CreateEventControllerTests {
 
     @Test
     public void validateAndCreateEvent_missingName_fails() {
-        var r = controller.validateAndCreateEvent("  ", DESC, EVENT_AT, LOCATION, REG_OPEN, REG_CLOSE, null, Collections.emptyList());
+        var r = controller.validateAndCreateEvent(
+                null, DESC, EVENT_AT, LOCATION, REG_OPEN, REG_CLOSE, "", Collections.emptyList(), ""
+        );
+        assertFalse(r.isValid());
+        assertEquals("Event name is required", r.getErrorMessage());
+        assertNull(r.getEvent());
+    }
+
+    @Test
+    public void validateAndCreateEvent_emptyName_fails() {
+        var r = controller.validateAndCreateEvent(
+                "  ", DESC, EVENT_AT, LOCATION, REG_OPEN, REG_CLOSE, "", Collections.emptyList(), ""
+        );
         assertFalse(r.isValid());
         assertEquals("Event name is required", r.getErrorMessage());
         assertNull(r.getEvent());
@@ -79,7 +92,19 @@ public class CreateEventControllerTests {
 
     @Test
     public void validateAndCreateEvent_missingEventDate_fails() {
-        var r = controller.validateAndCreateEvent("Name", DESC, " ", LOCATION, REG_OPEN, REG_CLOSE, null, Collections.emptyList());
+        var r = controller.validateAndCreateEvent(
+                NAME, DESC, null, LOCATION, REG_OPEN, REG_CLOSE, "", Collections.emptyList(), ""
+        );
+        assertFalse(r.isValid());
+        assertEquals("Event date/time is required", r.getErrorMessage());
+        assertNull(r.getEvent());
+    }
+
+    @Test
+    public void validateAndCreateEvent_emptyEventDate_fails() {
+        var r = controller.validateAndCreateEvent(
+                NAME, DESC, "  ", LOCATION, REG_OPEN, REG_CLOSE, "", Collections.emptyList(), ""
+        );
         assertFalse(r.isValid());
         assertEquals("Event date/time is required", r.getErrorMessage());
         assertNull(r.getEvent());
@@ -87,7 +112,19 @@ public class CreateEventControllerTests {
 
     @Test
     public void validateAndCreateEvent_missingRegOpen_fails() {
-        var r = controller.validateAndCreateEvent("Name", DESC, EVENT_AT, LOCATION, " ", REG_CLOSE, null, Collections.emptyList());
+        var r = controller.validateAndCreateEvent(
+                NAME, DESC, EVENT_AT, LOCATION, null, REG_CLOSE, "", Collections.emptyList(), ""
+        );
+        assertFalse(r.isValid());
+        assertEquals("Registration open date is required", r.getErrorMessage());
+        assertNull(r.getEvent());
+    }
+
+    @Test
+    public void validateAndCreateEvent_emptyRegOpen_fails() {
+        var r = controller.validateAndCreateEvent(
+                NAME, DESC, EVENT_AT, LOCATION, "  ", REG_CLOSE, "", Collections.emptyList(), ""
+        );
         assertFalse(r.isValid());
         assertEquals("Registration open date is required", r.getErrorMessage());
         assertNull(r.getEvent());
@@ -95,7 +132,19 @@ public class CreateEventControllerTests {
 
     @Test
     public void validateAndCreateEvent_missingRegClose_fails() {
-        var r = controller.validateAndCreateEvent("Name", DESC, EVENT_AT, LOCATION, REG_OPEN, " ", null, Collections.emptyList());
+        var r = controller.validateAndCreateEvent(
+                NAME, DESC, EVENT_AT, LOCATION, REG_OPEN, null, "", Collections.emptyList(), ""
+        );
+        assertFalse(r.isValid());
+        assertEquals("Registration close date is required", r.getErrorMessage());
+        assertNull(r.getEvent());
+    }
+
+    @Test
+    public void validateAndCreateEvent_emptyRegClose_fails() {
+        var r = controller.validateAndCreateEvent(
+                NAME, DESC, EVENT_AT, LOCATION, REG_OPEN, "  ", "", Collections.emptyList(), ""
+        );
         assertFalse(r.isValid());
         assertEquals("Registration close date is required", r.getErrorMessage());
         assertNull(r.getEvent());
@@ -105,37 +154,69 @@ public class CreateEventControllerTests {
 
     @Test
     public void validateAndCreateEvent_capacity_parsesPositiveInt() {
-        var r = controller.validateAndCreateEvent("Name", null, EVENT_AT, null, REG_OPEN, REG_CLOSE, "42", Collections.emptyList());
+        var r = controller.validateAndCreateEvent(
+                NAME, DESC, EVENT_AT, LOCATION, REG_OPEN, REG_CLOSE, "42", Collections.emptyList(), ""
+        );
         assertTrue(r.isValid());
         assertEquals(Integer.valueOf(42), r.getEvent().getMaxCapacity());
     }
 
     @Test
     public void validateAndCreateEvent_capacity_zeroBecomesNull() {
-        var r = controller.validateAndCreateEvent("Name", null, EVENT_AT, null, REG_OPEN, REG_CLOSE, "0", Collections.emptyList());
+        var r = controller.validateAndCreateEvent(
+                NAME, DESC, EVENT_AT, LOCATION, REG_OPEN, REG_CLOSE, "0", Collections.emptyList(), ""
+        );
         assertTrue(r.isValid());
         assertNull(r.getEvent().getMaxCapacity());
     }
 
     @Test
     public void validateAndCreateEvent_capacity_negativeBecomesNull() {
-        var r = controller.validateAndCreateEvent("Name", null, EVENT_AT, null, REG_OPEN, REG_CLOSE, "-7", Collections.emptyList());
+        var r = controller.validateAndCreateEvent(
+                NAME, DESC, EVENT_AT, LOCATION, REG_OPEN, REG_CLOSE, "-5", Collections.emptyList(), ""
+        );
         assertTrue(r.isValid());
         assertNull(r.getEvent().getMaxCapacity());
     }
 
     @Test
     public void validateAndCreateEvent_capacity_badStringBecomesNull() {
-        var r = controller.validateAndCreateEvent("Name", null, EVENT_AT, null, REG_OPEN, REG_CLOSE, "lol", Collections.emptyList());
+        var r = controller.validateAndCreateEvent(
+                NAME, DESC, EVENT_AT, LOCATION, REG_OPEN, REG_CLOSE, "abc", Collections.emptyList(), ""
+        );
         assertTrue(r.isValid());
         assertNull(r.getEvent().getMaxCapacity());
+    }
+
+    // ---------- validateAndCreateEvent: tags and poster ----------
+
+    @Test
+    public void validateAndCreateEvent_withTags_setsTags() {
+        var tags = Arrays.asList("music", "outdoor");
+        var r = controller.validateAndCreateEvent(
+                NAME, DESC, EVENT_AT, LOCATION, REG_OPEN, REG_CLOSE, "", tags, ""
+        );
+        assertTrue(r.isValid());
+        assertEquals(tags, r.getEvent().getTags());
+    }
+
+    @Test
+    public void validateAndCreateEvent_withPosterUrl_setsPosterUrl() {
+        String posterUrl = "https://example.com/poster.jpg";
+        var r = controller.validateAndCreateEvent(
+                NAME, DESC, EVENT_AT, LOCATION, REG_OPEN, REG_CLOSE, "", Collections.emptyList(), posterUrl
+        );
+        assertTrue(r.isValid());
+        assertEquals(posterUrl, r.getEvent().getPosterUrl());
     }
 
     // ---------- persistEvent ----------
 
     @Test
     public void persistEvent_happyPath_forwardsToDbAddEvent() {
-        var res = controller.validateAndCreateEvent("Name", DESC, EVENT_AT, LOCATION, REG_OPEN, REG_CLOSE, "10", Collections.emptyList());
+        var res = controller.validateAndCreateEvent(
+                NAME, DESC, EVENT_AT, LOCATION, REG_OPEN, REG_CLOSE, "", Collections.emptyList(), ""
+        );
         assertTrue(res.isValid());
         Event e = res.getEvent();
 
@@ -145,6 +226,7 @@ public class CreateEventControllerTests {
         controller.persistEvent(e, cb);
 
         ArgumentCaptor<Event> eventCap = ArgumentCaptor.forClass(Event.class);
+        @SuppressWarnings("unchecked")
         ArgumentCaptor<EventDB.Callback<Void>> cbCap = ArgumentCaptor.forClass(EventDB.Callback.class);
 
         verify(mockDb, times(1)).addEvent(eventCap.capture(), cbCap.capture());
@@ -161,5 +243,42 @@ public class CreateEventControllerTests {
 
         verify(mockDb, never()).addEvent(any(), any());
         verify(cb, times(1)).onError(any(IllegalArgumentException.class));
+    }
+
+    // ---------- canAddTag ----------
+
+    @Test
+    public void canAddTag_validNewTag_returnsTrue() {
+        assertTrue(controller.canAddTag("sports", Arrays.asList("music", "outdoor")));
+    }
+
+    @Test
+    public void canAddTag_duplicateTag_returnsFalse() {
+        assertFalse(controller.canAddTag("music", Arrays.asList("music", "outdoor")));
+    }
+
+    @Test
+    public void canAddTag_duplicateCaseInsensitive_returnsFalse() {
+        assertFalse(controller.canAddTag("MUSIC", Arrays.asList("music", "outdoor")));
+    }
+
+    @Test
+    public void canAddTag_nullTag_returnsFalse() {
+        assertFalse(controller.canAddTag(null, Arrays.asList("music")));
+    }
+
+    @Test
+    public void canAddTag_emptyTag_returnsFalse() {
+        assertFalse(controller.canAddTag("  ", Arrays.asList("music")));
+    }
+
+    @Test
+    public void canAddTag_emptyList_returnsTrue() {
+        assertTrue(controller.canAddTag("sports", Collections.emptyList()));
+    }
+
+    @Test
+    public void canAddTag_nullList_returnsTrue() {
+        assertTrue(controller.canAddTag("sports", null));
     }
 }
