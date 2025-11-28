@@ -3,8 +3,10 @@ package ca.ualberta.codarc.codarc_events.views;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageView;
+import android.widget.PopupMenu;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -33,7 +35,9 @@ import ca.ualberta.codarc.codarc_events.controllers.FilterEventsController;
 import ca.ualberta.codarc.codarc_events.data.EntrantDB;
 import ca.ualberta.codarc.codarc_events.data.EventDB;
 import ca.ualberta.codarc.codarc_events.data.TagDB;
+import ca.ualberta.codarc.codarc_events.data.UserDB;
 import ca.ualberta.codarc.codarc_events.models.Event;
+import ca.ualberta.codarc.codarc_events.models.User;
 import ca.ualberta.codarc.codarc_events.utils.Identity;
 import ca.ualberta.codarc.codarc_events.utils.TagHelper;
 
@@ -143,6 +147,65 @@ public class EventBrowserActivity extends AppCompatActivity {
                 overridePendingTransition(android.R.anim.slide_in_left, android.R.anim.slide_out_right);
             });
         }
+
+        // Admin lock button: check admin status and show menu
+        ImageView adminLockButton = findViewById(R.id.btn_admin);
+        if (adminLockButton != null) {
+            adminLockButton.setOnClickListener(v -> checkAdminAndShowMenu());
+        }
+    }
+
+    /**
+     * Checks if the current user is an admin and shows the admin menu if they are.
+     */
+    private void checkAdminAndShowMenu() {
+        String deviceId = Identity.getOrCreateDeviceId(this);
+        UserDB userDB = new UserDB();
+        userDB.getUser(deviceId, new UserDB.Callback<User>() {
+            @Override
+            public void onSuccess(User user) {
+                if (user != null && user.isAdmin()) {
+                    showAdminMenu();
+                } else {
+                    Toast.makeText(EventBrowserActivity.this, 
+                        R.string.admin_access_required, Toast.LENGTH_SHORT).show();
+                }
+            }
+            
+            @Override
+            public void onError(@NonNull Exception e) {
+                android.util.Log.e("EventBrowserActivity", "Failed to check admin status", e);
+                Toast.makeText(EventBrowserActivity.this, 
+                    R.string.admin_check_status_error, Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    /**
+     * Shows the admin popup menu with available admin functions.
+     */
+    private void showAdminMenu() {
+        PopupMenu popupMenu = new PopupMenu(this, findViewById(R.id.btn_admin));
+        popupMenu.getMenuInflater().inflate(R.menu.menu_admin, popupMenu.getMenu());
+        popupMenu.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == R.id.menu_admin_remove_events) {
+                Intent intent = new Intent(this, AdminEventListActivity.class);
+                startActivity(intent);
+                return true;
+            }
+            if (item.getItemId() == R.id.menu_admin_remove_profiles) {
+                Intent intent = new Intent(this, AdminProfileListActivity.class);
+                startActivity(intent);
+                return true;
+            }
+            if (item.getItemId() == R.id.menu_admin_remove_images) {
+                Intent intent = new Intent(this, AdminImageListActivity.class);
+                startActivity(intent);
+                return true;
+            }
+            return false;
+        });
+        popupMenu.show();
     }
 
     @Override
