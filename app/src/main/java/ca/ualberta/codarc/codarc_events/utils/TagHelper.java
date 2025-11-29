@@ -5,7 +5,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
-import ca.ualberta.codarc.codarc_events.models.Event;
 
 /**
  * Utility class for managing event tags.
@@ -94,7 +93,7 @@ public class TagHelper {
      * @param events the list of events to extract tags from
      * @return set of unique tag strings (normalized)
      */
-    public static Set<String> collectAllUniqueTags(List<Event> events) {
+    public static Set<String> collectAllUniqueTags(List<? extends ca.ualberta.codarc.codarc_events.models.Event> events) {
         Set<String> allTags = new HashSet<>();
 
         // Add all predefined tags
@@ -104,7 +103,7 @@ public class TagHelper {
 
         // Add tags from events
         if (events != null) {
-            for (Event event : events) {
+            for (ca.ualberta.codarc.codarc_events.models.Event event : events) {
                 if (event != null && event.getTags() != null) {
                     for (String tag : event.getTags()) {
                         if (tag != null && !tag.trim().isEmpty()) {
