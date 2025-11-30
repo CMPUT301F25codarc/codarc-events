@@ -28,10 +28,10 @@ jobs:
     - name: Run Unit Tests
       run: ./gradlew test
     
-    - name: Run Instrumented UI Tests
+    - name: Run UI Tests
       uses: reactivecircus/android-emulator-runner@v2
       with:
-        api-level: 34
-        target: google_apis
-        arch: x86_64
+        api-level: 29
+        target: default
+        arch: x86
         script: ./gradlew connectedAndroidTest
