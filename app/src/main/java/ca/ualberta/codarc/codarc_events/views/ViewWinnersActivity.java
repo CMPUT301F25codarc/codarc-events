@@ -71,7 +71,7 @@ public class ViewWinnersActivity extends AppCompatActivity {
         btnNotifyWinners = findViewById(R.id.btn_notify_winners);
 
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new WinnersAdapter(itemList);
+        adapter = new WinnersAdapter(itemList, this::cancelWinner);
         recyclerView.setAdapter(adapter);
 
         setupNotifyButton();
@@ -197,6 +197,26 @@ public class ViewWinnersActivity extends AppCompatActivity {
         emptyState.setVisibility(android.view.View.GONE);
     }
 
+    private void cancelWinner(String deviceId) {
+        if (deviceId == null || deviceId.isEmpty()) {
+            Toast.makeText(this, "Invalid entrant", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        eventDB.setEnrolledStatus(eventId, deviceId, false, new EventDB.Callback<Void>() {
+            @Override
+            public void onSuccess(Void value) {
+                Toast.makeText(ViewWinnersActivity.this, "Entrant cancelled", Toast.LENGTH_SHORT).show();
+                loadWinners();
+            }
+
+            @Override
+            public void onError(@NonNull Exception e) {
+                Toast.makeText(ViewWinnersActivity.this, "Failed to cancel entrant", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
     /**
      * Sets up the notify button click listener.
      */
@@ -293,4 +313,3 @@ public class ViewWinnersActivity extends AppCompatActivity {
         });
     }
 }
-
