@@ -89,21 +89,18 @@ public class RegistrationHistoryControllerTests {
 
         controller.loadRegistrationHistory("dev1", cb);
 
-        // history -> ["E1"]
         @SuppressWarnings("unchecked")
         ArgumentCaptor<EntrantDB.Callback<List<String>>> histCap =
                 ArgumentCaptor.forClass(EntrantDB.Callback.class);
         verify(mockEntrantDb).getRegistrationHistory(eq("dev1"), histCap.capture());
         histCap.getValue().onSuccess(Collections.singletonList("E1"));
 
-        // eventExists(E1) -> true
         @SuppressWarnings("unchecked")
         ArgumentCaptor<EventDB.Callback<Boolean>> existsCap =
                 ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).eventExists(eq("E1"), existsCap.capture());
         existsCap.getValue().onSuccess(true);
 
-        // getEvent(E1) -> event
         @SuppressWarnings("unchecked")
         ArgumentCaptor<EventDB.Callback<Event>> eventCap =
                 ArgumentCaptor.forClass(EventDB.Callback.class);
@@ -112,18 +109,15 @@ public class RegistrationHistoryControllerTests {
         Event event = new Event();
         event.setId("E1");
         event.setName("Event 1");
-        // future date so Not Selected logic is not used
         event.setEventDateTime("2099-01-01'T'10:00:00".replace("'T'", "T"));
         eventCap.getValue().onSuccess(event);
 
-        // isEntrantAccepted(E1, dev1) -> true
         @SuppressWarnings("unchecked")
         ArgumentCaptor<EventDB.Callback<Boolean>> accCap =
                 ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).isEntrantAccepted(eq("E1"), eq("dev1"), accCap.capture());
         accCap.getValue().onSuccess(true);
 
-        // final result
         ArgumentCaptor<RegistrationHistoryController.HistoryResult> resCap =
                 ArgumentCaptor.forClass(RegistrationHistoryController.HistoryResult.class);
         verify(cb).onResult(resCap.capture());
@@ -138,8 +132,6 @@ public class RegistrationHistoryControllerTests {
         assertEquals("Event 1", entry.getEventName());
         assertEquals("Accepted", entry.getSelectionStatus());
     }
-
-    // ---------- single event: Not Selected vs Waitlisted ----------
 
     @Test
     public void loadRegistrationHistory_pastEventNotInAnyList_notSelected() {
@@ -168,32 +160,27 @@ public class RegistrationHistoryControllerTests {
         Event event = new Event();
         event.setId("E1");
         event.setName("Old Event");
-        // definitely in the past
         event.setEventDateTime("2000-01-01T10:00:00");
         eventCap.getValue().onSuccess(event);
 
-        // accepted -> false
         @SuppressWarnings("unchecked")
         ArgumentCaptor<EventDB.Callback<Boolean>> accCap =
                 ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).isEntrantAccepted(eq("E1"), eq("dev1"), accCap.capture());
         accCap.getValue().onSuccess(false);
 
-        // cancelled -> false
         @SuppressWarnings("unchecked")
         ArgumentCaptor<EventDB.Callback<Boolean>> cancCap =
                 ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).isEntrantCancelled(eq("E1"), eq("dev1"), cancCap.capture());
         cancCap.getValue().onSuccess(false);
 
-        // winner -> false
         @SuppressWarnings("unchecked")
         ArgumentCaptor<EventDB.Callback<Boolean>> winCap =
                 ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).isEntrantWinner(eq("E1"), eq("dev1"), winCap.capture());
         winCap.getValue().onSuccess(false);
 
-        // waitlist -> false
         @SuppressWarnings("unchecked")
         ArgumentCaptor<EventDB.Callback<Boolean>> wlCap =
                 ArgumentCaptor.forClass(EventDB.Callback.class);
@@ -237,32 +224,27 @@ public class RegistrationHistoryControllerTests {
         Event event = new Event();
         event.setId("E1");
         event.setName("Future Event");
-        // far in the future
         event.setEventDateTime("2099-01-01T10:00:00");
         eventCap.getValue().onSuccess(event);
 
-        // accepted -> false
         @SuppressWarnings("unchecked")
         ArgumentCaptor<EventDB.Callback<Boolean>> accCap =
                 ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).isEntrantAccepted(eq("E1"), eq("dev1"), accCap.capture());
         accCap.getValue().onSuccess(false);
 
-        // cancelled -> false
         @SuppressWarnings("unchecked")
         ArgumentCaptor<EventDB.Callback<Boolean>> cancCap =
                 ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).isEntrantCancelled(eq("E1"), eq("dev1"), cancCap.capture());
         cancCap.getValue().onSuccess(false);
 
-        // winner -> false
         @SuppressWarnings("unchecked")
         ArgumentCaptor<EventDB.Callback<Boolean>> winCap =
                 ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).isEntrantWinner(eq("E1"), eq("dev1"), winCap.capture());
         winCap.getValue().onSuccess(false);
 
-        // waitlist -> false
         @SuppressWarnings("unchecked")
         ArgumentCaptor<EventDB.Callback<Boolean>> wlCap =
                 ArgumentCaptor.forClass(EventDB.Callback.class);
@@ -278,8 +260,6 @@ public class RegistrationHistoryControllerTests {
         assertEquals(1, res.getEntries().size());
         assertEquals("Waitlisted", res.getEntries().get(0).getSelectionStatus());
     }
-    // ---------- sorting by event date (most recent first) ----------
-
     @Test
     public void loadRegistrationHistory_entriesSortedByDateDescending() {
         RegistrationHistoryController.Callback cb =
@@ -293,17 +273,15 @@ public class RegistrationHistoryControllerTests {
         verify(mockEntrantDb).getRegistrationHistory(eq("dev1"), histCap.capture());
         histCap.getValue().onSuccess(Arrays.asList("E1", "E2"));
 
-        // eventExists both true
         @SuppressWarnings("unchecked")
         ArgumentCaptor<EventDB.Callback<Boolean>> existsCap =
                 ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb, times(2))
                 .eventExists(anyString(), existsCap.capture());
         List<EventDB.Callback<Boolean>> existsCallbacks = existsCap.getAllValues();
-        existsCallbacks.get(0).onSuccess(true); // E1
-        existsCallbacks.get(1).onSuccess(true); // E2
+        existsCallbacks.get(0).onSuccess(true);
+        existsCallbacks.get(1).onSuccess(true);
 
-        // getEvent for both E1, E2
         @SuppressWarnings("unchecked")
         ArgumentCaptor<EventDB.Callback<Event>> eventCap =
                 ArgumentCaptor.forClass(EventDB.Callback.class);
@@ -311,7 +289,6 @@ public class RegistrationHistoryControllerTests {
                 .getEvent(anyString(), eventCap.capture());
         List<EventDB.Callback<Event>> eventCallbacks = eventCap.getAllValues();
 
-        // For deterministic mapping, assume first is E1, second is E2
         Event e1 = new Event();
         e1.setId("E1");
         e1.setName("Older Event");
@@ -325,15 +302,14 @@ public class RegistrationHistoryControllerTests {
         eventCallbacks.get(0).onSuccess(e1);
         eventCallbacks.get(1).onSuccess(e2);
 
-        // accepted -> true for both so status resolution is trivial
         @SuppressWarnings("unchecked")
         ArgumentCaptor<EventDB.Callback<Boolean>> accCap =
                 ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb, times(2))
                 .isEntrantAccepted(anyString(), eq("dev1"), accCap.capture());
         List<EventDB.Callback<Boolean>> accCallbacks = accCap.getAllValues();
-        accCallbacks.get(0).onSuccess(true); // E1
-        accCallbacks.get(1).onSuccess(true); // E2
+        accCallbacks.get(0).onSuccess(true);
+        accCallbacks.get(1).onSuccess(true);
 
         ArgumentCaptor<RegistrationHistoryController.HistoryResult> resCap =
                 ArgumentCaptor.forClass(RegistrationHistoryController.HistoryResult.class);
@@ -343,7 +319,6 @@ public class RegistrationHistoryControllerTests {
         assertTrue(res.isSuccess());
         assertEquals(2, res.getEntries().size());
 
-        // Most recent first -> E2, then E1
         assertEquals("E2", res.getEntries().get(0).getEventId());
         assertEquals("E1", res.getEntries().get(1).getEventId());
     }

@@ -28,8 +28,6 @@ public class UpdatePosterControllerTests {
         controller = new UpdatePosterController(mockEventDb, mockPosterStorage);
     }
 
-    // ---------- validation ----------
-
     @Test
     public void updatePoster_nullEvent_failsFast() {
         UpdatePosterController.Callback cb = mock(UpdatePosterController.Callback.class);
@@ -54,7 +52,7 @@ public class UpdatePosterControllerTests {
         UpdatePosterController.Callback cb = mock(UpdatePosterController.Callback.class);
         Uri mockUri = mock(Uri.class);
 
-        Event event = new Event(); // id is null
+        Event event = new Event();
         controller.updatePoster(event, mockUri, cb);
 
         ArgumentCaptor<UpdatePosterController.UpdatePosterResult> resCap =
@@ -90,8 +88,6 @@ public class UpdatePosterControllerTests {
         verifyNoInteractions(mockPosterStorage, mockEventDb);
     }
 
-    // ---------- upload failure ----------
-
     @Test
     public void updatePoster_uploadFails_returnsFailureAndDoesNotTouchEventDb() {
         UpdatePosterController.Callback cb = mock(UpdatePosterController.Callback.class);
@@ -107,7 +103,6 @@ public class UpdatePosterControllerTests {
                 ArgumentCaptor.forClass(PosterStorage.Callback.class);
         verify(mockPosterStorage).uploadPoster(eq("E1"), eq(mockUri), uploadCap.capture());
 
-        // Simulate upload error with a specific message
         uploadCap.getValue().onError(new Exception("upload exploded"));
 
         ArgumentCaptor<UpdatePosterController.UpdatePosterResult> resCap =
@@ -116,14 +111,11 @@ public class UpdatePosterControllerTests {
 
         UpdatePosterController.UpdatePosterResult res = resCap.getValue();
         assertFalse(res.isSuccess());
-        // Controller uses the exception message if non empty
         assertEquals("upload exploded", res.getErrorMessage());
         assertNull(res.getUpdatedEvent());
 
         verifyNoInteractions(mockEventDb);
     }
-
-    // ---------- event update failure after successful upload ----------
 
     @Test
     public void updatePoster_eventUpdateFails_returnsFailure() {
@@ -140,7 +132,6 @@ public class UpdatePosterControllerTests {
                 ArgumentCaptor.forClass(PosterStorage.Callback.class);
         verify(mockPosterStorage).uploadPoster(eq("E1"), eq(mockUri), uploadCap.capture());
 
-        // Simulate successful upload
         uploadCap.getValue().onSuccess("https://example.com/poster.jpg");
         assertEquals("https://example.com/poster.jpg", event.getPosterUrl());
 
@@ -149,7 +140,6 @@ public class UpdatePosterControllerTests {
                 ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).addEvent(eq(event), eventCap.capture());
 
-        // Simulate Firestore failure
         eventCap.getValue().onError(new Exception("firestore RIP"));
 
         ArgumentCaptor<UpdatePosterController.UpdatePosterResult> resCap =
@@ -162,8 +152,6 @@ public class UpdatePosterControllerTests {
         assertNull(res.getUpdatedEvent());
     }
 
-    // ---------- happy path ----------
-
     @Test
     public void updatePoster_success_updatesPosterUrlAndReturnsUpdatedEvent() {
         UpdatePosterController.Callback cb = mock(UpdatePosterController.Callback.class);
@@ -174,29 +162,22 @@ public class UpdatePosterControllerTests {
 
         controller.updatePoster(event, mockUri, cb);
 
-        // Step 1: capture upload callback
         @SuppressWarnings("unchecked")
         ArgumentCaptor<PosterStorage.Callback<String>> uploadCap =
                 ArgumentCaptor.forClass(PosterStorage.Callback.class);
         verify(mockPosterStorage).uploadPoster(eq("E1"), eq(mockUri), uploadCap.capture());
 
-        // Simulate upload success
         String newUrl = "https://example.com/posters/E1.jpg";
         uploadCap.getValue().onSuccess(newUrl);
-
-        // Event should now carry the new URL before hitting EventDB
         assertEquals(newUrl, event.getPosterUrl());
 
-        // Step 2: capture event update callback
         @SuppressWarnings("unchecked")
         ArgumentCaptor<EventDB.Callback<Void>> eventCap =
                 ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).addEvent(eq(event), eventCap.capture());
 
-        // Simulate event update success
         eventCap.getValue().onSuccess(null);
 
-        // Step 3: verify final result
         ArgumentCaptor<UpdatePosterController.UpdatePosterResult> resCap =
                 ArgumentCaptor.forClass(UpdatePosterController.UpdatePosterResult.class);
         verify(cb).onResult(resCap.capture());

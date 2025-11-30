@@ -18,7 +18,6 @@ public class CreateEventControllerTests {
     private EventDB mockDb;
     private CreateEventController controller;
 
-    // Valid baseline inputs
     private static final String NAME = " Launch Party ";
     private static final String DESC = "  Free snacks  ";
     private static final String LOCATION = "  CSC Atrium  ";
@@ -46,29 +45,20 @@ public class CreateEventControllerTests {
         Event e = res.getEvent();
         assertNotNull(e);
 
-        // Trimmed fields
         assertEquals("Launch Party", e.getName());
         assertEquals("Free snacks", e.getDescription());
         assertEquals("CSC Atrium", e.getLocation());
-
-        // Required passthroughs
         assertEquals(EVENT_AT, e.getEventDateTime());
         assertEquals(REG_OPEN, e.getRegistrationOpen());
         assertEquals(REG_CLOSE, e.getRegistrationClose());
-
-        // Organizer + generated identifiers
         assertEquals(ORGANIZER, e.getOrganizerId());
         assertNotNull(e.getId());
         assertFalse(e.getId().trim().isEmpty());
         assertNotNull(e.getQrCode());
         assertTrue(e.getQrCode().startsWith("event:"));
-
-        // Flags and capacity
         assertTrue(e.isOpen());
         assertNull(e.getMaxCapacity());
     }
-
-    // ---------- validateAndCreateEvent: required fields ----------
 
     @Test
     public void validateAndCreateEvent_missingName_fails() {
@@ -150,8 +140,6 @@ public class CreateEventControllerTests {
         assertNull(r.getEvent());
     }
 
-    // ---------- validateAndCreateEvent: capacity behavior (as-implemented) ----------
-
     @Test
     public void validateAndCreateEvent_capacity_parsesPositiveInt() {
         var r = controller.validateAndCreateEvent(
@@ -188,8 +176,6 @@ public class CreateEventControllerTests {
         assertNull(r.getEvent().getMaxCapacity());
     }
 
-    // ---------- validateAndCreateEvent: tags and poster ----------
-
     @Test
     public void validateAndCreateEvent_withTags_setsTags() {
         var tags = Arrays.asList("music", "outdoor");
@@ -209,8 +195,6 @@ public class CreateEventControllerTests {
         assertTrue(r.isValid());
         assertEquals(posterUrl, r.getEvent().getPosterUrl());
     }
-
-    // ---------- persistEvent ----------
 
     @Test
     public void persistEvent_happyPath_forwardsToDbAddEvent() {
@@ -244,8 +228,6 @@ public class CreateEventControllerTests {
         verify(mockDb, never()).addEvent(any(), any());
         verify(cb, times(1)).onError(any(IllegalArgumentException.class));
     }
-
-    // ---------- canAddTag ----------
 
     @Test
     public void canAddTag_validNewTag_returnsTrue() {

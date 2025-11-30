@@ -33,8 +33,6 @@ public class RemoveProfileControllerTests {
         controller = new AdminRemoveProfileController(mockEntrantDb, mockEventDb, mockUserDb);
     }
 
-    // ---------- validation ----------
-
     @Test
     public void removeProfile_emptyEntrantDeviceId_failsFast() {
         AdminRemoveProfileController.Callback cb = mock(AdminRemoveProfileController.Callback.class);
@@ -77,7 +75,6 @@ public class RemoveProfileControllerTests {
 
         controller.removeProfile("dev1", "admin1", cb);
 
-        // userDB.getUser("admin1", callback)
         @SuppressWarnings("unchecked")
         ArgumentCaptor<UserDB.Callback<User>> userCap =
                 ArgumentCaptor.forClass(UserDB.Callback.class);
@@ -85,8 +82,6 @@ public class RemoveProfileControllerTests {
 
         User mockUser = mock(User.class);
         when(mockUser.isAdmin()).thenReturn(false);
-
-        // Trigger non admin success path (no Log)
         userCap.getValue().onSuccess(mockUser);
 
         ArgumentCaptor<AdminRemoveProfileController.RemoveProfileResult> resCap =
@@ -100,15 +95,12 @@ public class RemoveProfileControllerTests {
         verifyNoInteractions(mockEntrantDb, mockEventDb);
     }
 
-    // ---------- happy path wiring (avoid calling callbacks that log) ----------
-
     @Test
     public void removeProfile_adminAndEntrantWithEvents_callsExpectedDbOperations() {
         AdminRemoveProfileController.Callback cb = mock(AdminRemoveProfileController.Callback.class);
 
         controller.removeProfile("dev1", "admin1", cb);
 
-        // 1) Admin validation
         @SuppressWarnings("unchecked")
         ArgumentCaptor<UserDB.Callback<User>> userCap =
                 ArgumentCaptor.forClass(UserDB.Callback.class);
@@ -116,53 +108,34 @@ public class RemoveProfileControllerTests {
 
         User adminUser = mock(User.class);
         when(adminUser.isAdmin()).thenReturn(true);
-        userCap.getValue().onSuccess(adminUser); // no Log in this path
+        userCap.getValue().onSuccess(adminUser);
 
-        // 2) Entrant events list (DeleteOwnProfileController goes directly to getEntrantEvents)
         @SuppressWarnings("unchecked")
         ArgumentCaptor<EntrantDB.Callback<List<String>>> eventsCap =
                 ArgumentCaptor.forClass(EntrantDB.Callback.class);
         verify(mockEntrantDb).getEntrantEvents(eq("dev1"), eventsCap.capture());
 
-        // Use non empty list so removeFromAllEvents does not hit the "empty" Log branch
         eventsCap.getValue().onSuccess(Arrays.asList("E1", "E2"));
 
-        // At this point, controller will:
-        // - call eventDB.removeEntrantFromEvent for E1, E2
-        // - call entrantDB.deleteAllEntrantEvents("dev1")
-        // - call entrantDB.deleteProfile("dev1")
-        // We do NOT trigger any of those callbacks to avoid android.util.Log usage.
-
-        // Verify removal from events
         @SuppressWarnings("unchecked")
         ArgumentCaptor<EventDB.Callback<Void>> removeCap =
                 ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb, times(2))
                 .removeEntrantFromEvent(anyString(), eq("dev1"), removeCap.capture());
 
-        // The order of calls should correspond to E1 then E2
         verify(mockEventDb).removeEntrantFromEvent(eq("E1"), eq("dev1"), any());
         verify(mockEventDb).removeEntrantFromEvent(eq("E2"), eq("dev1"), any());
 
-        // Verify entrant events subcollection deletion
         @SuppressWarnings("unchecked")
         ArgumentCaptor<EntrantDB.Callback<Void>> delEventsCap =
                 ArgumentCaptor.forClass(EntrantDB.Callback.class);
         verify(mockEntrantDb).deleteAllEntrantEvents(eq("dev1"), delEventsCap.capture());
 
-        // Verify profile wipe
-        // Note: AdminRemoveProfileController uses DeleteOwnProfileController internally,
-        // which calls deleteProfileInternal, which then calls entrantDB.deleteProfile with shouldBan=true
         @SuppressWarnings("unchecked")
         ArgumentCaptor<EntrantDB.Callback<Void>> delProfileCap =
                 ArgumentCaptor.forClass(EntrantDB.Callback.class);
         verify(mockEntrantDb).deleteProfile(eq("dev1"), eq(true), delProfileCap.capture());
 
-        // Important: do NOT call delEventsCap.getValue().onSuccess(...)
-        // or delProfileCap.getValue().onSuccess(...), since those paths log
-
-        // Because we never trigger deleteProfile's callback, controller never calls cb.onResult,
-        // so we also do not assert on cb here.
         verifyNoMoreInteractions(cb);
     }
 }

@@ -19,14 +19,12 @@ public class EventValidationControllerTests {
 
     private final SimpleDateFormat iso = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US);
 
-    // ---------- isWithinRegistrationWindow ----------
-
     @Test
     public void isWithinRegistrationWindow_trueWhenNowInsideWindow() throws Exception {
         Event e = new Event();
         long now = System.currentTimeMillis();
-        e.setRegistrationOpen(iso.format(new Date(now - 1000)));   // opened 1s ago
-        e.setRegistrationClose(iso.format(new Date(now + 1000)));  // closes 1s later
+        e.setRegistrationOpen(iso.format(new Date(now - 1000)));
+        e.setRegistrationClose(iso.format(new Date(now + 1000)));
 
         assertTrue(EventValidationHelper.isWithinRegistrationWindow(e));
     }
@@ -35,8 +33,8 @@ public class EventValidationControllerTests {
     public void isWithinRegistrationWindow_falseWhenNowBeforeOpen() throws Exception {
         Event e = new Event();
         long now = System.currentTimeMillis();
-        e.setRegistrationOpen(iso.format(new Date(now + 5000)));   // opens in 5s
-        e.setRegistrationClose(iso.format(new Date(now + 10000))); // closes later
+        e.setRegistrationOpen(iso.format(new Date(now + 5000)));
+        e.setRegistrationClose(iso.format(new Date(now + 10000)));
 
         assertFalse(EventValidationHelper.isWithinRegistrationWindow(e));
     }
@@ -46,7 +44,7 @@ public class EventValidationControllerTests {
         Event e = new Event();
         long now = System.currentTimeMillis();
         e.setRegistrationOpen(iso.format(new Date(now - 10000)));
-        e.setRegistrationClose(iso.format(new Date(now - 1000))); // closed 1s ago
+        e.setRegistrationClose(iso.format(new Date(now - 1000)));
 
         assertFalse(EventValidationHelper.isWithinRegistrationWindow(e));
     }
@@ -69,8 +67,6 @@ public class EventValidationControllerTests {
         e.setRegistrationClose(null);
         assertFalse(EventValidationHelper.isWithinRegistrationWindow(e));
     }
-
-    // ---------- hasCapacity ----------
 
     @Test
     public void hasCapacity_trueWhenNoLimit() {
@@ -98,7 +94,7 @@ public class EventValidationControllerTests {
     }
 
     @Test
-    public void hasCapacity_trueWhenCapacityIsZeroOrNegative() { // 0 or negative means no capacity limit in the implementation
+    public void hasCapacity_trueWhenCapacityIsZeroOrNegative() {
         Event e1 = new Event();
         e1.setMaxCapacity(0);
         Event e2 = new Event();

@@ -26,15 +26,10 @@ public class DrawControllerTests {
 
     @Before
     public void setUp() {
-        // Mock both DB dependencies so no Firebase / Android APIs are touched
         mockEventDb = mock(EventDB.class);
         mockEntrantDb = mock(EntrantDB.class);
-
-        // Uses a DI constructor in DrawController: DrawController(EventDB, EntrantDB)
         controller = new DrawController(mockEventDb, mockEntrantDb);
     }
-
-    // ---------------- loadEntrantCount ----------------
 
     @Test
     public void loadEntrantCount_forwardsSuccess() {
@@ -68,8 +63,6 @@ public class DrawControllerTests {
         verify(cb).onError(boom);
         verify(cb, never()).onSuccess(anyInt());
     }
-
-    // ---------------- runDraw: validations ----------------
 
     @Test
     public void runDraw_validation_nullEventId() {
@@ -111,23 +104,19 @@ public class DrawControllerTests {
         verify(mockEventDb, never()).getWaitlist(anyString(), any());
     }
 
-    // ---------------- runDraw: default overload uses pool size 3 ----------------
-
     @Test
     public void runDraw_defaultReplacementPool_isThree() {
         DrawController.DrawCallback cb = mock(DrawController.DrawCallback.class);
 
-        controller.runDraw("E", 2, cb); // uses DEFAULT_REPLACEMENT_POOL_SIZE = 3
+        controller.runDraw("E", 2, cb);
 
-        // capture waitlist callback
         ArgumentCaptor<EventDB.Callback<List<Map<String, Object>>>> wlCap =
                 ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).getWaitlist(eq("E"), wlCap.capture());
 
-        List<Map<String, Object>> waitlist = ids("A","B","C","D"); // 4 entrants
+        List<Map<String, Object>> waitlist = ids("A","B","C","D");
         wlCap.getValue().onSuccess(waitlist);
 
-        // capture markWinners
         ArgumentCaptor<List<String>> winnersCap = ArgumentCaptor.forClass(List.class);
         ArgumentCaptor<List<String>> repsCap = ArgumentCaptor.forClass(List.class);
         ArgumentCaptor<EventDB.Callback<Void>> mwCap = ArgumentCaptor.forClass(EventDB.Callback.class);
@@ -136,23 +125,15 @@ public class DrawControllerTests {
         List<String> winners = winnersCap.getValue();
         List<String> reps = repsCap.getValue();
 
-        // sizes: winners=min(2,4)=2; replacements=min(3, 4-2)=2
         assertEquals(2, winners.size());
         assertEquals(2, reps.size());
-
-        // disjoint and members from original set
         assertDisjoint(winners, reps);
         assertMembersOf(winners, "A","B","C","D");
         assertMembersOf(reps, "A","B","C","D");
 
-        // simulate DB success
         mwCap.getValue().onSuccess(null);
-
-        // Controller may not call callback on success, just assert it did not report error
         verify(cb, never()).onError(any());
     }
-
-    // ---------------- runDraw: branches ----------------
 
     @Test
     public void runDraw_noEntrants_isError() {
@@ -191,21 +172,17 @@ public class DrawControllerTests {
         List<String> winners = winnersCap.getValue();
         List<String> reps = repsCap.getValue();
 
-        // winners=min(2,5)=2; replacements=min(3, 5-2)=3
         assertEquals(2, winners.size());
         assertEquals(3, reps.size());
         assertDisjoint(winners, reps);
         assertMembersOf(winners, "A","B","C","D","E");
         assertMembersOf(reps, "A","B","C","D","E");
 
-        // union size should be 5 unique
         Set<String> union = new HashSet<>(winners);
         union.addAll(reps);
         assertEquals(5, union.size());
 
         mwCap.getValue().onSuccess(null);
-
-        // Just ensure no error callback is fired
         verify(cb, never()).onError(any());
     }
 
@@ -213,7 +190,7 @@ public class DrawControllerTests {
     public void runDraw_winnersMoreThanTotal_replacementsEmpty() {
         DrawController.DrawCallback cb = mock(DrawController.DrawCallback.class);
 
-        controller.runDraw("E", 5, 3, cb); // ask for more winners than entrants
+        controller.runDraw("E", 5, 3, cb);
 
         ArgumentCaptor<EventDB.Callback<List<Map<String, Object>>>> wlCap =
                 ArgumentCaptor.forClass(EventDB.Callback.class);
@@ -230,14 +207,11 @@ public class DrawControllerTests {
         List<String> winners = winnersCap.getValue();
         List<String> reps = repsCap.getValue();
 
-        // winners=min(5,2)=2; replacements=min(3, 2-2)=0
         assertEquals(2, winners.size());
         assertTrue(reps.isEmpty());
         assertMembersOf(winners, "X","Y");
 
         mwCap.getValue().onSuccess(null);
-
-        // No error expected
         verify(cb, never()).onError(any());
     }
 
@@ -253,7 +227,7 @@ public class DrawControllerTests {
 
         List<Map<String, Object>> waitlist = new ArrayList<>();
         waitlist.add(mapId("A"));
-        waitlist.add(Collections.singletonMap("deviceId", null)); // null id
+        waitlist.add(Collections.singletonMap("deviceId", null));
         waitlist.add(mapId("B"));
         waitlist.add(mapId("C"));
         waitlist.add(mapId("D"));
@@ -267,16 +241,12 @@ public class DrawControllerTests {
         List<String> winners = winnersCap.getValue();
         List<String> reps = repsCap.getValue();
 
-        // We asked for 3 winners, but one ID in the first 3 could be null.
-        // So winners.size() can be 2 or 3 depending on shuffle. We only assert it never exceeds 3 and members are valid.
         assertTrue(winners.size() <= 3);
-        assertMembersOf(winners, "A","B","C","D"); // null is skipped, so not present
-        assertMembersOf(reps, "A","B","C","D");    // replacements also skip nulls implicitly
+        assertMembersOf(winners, "A","B","C","D");
+        assertMembersOf(reps, "A","B","C","D");
         assertDisjoint(winners, reps);
 
         mwCap.getValue().onSuccess(null);
-
-        // Again, only care that it did not treat this as an error
         verify(cb, never()).onError(any());
     }
 
@@ -303,13 +273,11 @@ public class DrawControllerTests {
 
         controller.runDraw("E", 2, 1, cb);
 
-        // getWaitlist
         ArgumentCaptor<EventDB.Callback<List<Map<String, Object>>>> wlCap =
                 ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).getWaitlist(eq("E"), wlCap.capture());
         wlCap.getValue().onSuccess(ids("A","B"));
 
-        // markWinners
         ArgumentCaptor<EventDB.Callback<Void>> mwCap = ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).markWinners(eq("E"), anyList(), anyList(), mwCap.capture());
 
@@ -319,8 +287,6 @@ public class DrawControllerTests {
         verify(cb).onError(boom);
         verify(cb, never()).onSuccess(anyList(), anyList());
     }
-
-    // ---------------- helpers ----------------
 
     private static List<Map<String, Object>> ids(String... deviceIds) {
         List<Map<String, Object>> list = new ArrayList<>();

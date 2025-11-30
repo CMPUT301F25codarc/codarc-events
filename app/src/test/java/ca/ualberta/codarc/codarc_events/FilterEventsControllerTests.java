@@ -137,7 +137,7 @@ public class FilterEventsControllerTests {
         FilterEventsController.FilterCriteria criteria = new FilterEventsController.FilterCriteria(
                 null, true);
         Map<String, Integer> acceptedCounts = new HashMap<>();
-        acceptedCounts.put("event1", 5); // 5 accepted, capacity is 10, so available
+        acceptedCounts.put("event1", 5);
 
         FilterEventsController.FilterResult result = controller.applyFilters(events, criteria, acceptedCounts);
 
@@ -150,7 +150,7 @@ public class FilterEventsControllerTests {
         Event event = createEvent("event1");
         long now = System.currentTimeMillis();
         event.setRegistrationOpen(iso.format(new Date(now - 10000)));
-        event.setRegistrationClose(iso.format(new Date(now - 1000))); // Closed
+        event.setRegistrationClose(iso.format(new Date(now - 1000)));
         event.setMaxCapacity(10);
 
         List<Event> events = new ArrayList<>();
@@ -181,7 +181,7 @@ public class FilterEventsControllerTests {
         FilterEventsController.FilterCriteria criteria = new FilterEventsController.FilterCriteria(
                 null, true);
         Map<String, Integer> acceptedCounts = new HashMap<>();
-        acceptedCounts.put("event1", 5); // 5 accepted, capacity is 5, so full
+        acceptedCounts.put("event1", 5);
 
         FilterEventsController.FilterResult result = controller.applyFilters(events, criteria, acceptedCounts);
 
@@ -195,7 +195,7 @@ public class FilterEventsControllerTests {
         long now = System.currentTimeMillis();
         event.setRegistrationOpen(iso.format(new Date(now - 1000)));
         event.setRegistrationClose(iso.format(new Date(now + 10000)));
-        event.setMaxCapacity(null); // No limit
+        event.setMaxCapacity(null);
 
         List<Event> events = new ArrayList<>();
         events.add(event);
@@ -211,8 +211,6 @@ public class FilterEventsControllerTests {
         assertEquals(1, result.getFilteredEvents().size());
     }
 
-    // ---------- Combined Filtering Tests ----------
-
     @Test
     public void applyFilters_combinedFilters_tagsAndAvailability() throws Exception {
         Event event1 = createEventWithTags("event1", "sports");
@@ -223,7 +221,7 @@ public class FilterEventsControllerTests {
 
         Event event2 = createEventWithTags("event2", "sports");
         event2.setRegistrationOpen(iso.format(new Date(now - 10000)));
-        event2.setRegistrationClose(iso.format(new Date(now - 1000))); // Closed
+        event2.setRegistrationClose(iso.format(new Date(now - 1000)));
         event2.setMaxCapacity(10);
 
         List<Event> events = new ArrayList<>();

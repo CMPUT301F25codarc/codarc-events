@@ -41,7 +41,6 @@ public class UserModelTests {
         assertTrue(u.isOrganizer());
         assertTrue(u.isAdmin());
 
-        // flip back to false
         u.setEntrant(false);
         u.setOrganizer(false);
         u.setAdmin(false);

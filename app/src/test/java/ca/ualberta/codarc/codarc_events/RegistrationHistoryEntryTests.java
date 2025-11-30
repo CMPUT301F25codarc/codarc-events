@@ -47,7 +47,6 @@ public class RegistrationHistoryEntryTests {
     @Test
     public void isPastEvent_returnsTrueForPastDate() {
         RegistrationHistoryEntry entry = new RegistrationHistoryEntry();
-        // Very old date so this stays in the past forever
         entry.setEventDate("2000-01-01T10:00:00");
 
         assertTrue(entry.isPastEvent());
@@ -56,7 +55,6 @@ public class RegistrationHistoryEntryTests {
     @Test
     public void isPastEvent_returnsFalseForFutureDate() {
         RegistrationHistoryEntry entry = new RegistrationHistoryEntry();
-        // Far future date so it stays in the future
         entry.setEventDate("2099-12-31T23:59:59");
 
         assertFalse(entry.isPastEvent());

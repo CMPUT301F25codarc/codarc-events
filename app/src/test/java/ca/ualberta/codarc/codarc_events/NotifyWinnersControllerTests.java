@@ -30,8 +30,6 @@ public class NotifyWinnersControllerTests {
         controller = new NotifyWinnersController(mockEventDb, mockEntrantDb);
     }
 
-    // ---------------- validateMessage ----------------
-
     @Test
     public void validateMessage_nullOrEmpty_fails() {
         NotifyWinnersController.ValidationResult res1 = controller.validateMessage(null);
@@ -62,8 +60,6 @@ public class NotifyWinnersControllerTests {
         assertTrue(res.isValid());
         assertNull(res.getErrorMessage());
     }
-
-    // ---------------- notifyWinners: basic validation ----------------
 
     @Test
     public void notifyWinners_emptyEventId_errorsFast() {
@@ -96,8 +92,6 @@ public class NotifyWinnersControllerTests {
 
         verifyNoInteractions(mockEventDb, mockEntrantDb);
     }
-
-    // ---------------- notifyWinners: getWinners failures ----------------
 
     @Test
     public void notifyWinners_getWinnersError_bubblesToCallback() {
@@ -138,8 +132,6 @@ public class NotifyWinnersControllerTests {
         verifyNoInteractions(mockEntrantDb);
     }
 
-    // ---------------- notifyWinners: happy path ----------------
-
     @Test
     public void notifyWinners_allNotificationsSuccess_reportsCounts() {
         NotifyWinnersController.NotifyWinnersCallback cb =
@@ -147,7 +139,6 @@ public class NotifyWinnersControllerTests {
 
         controller.notifyWinners("E1", "You won!", cb);
 
-        // 1) eventDB.getWinners -> two winners
         ArgumentCaptor<EventDB.Callback<List<Map<String, Object>>>> winnersCap =
                 ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).getWinners(eq("E1"), winnersCap.capture());
@@ -162,7 +153,6 @@ public class NotifyWinnersControllerTests {
 
         winnersCap.getValue().onSuccess(winners);
 
-        // 2) verify notifications (winners skip preference check)
         ArgumentCaptor<String> deviceIdCap = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<EntrantDB.Callback<Void>> notifCap =
                 ArgumentCaptor.forClass(EntrantDB.Callback.class);
@@ -176,15 +166,14 @@ public class NotifyWinnersControllerTests {
         );
 
         List<String> deviceIds = deviceIdCap.getAllValues();
+        assertEquals(2, deviceIds.size());
         assertTrue(deviceIds.contains("dev1"));
         assertTrue(deviceIds.contains("dev2"));
 
-        // 3) simulate notification success (must trigger callbacks for NotificationSender to complete)
-        for (EntrantDB.Callback<Void> cbNotif : notifCap.getAllValues()) {
-            cbNotif.onSuccess(null);
-        }
-
-        // 4) callback should report notifiedCount=2, failedCount=0
+        List<EntrantDB.Callback<Void>> callbacks = notifCap.getAllValues();
+        callbacks.get(0).onSuccess(null);
+        callbacks.get(1).onSuccess(null);
+        
         ArgumentCaptor<Integer> notifiedCap = ArgumentCaptor.forClass(Integer.class);
         ArgumentCaptor<Integer> failedCap = ArgumentCaptor.forClass(Integer.class);
 
@@ -192,8 +181,6 @@ public class NotifyWinnersControllerTests {
         assertEquals(2, notifiedCap.getValue().intValue());
         assertEquals(0, failedCap.getValue().intValue());
     }
-
-    // ---------------- notifyWinners: null deviceId entries ----------------
 
     @Test
     public void notifyWinners_entriesWithoutDeviceId_areCountedAsFailed() {
@@ -206,7 +193,6 @@ public class NotifyWinnersControllerTests {
                 ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).getWinners(eq("E1"), winnersCap.capture());
 
-        // one missing deviceId entry, one valid
         List<Map<String, Object>> winners = new ArrayList<>();
         Map<String, Object> missing = new HashMap<>();
         Map<String, Object> valid = new HashMap<>();
@@ -216,8 +202,6 @@ public class NotifyWinnersControllerTests {
 
         winnersCap.getValue().onSuccess(winners);
 
-        // null deviceId entry is immediately counted as failed,
-        // valid one still calls addNotification once (winners skip preference check)
         ArgumentCaptor<String> deviceIdCap = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<EntrantDB.Callback<Void>> notifCap =
                 ArgumentCaptor.forClass(EntrantDB.Callback.class);
@@ -231,12 +215,8 @@ public class NotifyWinnersControllerTests {
         );
         
         assertEquals("dev1", deviceIdCap.getValue());
-        
-        // Trigger the notification callback to complete the NotificationSender
         notifCap.getValue().onSuccess(null);
 
-        // The controller calls the callback when all notifications complete.
-        // null deviceId = 1 failed, valid notification = 1 success
         ArgumentCaptor<Integer> notifiedCap = ArgumentCaptor.forClass(Integer.class);
         ArgumentCaptor<Integer> failedCap = ArgumentCaptor.forClass(Integer.class);
 

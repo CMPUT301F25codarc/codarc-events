@@ -22,7 +22,6 @@ public class LeaveWaitlistControllerTests {
     public void setUp() {
         mockEventDb = mock(EventDB.class);
         mockEntrantDb = mock(EntrantDB.class);
-        // use DI constructor so we never call new EntrantDB() in tests
         controller = new LeaveWaitlistController(mockEventDb, mockEntrantDb);
     }
 
@@ -31,8 +30,6 @@ public class LeaveWaitlistControllerTests {
         e.setId(id);
         return e;
     }
-
-    // ---------- validation ----------
 
     @Test
     public void leaveWaitlist_nullEvent_failsFast() {
@@ -68,8 +65,6 @@ public class LeaveWaitlistControllerTests {
         verifyNoInteractions(mockEventDb);
     }
 
-    // ---------- isEntrantOnWaitlist -> false ----------
-
     @Test
     public void leaveWaitlist_notOnWaitlist_reportsFailure() {
         LeaveWaitlistController.Callback cb = mock(LeaveWaitlistController.Callback.class);
@@ -80,7 +75,6 @@ public class LeaveWaitlistControllerTests {
                 ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).isEntrantOnWaitlist(eq("E1"), eq("dev1"), onCap.capture());
 
-        // simulate DB: not on waitlist
         onCap.getValue().onSuccess(false);
 
         ArgumentCaptor<LeaveWaitlistController.LeaveResult> resCap =
@@ -93,8 +87,6 @@ public class LeaveWaitlistControllerTests {
 
         verify(mockEventDb, never()).leaveWaitlist(anyString(), anyString(), any());
     }
-
-    // ---------- isEntrantOnWaitlist -> error ----------
 
     @Test
     public void leaveWaitlist_statusCheckError_reportsFailure() {
@@ -119,27 +111,22 @@ public class LeaveWaitlistControllerTests {
         verify(mockEventDb, never()).leaveWaitlist(anyString(), anyString(), any());
     }
 
-    // ---------- happy path ----------
-
     @Test
     public void leaveWaitlist_successFlow_callsDbAndReportsSuccess() {
         LeaveWaitlistController.Callback cb = mock(LeaveWaitlistController.Callback.class);
 
         controller.leaveWaitlist(event("E1"), "dev1", cb);
 
-        // 1) status check -> true
         ArgumentCaptor<EventDB.Callback<Boolean>> onCap =
                 ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).isEntrantOnWaitlist(eq("E1"), eq("dev1"), onCap.capture());
         onCap.getValue().onSuccess(true);
 
-        // 2) leaveWaitlist -> success
         ArgumentCaptor<EventDB.Callback<Void>> leaveCap =
                 ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).leaveWaitlist(eq("E1"), eq("dev1"), leaveCap.capture());
         leaveCap.getValue().onSuccess(null);
 
-        // 3) result
         ArgumentCaptor<LeaveWaitlistController.LeaveResult> resCap =
                 ArgumentCaptor.forClass(LeaveWaitlistController.LeaveResult.class);
         verify(cb).onResult(resCap.capture());
@@ -149,27 +136,22 @@ public class LeaveWaitlistControllerTests {
         assertEquals("You have left this event", res.getMessage());
     }
 
-    // ---------- leave DB error ----------
-
     @Test
     public void leaveWaitlist_leaveDbError_reportsGenericFailure() {
         LeaveWaitlistController.Callback cb = mock(LeaveWaitlistController.Callback.class);
 
         controller.leaveWaitlist(event("E1"), "dev1", cb);
 
-        // status check -> true
         ArgumentCaptor<EventDB.Callback<Boolean>> onCap =
                 ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).isEntrantOnWaitlist(eq("E1"), eq("dev1"), onCap.capture());
         onCap.getValue().onSuccess(true);
 
-        // leave DB -> error
         ArgumentCaptor<EventDB.Callback<Void>> leaveCap =
                 ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).leaveWaitlist(eq("E1"), eq("dev1"), leaveCap.capture());
         leaveCap.getValue().onError(new RuntimeException("leave failed"));
 
-        // result
         ArgumentCaptor<LeaveWaitlistController.LeaveResult> resCap =
                 ArgumentCaptor.forClass(LeaveWaitlistController.LeaveResult.class);
         verify(cb).onResult(resCap.capture());

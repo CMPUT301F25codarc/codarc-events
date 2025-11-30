@@ -22,7 +22,7 @@ public class NotificationEntryModelTests {
         assertFalse(n.isRead());
         assertNull(n.getResponse());
         assertEquals(0L, n.getRespondedAt());
-        assertFalse(n.isProcessing()); // transient default should be false
+        assertFalse(n.isProcessing());
     }
 
     @Test
@@ -83,7 +83,7 @@ public class NotificationEntryModelTests {
         original.setRead(true);
         original.setResponse("declined");
         original.setRespondedAt(222L);
-        original.setProcessing(true); // should NOT survive serialization
+        original.setProcessing(true);
 
         byte[] bytes;
         try (ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -98,10 +98,7 @@ public class NotificationEntryModelTests {
             copy = (NotificationEntry) ois.readObject();
         }
 
-        // Not the same instance
         assertNotSame(original, copy);
-
-        // Persistent fields preserved
         assertEquals(original.getId(), copy.getId());
         assertEquals(original.getEventId(), copy.getEventId());
         assertEquals(original.getEventName(), copy.getEventName());
@@ -111,8 +108,6 @@ public class NotificationEntryModelTests {
         assertEquals(original.isRead(), copy.isRead());
         assertEquals(original.getResponse(), copy.getResponse());
         assertEquals(original.getRespondedAt(), copy.getRespondedAt());
-
-        // Transient flag resets to default false after deserialization
         assertTrue(original.isProcessing());
         assertFalse(copy.isProcessing());
     }

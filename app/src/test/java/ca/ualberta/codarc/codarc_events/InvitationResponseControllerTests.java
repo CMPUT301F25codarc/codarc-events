@@ -34,10 +34,7 @@ public class InvitationResponseControllerTests {
 
     @Before
     public void setUp() {
-        // Intercept android.util.Log so Log.e does not throw "not mocked" in JVM tests
         logMock = Mockito.mockStatic(Log.class);
-        // No need to stub specific methods unless you want to verify logging
-
         mockEventDb = mock(EventDB.class);
         mockEntrantDb = mock(EntrantDB.class);
         controller = new InvitationResponseController(mockEventDb, mockEntrantDb);
@@ -49,8 +46,6 @@ public class InvitationResponseControllerTests {
             logMock.close();
         }
     }
-
-    // ---------- Validation ----------
 
     @Test
     public void acceptInvitation_emptyEventId_yieldsErrorAndSkipsDb() {
@@ -85,35 +80,28 @@ public class InvitationResponseControllerTests {
         verifyNoInteractions(mockEntrantDb);
     }
 
-    // ---------- Happy paths ----------
-
     @Test
     public void acceptInvitation_success_flowsThroughAndUpdatesNotification() {
         InvitationResponseController.ResponseCallback cb = mock(InvitationResponseController.ResponseCallback.class);
 
         controller.acceptInvitation("evt", "dev1", "notif1", cb);
 
-        // capture setEnrolledStatus callback
         ArgumentCaptor<EventDB.Callback<Void>> enrollCap = ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).setEnrolledStatus(eq("evt"), eq("dev1"), eq(true), enrollCap.capture());
 
-        // signal event DB success
         enrollCap.getValue().onSuccess(null);
 
-        // capture updateNotificationState
         ArgumentCaptor<Map<String, Object>> updatesCap = ArgumentCaptor.forClass(Map.class);
         ArgumentCaptor<EntrantDB.Callback<Void>> notifCap = ArgumentCaptor.forClass(EntrantDB.Callback.class);
         verify(mockEntrantDb).updateNotificationState(eq("dev1"), eq("notif1"), updatesCap.capture(), notifCap.capture());
 
         Map<String, Object> updates = updatesCap.getValue();
-        // expected keys
         assertEquals(true, updates.get("read"));
         assertEquals("accepted", updates.get("response"));
         assertNotNull(updates.get("respondedAt"));
         assertTrue(updates.get("respondedAt") instanceof Long);
         assertTrue(((Long) updates.get("respondedAt")) > 0L);
 
-        // signal entrant DB success
         notifCap.getValue().onSuccess(null);
 
         verify(cb).onSuccess();
@@ -126,13 +114,11 @@ public class InvitationResponseControllerTests {
 
         controller.declineInvitation("evt", "dev1", "notif1", cb);
 
-        // capture setEnrolledStatus callback
         ArgumentCaptor<EventDB.Callback<Void>> enrollCap = ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).setEnrolledStatus(eq("evt"), eq("dev1"), eq(false), enrollCap.capture());
 
         enrollCap.getValue().onSuccess(null);
 
-        // capture updateNotificationState
         ArgumentCaptor<Map<String, Object>> updatesCap = ArgumentCaptor.forClass(Map.class);
         ArgumentCaptor<EntrantDB.Callback<Void>> notifCap = ArgumentCaptor.forClass(EntrantDB.Callback.class);
         verify(mockEntrantDb).updateNotificationState(eq("dev1"), eq("notif1"), updatesCap.capture(), notifCap.capture());
@@ -146,8 +132,6 @@ public class InvitationResponseControllerTests {
 
         notifCap.getValue().onSuccess(null);
 
-        // After decline, automatic reselection is triggered
-        // Mock empty replacement pool and waitlist to complete flow
         ArgumentCaptor<EventDB.Callback<List<Map<String, Object>>>> poolCap = ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).getReplacementPool(eq("evt"), poolCap.capture());
         poolCap.getValue().onSuccess(new ArrayList<>());
@@ -156,7 +140,6 @@ public class InvitationResponseControllerTests {
         verify(mockEventDb).getWaitlist(eq("evt"), waitlistCap.capture());
         waitlistCap.getValue().onSuccess(new ArrayList<>());
 
-        // Log decline (no replacement)
         ArgumentCaptor<EventDB.Callback<Void>> logCap = ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).logDeclineReplacement(eq("evt"), eq("dev1"), isNull(), isNull(), eq(false), logCap.capture());
         logCap.getValue().onSuccess(null);
@@ -164,8 +147,6 @@ public class InvitationResponseControllerTests {
         verify(cb).onSuccess();
         verify(cb, never()).onError(any());
     }
-
-    // ---------- Failure propagation ----------
 
     @Test
     public void acceptInvitation_eventDbError_propagates() {
@@ -203,15 +184,12 @@ public class InvitationResponseControllerTests {
         verify(cb, never()).onSuccess();
     }
 
-    // ---------- Automatic reselection tests ----------
-
     @Test
     public void declineInvitation_withReplacementPool_automaticallySelectsReplacement() {
         InvitationResponseController.ResponseCallback cb = mock(InvitationResponseController.ResponseCallback.class);
 
         controller.declineInvitation("evt", "dev1", "notif1", cb);
 
-        // Complete decline flow
         ArgumentCaptor<EventDB.Callback<Void>> enrollCap = ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).setEnrolledStatus(eq("evt"), eq("dev1"), eq(false), enrollCap.capture());
         enrollCap.getValue().onSuccess(null);
@@ -220,7 +198,6 @@ public class InvitationResponseControllerTests {
         verify(mockEntrantDb).updateNotificationState(eq("dev1"), eq("notif1"), anyMap(), notifCap.capture());
         notifCap.getValue().onSuccess(null);
 
-        // Mock replacement pool with entry
         List<Map<String, Object>> pool = new ArrayList<>();
         Map<String, Object> poolEntry = new HashMap<>();
         poolEntry.put("deviceId", "replacement1");
@@ -230,17 +207,14 @@ public class InvitationResponseControllerTests {
         verify(mockEventDb).getReplacementPool(eq("evt"), poolCap.capture());
         poolCap.getValue().onSuccess(pool);
 
-        // Verify markReplacement called
         ArgumentCaptor<EventDB.Callback<Void>> markCap = ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).markReplacement(eq("evt"), eq("replacement1"), markCap.capture());
         markCap.getValue().onSuccess(null);
 
-        // Verify notification sent
         ArgumentCaptor<EntrantDB.Callback<Void>> addNotifCap = ArgumentCaptor.forClass(EntrantDB.Callback.class);
         verify(mockEntrantDb).addNotification(eq("replacement1"), eq("evt"), anyString(), eq("winner"), addNotifCap.capture());
         addNotifCap.getValue().onSuccess(null);
 
-        // Verify logging
         ArgumentCaptor<EventDB.Callback<Void>> logCap = ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).logDeclineReplacement(eq("evt"), eq("dev1"), eq("replacement1"), eq("replacementPool"), eq(true), logCap.capture());
         logCap.getValue().onSuccess(null);
@@ -254,7 +228,6 @@ public class InvitationResponseControllerTests {
 
         controller.declineInvitation("evt", "dev1", "notif1", cb);
 
-        // Complete decline flow
         ArgumentCaptor<EventDB.Callback<Void>> enrollCap = ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).setEnrolledStatus(eq("evt"), eq("dev1"), eq(false), enrollCap.capture());
         enrollCap.getValue().onSuccess(null);
@@ -263,12 +236,10 @@ public class InvitationResponseControllerTests {
         verify(mockEntrantDb).updateNotificationState(eq("dev1"), eq("notif1"), anyMap(), notifCap.capture());
         notifCap.getValue().onSuccess(null);
 
-        // Mock empty replacement pool
         ArgumentCaptor<EventDB.Callback<List<Map<String, Object>>>> poolCap = ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).getReplacementPool(eq("evt"), poolCap.capture());
         poolCap.getValue().onSuccess(new ArrayList<>());
 
-        // Mock waitlist with entry
         List<Map<String, Object>> waitlist = new ArrayList<>();
         Map<String, Object> waitlistEntry = new HashMap<>();
         waitlistEntry.put("deviceId", "waitlist1");
@@ -278,17 +249,14 @@ public class InvitationResponseControllerTests {
         verify(mockEventDb).getWaitlist(eq("evt"), waitlistCap.capture());
         waitlistCap.getValue().onSuccess(waitlist);
 
-        // Verify promoteFromWaitlist called
         ArgumentCaptor<EventDB.Callback<Void>> promoteCap = ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).promoteFromWaitlist(eq("evt"), eq("waitlist1"), promoteCap.capture());
         promoteCap.getValue().onSuccess(null);
 
-        // Verify notification sent
         ArgumentCaptor<EntrantDB.Callback<Void>> addNotifCap = ArgumentCaptor.forClass(EntrantDB.Callback.class);
         verify(mockEntrantDb).addNotification(eq("waitlist1"), eq("evt"), anyString(), eq("winner"), addNotifCap.capture());
         addNotifCap.getValue().onSuccess(null);
 
-        // Verify logging
         ArgumentCaptor<EventDB.Callback<Void>> logCap = ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).logDeclineReplacement(eq("evt"), eq("dev1"), eq("waitlist1"), eq("waitlist"), eq(true), logCap.capture());
         logCap.getValue().onSuccess(null);
@@ -302,7 +270,6 @@ public class InvitationResponseControllerTests {
 
         controller.declineInvitation("evt", "dev1", "notif1", cb);
 
-        // Complete decline flow
         ArgumentCaptor<EventDB.Callback<Void>> enrollCap = ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).setEnrolledStatus(eq("evt"), eq("dev1"), eq(false), enrollCap.capture());
         enrollCap.getValue().onSuccess(null);
@@ -311,22 +278,18 @@ public class InvitationResponseControllerTests {
         verify(mockEntrantDb).updateNotificationState(eq("dev1"), eq("notif1"), anyMap(), notifCap.capture());
         notifCap.getValue().onSuccess(null);
 
-        // Mock empty replacement pool
         ArgumentCaptor<EventDB.Callback<List<Map<String, Object>>>> poolCap = ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).getReplacementPool(eq("evt"), poolCap.capture());
         poolCap.getValue().onSuccess(new ArrayList<>());
 
-        // Mock empty waitlist
         ArgumentCaptor<EventDB.Callback<List<Map<String, Object>>>> waitlistCap = ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).getWaitlist(eq("evt"), waitlistCap.capture());
         waitlistCap.getValue().onSuccess(new ArrayList<>());
 
-        // Verify logging (no replacement)
         ArgumentCaptor<EventDB.Callback<Void>> logCap = ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).logDeclineReplacement(eq("evt"), eq("dev1"), isNull(), isNull(), eq(false), logCap.capture());
         logCap.getValue().onSuccess(null);
 
-        // Verify no promotion or notification
         verify(mockEventDb, never()).markReplacement(anyString(), anyString(), any());
         verify(mockEventDb, never()).promoteFromWaitlist(anyString(), anyString(), any());
         verify(mockEntrantDb, never()).addNotification(anyString(), anyString(), anyString(), anyString(), any());
@@ -340,7 +303,6 @@ public class InvitationResponseControllerTests {
 
         controller.declineInvitation("evt", "dev1", "notif1", cb);
 
-        // Complete decline flow
         ArgumentCaptor<EventDB.Callback<Void>> enrollCap = ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).setEnrolledStatus(eq("evt"), eq("dev1"), eq(false), enrollCap.capture());
         enrollCap.getValue().onSuccess(null);
@@ -349,17 +311,14 @@ public class InvitationResponseControllerTests {
         verify(mockEntrantDb).updateNotificationState(eq("dev1"), eq("notif1"), anyMap(), notifCap.capture());
         notifCap.getValue().onSuccess(null);
 
-        // Mock replacement pool query failure
         ArgumentCaptor<EventDB.Callback<List<Map<String, Object>>>> poolCap = ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).getReplacementPool(eq("evt"), poolCap.capture());
         poolCap.getValue().onError(new RuntimeException("Pool query failed"));
 
-        // Should fall back to waitlist
         ArgumentCaptor<EventDB.Callback<List<Map<String, Object>>>> waitlistCap = ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).getWaitlist(eq("evt"), waitlistCap.capture());
         waitlistCap.getValue().onSuccess(new ArrayList<>());
 
-        // Verify logging
         ArgumentCaptor<EventDB.Callback<Void>> logCap = ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).logDeclineReplacement(eq("evt"), eq("dev1"), isNull(), isNull(), eq(false), logCap.capture());
         logCap.getValue().onSuccess(null);
@@ -373,7 +332,6 @@ public class InvitationResponseControllerTests {
 
         controller.declineInvitation("evt", "dev1", "notif1", cb);
 
-        // Complete decline flow
         ArgumentCaptor<EventDB.Callback<Void>> enrollCap = ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).setEnrolledStatus(eq("evt"), eq("dev1"), eq(false), enrollCap.capture());
         enrollCap.getValue().onSuccess(null);
@@ -382,7 +340,6 @@ public class InvitationResponseControllerTests {
         verify(mockEntrantDb).updateNotificationState(eq("dev1"), eq("notif1"), anyMap(), notifCap.capture());
         notifCap.getValue().onSuccess(null);
 
-        // Mock replacement pool with entry
         List<Map<String, Object>> pool = new ArrayList<>();
         Map<String, Object> poolEntry = new HashMap<>();
         poolEntry.put("deviceId", "replacement1");
@@ -392,12 +349,10 @@ public class InvitationResponseControllerTests {
         verify(mockEventDb).getReplacementPool(eq("evt"), poolCap.capture());
         poolCap.getValue().onSuccess(pool);
 
-        // Mock markReplacement failure
         ArgumentCaptor<EventDB.Callback<Void>> markCap = ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).markReplacement(eq("evt"), eq("replacement1"), markCap.capture());
         markCap.getValue().onError(new RuntimeException("Promotion failed"));
 
-        // Should still log the decline
         ArgumentCaptor<EventDB.Callback<Void>> logCap = ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).logDeclineReplacement(eq("evt"), eq("dev1"), eq("replacement1"), eq("replacementPool"), eq(false), logCap.capture());
         logCap.getValue().onSuccess(null);
@@ -411,7 +366,6 @@ public class InvitationResponseControllerTests {
 
         controller.declineInvitation("evt", "dev1", "notif1", cb);
 
-        // Complete decline flow
         ArgumentCaptor<EventDB.Callback<Void>> enrollCap = ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).setEnrolledStatus(eq("evt"), eq("dev1"), eq(false), enrollCap.capture());
         enrollCap.getValue().onSuccess(null);
@@ -420,7 +374,6 @@ public class InvitationResponseControllerTests {
         verify(mockEntrantDb).updateNotificationState(eq("dev1"), eq("notif1"), anyMap(), notifCap.capture());
         notifCap.getValue().onSuccess(null);
 
-        // Mock empty replacement pool and waitlist
         ArgumentCaptor<EventDB.Callback<List<Map<String, Object>>>> poolCap = ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).getReplacementPool(eq("evt"), poolCap.capture());
         poolCap.getValue().onSuccess(new ArrayList<>());
@@ -429,12 +382,10 @@ public class InvitationResponseControllerTests {
         verify(mockEventDb).getWaitlist(eq("evt"), waitlistCap.capture());
         waitlistCap.getValue().onSuccess(new ArrayList<>());
 
-        // Mock logging failure
         ArgumentCaptor<EventDB.Callback<Void>> logCap = ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).logDeclineReplacement(eq("evt"), eq("dev1"), isNull(), isNull(), eq(false), logCap.capture());
         logCap.getValue().onError(new RuntimeException("Logging failed"));
 
-        // Decline should still succeed
         verify(cb).onSuccess();
     }
 }

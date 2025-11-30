@@ -30,8 +30,6 @@ public class RemoveImageControllerTests {
         controller = new RemoveImageController(mockEventDb, mockPosterStorage, mockUserDb);
     }
 
-    // ---------- validation ----------
-
     @Test
     public void removeImage_emptyEventId_failsFast() {
         RemoveImageController.Callback cb = mock(RemoveImageController.Callback.class);
@@ -66,8 +64,6 @@ public class RemoveImageControllerTests {
         verifyNoInteractions(mockUserDb, mockEventDb, mockPosterStorage);
     }
 
-    // ---------- admin validation ----------
-
     @Test
     public void removeImage_nonAdmin_returnsAdminRequiredError() {
         RemoveImageController.Callback cb = mock(RemoveImageController.Callback.class);
@@ -81,8 +77,6 @@ public class RemoveImageControllerTests {
 
         User mockUser = mock(User.class);
         when(mockUser.isAdmin()).thenReturn(false);
-
-        // simulate DB returning a non admin user
         userCap.getValue().onSuccess(mockUser);
 
         ArgumentCaptor<RemoveImageController.RemoveImageResult> resCap =
@@ -96,15 +90,12 @@ public class RemoveImageControllerTests {
         verifyNoInteractions(mockEventDb, mockPosterStorage);
     }
 
-    // ---------- event validation ----------
-
     @Test
     public void removeImage_eventNotFound_returnsFailure() {
         RemoveImageController.Callback cb = mock(RemoveImageController.Callback.class);
 
         controller.removeImage("E1", "admin1", cb);
 
-        // 1) admin check -> admin user
         @SuppressWarnings("unchecked")
         ArgumentCaptor<UserDB.Callback<User>> userCap =
                 ArgumentCaptor.forClass(UserDB.Callback.class);
@@ -114,7 +105,6 @@ public class RemoveImageControllerTests {
         when(mockUser.isAdmin()).thenReturn(true);
         userCap.getValue().onSuccess(mockUser);
 
-        // 2) event retrieval -> null
         @SuppressWarnings("unchecked")
         ArgumentCaptor<EventDB.Callback<Event>> eventCap =
                 ArgumentCaptor.forClass(EventDB.Callback.class);
@@ -140,7 +130,6 @@ public class RemoveImageControllerTests {
 
         controller.removeImage("E1", "admin1", cb);
 
-        // 1) admin check -> admin user
         @SuppressWarnings("unchecked")
         ArgumentCaptor<UserDB.Callback<User>> userCap =
                 ArgumentCaptor.forClass(UserDB.Callback.class);
@@ -150,7 +139,6 @@ public class RemoveImageControllerTests {
         when(mockUser.isAdmin()).thenReturn(true);
         userCap.getValue().onSuccess(mockUser);
 
-        // 2) event retrieval -> event with null posterUrl
         @SuppressWarnings("unchecked")
         ArgumentCaptor<EventDB.Callback<Event>> eventCap =
                 ArgumentCaptor.forClass(EventDB.Callback.class);
@@ -158,7 +146,7 @@ public class RemoveImageControllerTests {
 
         Event event = new Event();
         event.setId("E1");
-        event.setPosterUrl(null); // no poster
+        event.setPosterUrl(null);
         eventCap.getValue().onSuccess(event);
 
         ArgumentCaptor<RemoveImageController.RemoveImageResult> resCap =
@@ -173,15 +161,12 @@ public class RemoveImageControllerTests {
         verify(mockEventDb, never()).addEvent(any(Event.class), any());
     }
 
-    // ---------- happy path wiring (no Log callbacks triggered) ----------
-
     @Test
     public void removeImage_adminAndPoster_deletesPosterAndUpdatesEvent() {
         RemoveImageController.Callback cb = mock(RemoveImageController.Callback.class);
 
         controller.removeImage("E1", "admin1", cb);
 
-        // 1) admin check -> admin user
         @SuppressWarnings("unchecked")
         ArgumentCaptor<UserDB.Callback<User>> userCap =
                 ArgumentCaptor.forClass(UserDB.Callback.class);
@@ -191,7 +176,6 @@ public class RemoveImageControllerTests {
         when(mockUser.isAdmin()).thenReturn(true);
         userCap.getValue().onSuccess(mockUser);
 
-        // 2) event retrieval -> event with poster
         @SuppressWarnings("unchecked")
         ArgumentCaptor<EventDB.Callback<Event>> eventCap =
                 ArgumentCaptor.forClass(EventDB.Callback.class);
@@ -202,14 +186,11 @@ public class RemoveImageControllerTests {
         event.setPosterUrl("https://example.com/poster.png");
         eventCap.getValue().onSuccess(event);
 
-        // 3) poster deletion requested
         @SuppressWarnings("unchecked")
         ArgumentCaptor<PosterStorage.Callback<Void>> deleteCap =
                 ArgumentCaptor.forClass(PosterStorage.Callback.class);
         verify(mockPosterStorage).deletePoster(eq("E1"), deleteCap.capture());
-        // do not call deleteCap.getValue().onSuccess/onError to avoid Log usage
 
-        // 4) event update requested with posterUrl null
         @SuppressWarnings("unchecked")
         ArgumentCaptor<Event> savedEventCap =
                 ArgumentCaptor.forClass(Event.class);
@@ -222,8 +203,6 @@ public class RemoveImageControllerTests {
         assertEquals("E1", updated.getId());
         assertNull(updated.getPosterUrl());
 
-        // We intentionally do not trigger updateCap.getValue().onSuccess(...)
-        // because that path logs using android.util.Log which is not mocked
         verifyNoInteractions(cb);
     }
 }

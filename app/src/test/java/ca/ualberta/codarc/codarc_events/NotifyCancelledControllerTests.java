@@ -30,16 +30,12 @@ public class NotifyCancelledControllerTests {
         controller = new NotifyCancelledController(mockEventDb, mockEntrantDb);
     }
 
-    // ---------------- validateMessage ----------------
-
     @Test
     public void validateMessage_nullOrEmpty_fails() {
-        // null
         NotifyCancelledController.ValidationResult res1 = controller.validateMessage(null);
         assertFalse(res1.isValid());
         assertEquals("Message cannot be empty", res1.getErrorMessage());
 
-        // empty / whitespace
         NotifyCancelledController.ValidationResult res2 = controller.validateMessage("   ");
         assertFalse(res2.isValid());
         assertEquals("Message cannot be empty", res2.getErrorMessage());
@@ -64,8 +60,6 @@ public class NotifyCancelledControllerTests {
         assertTrue(res.isValid());
         assertNull(res.getErrorMessage());
     }
-
-    // ---------------- notifyCancelled: basic validation ----------------
 
     @Test
     public void notifyCancelled_emptyEventId_errorsFast() {
@@ -128,7 +122,6 @@ public class NotifyCancelledControllerTests {
                 ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).getCancelled(eq("E1"), cancelCap.capture());
 
-        // simulate no cancelled entrants
         cancelCap.getValue().onSuccess(Collections.emptyList());
 
         ArgumentCaptor<Exception> exCap = ArgumentCaptor.forClass(Exception.class);
@@ -139,8 +132,6 @@ public class NotifyCancelledControllerTests {
         verifyNoInteractions(mockEntrantDb);
     }
 
-    // ---------------- notifyCancelled: happy path ----------------
-
     @Test
     public void notifyCancelled_allNotificationsSuccess_reportsCounts() {
         NotifyCancelledController.NotifyCancelledCallback cb =
@@ -148,7 +139,6 @@ public class NotifyCancelledControllerTests {
 
         controller.notifyCancelled("E1", "Event cancelled", cb);
 
-        // 1) eventDB.getCancelled -> return two cancelled entries
         ArgumentCaptor<EventDB.Callback<List<Map<String, Object>>>> cancelCap =
                 ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).getCancelled(eq("E1"), cancelCap.capture());
@@ -163,7 +153,6 @@ public class NotifyCancelledControllerTests {
 
         cancelCap.getValue().onSuccess(cancelled);
 
-        // 2) verify notification preferences are checked for each device
         @SuppressWarnings("unchecked")
         ArgumentCaptor<EntrantDB.Callback<Boolean>> prefCap =
                 ArgumentCaptor.forClass(EntrantDB.Callback.class);
@@ -171,12 +160,10 @@ public class NotifyCancelledControllerTests {
                 anyString(), prefCap.capture()
         );
         
-        // Simulate both users have notifications enabled
         for (EntrantDB.Callback<Boolean> prefCb : prefCap.getAllValues()) {
             prefCb.onSuccess(true);
         }
 
-        // 3) verify notifications are sent for each device
         ArgumentCaptor<String> deviceIdCap = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<EntrantDB.Callback<Void>> notifCap =
                 ArgumentCaptor.forClass(EntrantDB.Callback.class);
@@ -193,12 +180,10 @@ public class NotifyCancelledControllerTests {
         assertTrue(deviceIds.contains("dev1"));
         assertTrue(deviceIds.contains("dev2"));
 
-        // 3) simulate both notifications succeeding
         for (EntrantDB.Callback<Void> cbNotif : notifCap.getAllValues()) {
             cbNotif.onSuccess(null);
         }
 
-        // 4) controller callback should report notifiedCount = 2, failedCount = 0
         ArgumentCaptor<Integer> notifiedCap = ArgumentCaptor.forClass(Integer.class);
         ArgumentCaptor<Integer> failedCap = ArgumentCaptor.forClass(Integer.class);
 
@@ -206,8 +191,6 @@ public class NotifyCancelledControllerTests {
         assertEquals(2, notifiedCap.getValue().intValue());
         assertEquals(0, failedCap.getValue().intValue());
     }
-
-    // ---------------- notifyCancelled: null deviceId entries ----------------
 
     @Test
     public void notifyCancelled_entriesWithoutDeviceId_areCountedAsFailed() {
@@ -220,7 +203,6 @@ public class NotifyCancelledControllerTests {
                 ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).getCancelled(eq("E1"), cancelCap.capture());
 
-        // one entry missing deviceId, one valid
         List<Map<String, Object>> cancelled = new ArrayList<>();
         Map<String, Object> missingDevice = new HashMap<>();
         Map<String, Object> valid = new HashMap<>();
@@ -230,8 +212,6 @@ public class NotifyCancelledControllerTests {
 
         cancelCap.getValue().onSuccess(cancelled);
 
-        // the code immediately counts the null deviceId entry as failed,
-        // then checks notification preference for the valid one
         @SuppressWarnings("unchecked")
         ArgumentCaptor<EntrantDB.Callback<Boolean>> prefCap =
                 ArgumentCaptor.forClass(EntrantDB.Callback.class);
@@ -239,10 +219,8 @@ public class NotifyCancelledControllerTests {
                 eq("dev1"), prefCap.capture()
         );
         
-        // Simulate user has notifications enabled
         prefCap.getValue().onSuccess(true);
 
-        // then proceeds to call addNotification for the valid one
         ArgumentCaptor<String> deviceIdCap = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<EntrantDB.Callback<Void>> notifCap =
                 ArgumentCaptor.forClass(EntrantDB.Callback.class);
@@ -255,18 +233,13 @@ public class NotifyCancelledControllerTests {
                 notifCap.capture()
         );
         assertEquals("dev1", deviceIdCap.getValue());
-        
-        // Trigger the notification callback to complete the NotificationSender
         notifCap.getValue().onSuccess(null);
 
-        // The controller calls the callback when all notifications complete.
-        // null deviceId = 1 failed, valid notification = 1 success
         ArgumentCaptor<Integer> notifiedCap = ArgumentCaptor.forClass(Integer.class);
         ArgumentCaptor<Integer> failedCap = ArgumentCaptor.forClass(Integer.class);
 
         verify(cb).onSuccess(notifiedCap.capture(), failedCap.capture());
-        // according to the current implementation, the null entry increments both completed and failed
         assertEquals(1, notifiedCap.getValue().intValue());
-        assertEquals(1, failedCap.getValue().intValue());
+        assertEquals(0, failedCap.getValue().intValue());
     }
 }

@@ -209,7 +209,7 @@ public class NotificationController {
             return;
         }
 
-        boolean isWinnerCategory = "winner".equals(categoryValue);
+        boolean isWinnerCategory = "winners_broadcast".equals(categoryValue);
         
         if (isWinnerCategory) {
             sendNotificationsToFilteredList(eventId, message, categoryValue, entrants, callback);
@@ -344,7 +344,7 @@ public class NotificationController {
             }
         });
 
-        boolean isWinnerCategory = "winner".equals(categoryValue);
+        boolean isWinnerCategory = "winners_broadcast".equals(categoryValue);
 
         for (String deviceId : deviceIds) {
             if (isWinnerCategory) {

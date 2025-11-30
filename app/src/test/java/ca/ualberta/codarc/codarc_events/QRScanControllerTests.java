@@ -21,8 +21,6 @@ public class QRScanControllerTests {
         mockEventDb = mock(EventDB.class);
     }
 
-    // ---------------- parseEventIdFromQR ----------------
-
     @Test
     public void parseEventIdFromQR_nullOrEmpty_returnsNull() {
         assertNull(QRScanController.parseEventIdFromQR(null));
@@ -47,8 +45,6 @@ public class QRScanControllerTests {
         assertNull(QRScanController.parseEventIdFromQR("event:"));
         assertNull(QRScanController.parseEventIdFromQR("event:   "));
     }
-
-    // ---------------- validateQRCode ----------------
 
     @Test
     public void validateQRCode_nullOrEmpty_failsWithMessage() {
@@ -83,7 +79,7 @@ public class QRScanControllerTests {
 
         assertTrue(res.isSuccess());
         assertNull(res.getErrorMessage());
-        assertNull(res.getEvent()); // validate only parses ID
+        assertNull(res.getEvent());
         assertEquals("E42", res.getEventId());
     }
 
@@ -97,8 +93,6 @@ public class QRScanControllerTests {
         assertNull(res.getEvent());
         assertEquals("E999", res.getEventId());
     }
-
-    // ---------------- fetchEventFromQR: validation path ----------------
 
     @Test
     public void fetchEventFromQR_invalidQR_returnsValidationFailure_andSkipsDb() {
@@ -119,25 +113,20 @@ public class QRScanControllerTests {
         verifyNoInteractions(mockEventDb);
     }
 
-    // ---------------- fetchEventFromQR: happy path ----------------
-
     @Test
     public void fetchEventFromQR_validQR_eventFound_returnsSuccess() {
         QRScanController.Callback cb = mock(QRScanController.Callback.class);
 
         controller.fetchEventFromQR("event:E1", mockEventDb, cb);
 
-        // verify DB call
         @SuppressWarnings("unchecked")
         ArgumentCaptor<EventDB.Callback<Event>> dbCap =
                 ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).getEvent(eq("E1"), dbCap.capture());
 
-        // simulate DB returns an Event
         Event event = new Event();
         dbCap.getValue().onSuccess(event);
 
-        // verify callback result
         ArgumentCaptor<QRScanController.QRScanResult> resCap =
                 ArgumentCaptor.forClass(QRScanController.QRScanResult.class);
         verify(cb, times(1)).onResult(resCap.capture());
@@ -160,7 +149,6 @@ public class QRScanControllerTests {
                 ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).getEvent(eq("E1"), dbCap.capture());
 
-        // simulate DB returns null
         dbCap.getValue().onSuccess(null);
 
         ArgumentCaptor<QRScanController.QRScanResult> resCap =
@@ -174,10 +162,8 @@ public class QRScanControllerTests {
                 res.getErrorMessage()
         );
         assertNull(res.getEvent());
-        assertNull(res.getEventId()); // failure result sets eventId to null
+        assertNull(res.getEventId());
     }
-
-    // ---------------- fetchEventFromQR: DB error handling ----------------
 
     @Test
     public void fetchEventFromQR_dbError_genericMessageWhenNotContainingNotFound() {

@@ -62,6 +62,15 @@ public class DeleteEventController {
         this.userDB = new UserDB();
     }
 
+    public DeleteEventController(EventDB eventDB, PosterStorage posterStorage, OrganizerDB organizerDB,
+                                 TagDB tagDB, UserDB userDB) {
+        this.eventDB = eventDB;
+        this.posterStorage = posterStorage;
+        this.organizerDB = organizerDB;
+        this.tagDB = tagDB;
+        this.userDB = userDB;
+    }
+
     /**
      * Deletes an event and all associated data.
      *

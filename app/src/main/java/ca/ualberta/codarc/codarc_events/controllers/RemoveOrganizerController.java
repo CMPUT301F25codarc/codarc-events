@@ -66,6 +66,26 @@ public class RemoveOrganizerController {
         this.userDB = new UserDB();
     }
 
+    public RemoveOrganizerController(OrganizerDB organizerDB, EventDB eventDB, EntrantDB entrantDB,
+                                    PosterStorage posterStorage, UserDB userDB) {
+        this.organizerDB = organizerDB;
+        this.eventDB = eventDB;
+        this.entrantDB = entrantDB;
+        this.deleteEventController = new DeleteEventController();
+        this.posterStorage = posterStorage;
+        this.userDB = userDB;
+    }
+
+    public RemoveOrganizerController(OrganizerDB organizerDB, EventDB eventDB, EntrantDB entrantDB,
+                                    DeleteEventController deleteEventController, PosterStorage posterStorage, UserDB userDB) {
+        this.organizerDB = organizerDB;
+        this.eventDB = eventDB;
+        this.entrantDB = entrantDB;
+        this.deleteEventController = deleteEventController;
+        this.posterStorage = posterStorage;
+        this.userDB = userDB;
+    }
+
     /**
      * Bans an organizer and deletes all their events.
      *

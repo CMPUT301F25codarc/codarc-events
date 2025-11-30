@@ -14,7 +14,6 @@ public class EntrantModelTests {
     public void defaultConstructor_setsSafeDefaults() {
         Entrant e = new Entrant();
 
-        // Defaults are null/zero/false except strings you set later
         assertNull(e.getDeviceId());
         assertNull(e.getName());
         assertEquals(0L, e.getCreatedAtUtc());
@@ -32,12 +31,8 @@ public class EntrantModelTests {
         assertEquals("dev123", e.getDeviceId());
         assertEquals("Taylor Swift", e.getName());
         assertEquals(ts, e.getCreatedAtUtc());
-
-        // These default to empty strings in the constructor
         assertEquals("", e.getEmail());
         assertEquals("", e.getPhone());
-
-        // Flags default false
         assertFalse(e.getIsRegistered());
         assertFalse(e.isBanned());
     }
@@ -49,7 +44,7 @@ public class EntrantModelTests {
         e.setDeviceId("dev42");
         e.setName("Alyx Vance");
         e.setCreatedAtUtc(42L);
-        e.setCreatedAt(99L); // alias setter should overwrite
+        e.setCreatedAt(99L);
         e.setEmail("alyx@city17.example");
         e.setPhone("555-1234");
         e.setIsRegistered(true);
@@ -57,7 +52,6 @@ public class EntrantModelTests {
 
         assertEquals("dev42", e.getDeviceId());
         assertEquals("Alyx Vance", e.getName());
-        // alias getter matches utc field
         assertEquals(99L, e.getCreatedAtUtc());
         assertEquals(99L, e.getCreatedAt());
         assertEquals("alyx@city17.example", e.getEmail());
@@ -83,7 +77,6 @@ public class EntrantModelTests {
 
     @Test
     public void propertyNameAnnotations_present_andCorrect() throws Exception {
-        // createdAtUtc mappings
         Method getCreatedAtUtc = Entrant.class.getMethod("getCreatedAtUtc");
         Method setCreatedAtUtc = Entrant.class.getMethod("setCreatedAtUtc", long.class);
         PropertyName getCreatedAnn = getCreatedAtUtc.getAnnotation(PropertyName.class);
@@ -93,7 +86,6 @@ public class EntrantModelTests {
         assertEquals("createdAtUtc", getCreatedAnn.value());
         assertEquals("createdAtUtc", setCreatedAnn.value());
 
-        // is_registered mappings
         Method getIsRegistered = Entrant.class.getMethod("getIsRegistered");
         Method setIsRegistered = Entrant.class.getMethod("setIsRegistered", boolean.class);
         PropertyName getRegAnn = getIsRegistered.getAnnotation(PropertyName.class);
@@ -103,7 +95,6 @@ public class EntrantModelTests {
         assertEquals("is_registered", getRegAnn.value());
         assertEquals("is_registered", setRegAnn.value());
 
-        // banned mappings
         Method isBanned = Entrant.class.getMethod("isBanned");
         Method setBanned = Entrant.class.getMethod("setBanned", boolean.class);
         PropertyName getBannedAnn = isBanned.getAnnotation(PropertyName.class);

@@ -29,8 +29,6 @@ public class JoinWaitlistControllerTests {
         controller = new JoinWaitlistController(mockEventDb, mockEntrantDb);
     }
 
-    // ---------------- helpers ----------------
-
     private static String isoNowPlusSeconds(int delta) {
         long t = System.currentTimeMillis() + delta * 1000L;
         return new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).format(t);
@@ -39,8 +37,8 @@ public class JoinWaitlistControllerTests {
     private static Event openWindowEvent(String id, Integer maxCap) {
         Event e = new Event();
         e.setId(id);
-        e.setRegistrationOpen(isoNowPlusSeconds(-60));   // opened 1 min ago
-        e.setRegistrationClose(isoNowPlusSeconds(60));   // closes in 1 min
+        e.setRegistrationOpen(isoNowPlusSeconds(-60));
+        e.setRegistrationClose(isoNowPlusSeconds(60));
         if (maxCap != null) e.setMaxCapacity(maxCap);
         return e;
     }
@@ -48,8 +46,8 @@ public class JoinWaitlistControllerTests {
     private static Event closedWindowEvent(String id) {
         Event e = new Event();
         e.setId(id);
-        e.setRegistrationOpen(isoNowPlusSeconds(60));    // opens in 1 min
-        e.setRegistrationClose(isoNowPlusSeconds(120));  // closes later
+        e.setRegistrationOpen(isoNowPlusSeconds(60));
+        e.setRegistrationClose(isoNowPlusSeconds(120));
         return e;
     }
 
@@ -58,8 +56,6 @@ public class JoinWaitlistControllerTests {
         en.setIsRegistered(registered);
         return en;
     }
-
-    // ---------------- checkProfileRegistration ----------------
 
     @Test
     public void checkProfileRegistration_emptyDeviceId_errors() {
@@ -80,7 +76,6 @@ public class JoinWaitlistControllerTests {
                 ArgumentCaptor.forClass(EntrantDB.Callback.class);
         verify(mockEntrantDb).getProfile(eq("dev1"), profCap.capture());
 
-        // simulate DB returns a registered Entrant
         profCap.getValue().onSuccess(entrant(true));
 
         verify(cb).onSuccess(true);
@@ -97,7 +92,6 @@ public class JoinWaitlistControllerTests {
                 ArgumentCaptor.forClass(EntrantDB.Callback.class);
         verify(mockEntrantDb).getProfile(eq("dev1"), profCap.capture());
 
-        // null entrant -> false
         profCap.getValue().onSuccess(null);
         verify(cb).onSuccess(false);
     }
@@ -116,8 +110,6 @@ public class JoinWaitlistControllerTests {
         profCap.getValue().onError(boom);
         verify(cb).onError(boom);
     }
-
-    // ---------------- joinWaitlist: validation ----------------
 
     @Test
     public void joinWaitlist_nullEvent_fails() {
@@ -145,8 +137,6 @@ public class JoinWaitlistControllerTests {
         verifyNoInteractions(mockEntrantDb, mockEventDb);
     }
 
-    // ---------------- joinWaitlist: profile not registered ----------------
-
     @Test
     public void joinWaitlist_requiresProfileRegistration_ifNotRegistered() {
         JoinWaitlistController.Callback cb = mock(JoinWaitlistController.Callback.class);
@@ -171,8 +161,6 @@ public class JoinWaitlistControllerTests {
         verify(mockEventDb, never()).isEntrantOnWaitlist(anyString(), anyString(), any());
     }
 
-    // ---------------- joinWaitlist: already joined ----------------
-
     @Test
     public void joinWaitlist_alreadyJoined_fails() {
         JoinWaitlistController.Callback cb = mock(JoinWaitlistController.Callback.class);
@@ -180,19 +168,16 @@ public class JoinWaitlistControllerTests {
 
         controller.joinWaitlist(e, "dev1", cb);
 
-        // profile registered
         ArgumentCaptor<EntrantDB.Callback<Entrant>> profCap =
                 ArgumentCaptor.forClass(EntrantDB.Callback.class);
         verify(mockEntrantDb).getProfile(eq("dev1"), profCap.capture());
         profCap.getValue().onSuccess(entrant(true));
 
-        // not banned
         ArgumentCaptor<EntrantDB.Callback<Boolean>> banCap =
                 ArgumentCaptor.forClass(EntrantDB.Callback.class);
         verify(mockEntrantDb).isBanned(eq("dev1"), banCap.capture());
         banCap.getValue().onSuccess(false);
 
-        // isEntrantOnWaitlist -> true
         ArgumentCaptor<EventDB.Callback<Boolean>> onCap =
                 ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).isEntrantOnWaitlist(eq("E"), eq("dev1"), onCap.capture());
@@ -217,25 +202,21 @@ public class JoinWaitlistControllerTests {
 
         controller.joinWaitlist(e, "dev1", cb);
 
-        // profile registered
         ArgumentCaptor<EntrantDB.Callback<Entrant>> profCap =
                 ArgumentCaptor.forClass(EntrantDB.Callback.class);
         verify(mockEntrantDb).getProfile(eq("dev1"), profCap.capture());
         profCap.getValue().onSuccess(entrant(true));
 
-        // not banned
         ArgumentCaptor<EntrantDB.Callback<Boolean>> banCap =
                 ArgumentCaptor.forClass(EntrantDB.Callback.class);
         verify(mockEntrantDb).isBanned(eq("dev1"), banCap.capture());
         banCap.getValue().onSuccess(false);
 
-        // not already joined
         ArgumentCaptor<EventDB.Callback<Boolean>> onCap =
                 ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).isEntrantOnWaitlist(eq("E"), eq("dev1"), onCap.capture());
         onCap.getValue().onSuccess(false);
 
-        // now it should fail at registration window check
         ArgumentCaptor<JoinWaitlistController.JoinResult> resCap =
                 ArgumentCaptor.forClass(JoinWaitlistController.JoinResult.class);
         verify(cb).onResult(resCap.capture());
@@ -247,40 +228,32 @@ public class JoinWaitlistControllerTests {
         verify(mockEventDb, never()).joinWaitlist(anyString(), anyString(), any());
     }
 
-    // ---------------- joinWaitlist: capacity full ----------------
-
     @Test
     public void joinWaitlist_fullCapacity_fails() {
         JoinWaitlistController.Callback cb = mock(JoinWaitlistController.Callback.class);
-        Event e = openWindowEvent("E", 2); // capacity = 2
+        Event e = openWindowEvent("E", 2);
 
         controller.joinWaitlist(e, "dev1", cb);
 
-        // profile registered
         ArgumentCaptor<EntrantDB.Callback<Entrant>> profCap =
                 ArgumentCaptor.forClass(EntrantDB.Callback.class);
         verify(mockEntrantDb).getProfile(eq("dev1"), profCap.capture());
         profCap.getValue().onSuccess(entrant(true));
 
-        // not banned
         ArgumentCaptor<EntrantDB.Callback<Boolean>> banCap =
                 ArgumentCaptor.forClass(EntrantDB.Callback.class);
         verify(mockEntrantDb).isBanned(eq("dev1"), banCap.capture());
         banCap.getValue().onSuccess(false);
 
-        // not already joined
         ArgumentCaptor<EventDB.Callback<Boolean>> onCap =
                 ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).isEntrantOnWaitlist(eq("E"), eq("dev1"), onCap.capture());
         onCap.getValue().onSuccess(false);
 
-        // capacity check -> waitlistCount -> full (using getWaitlistCount instead of getAcceptedCount)
-        // hasWaitlistCapacity returns false when waitlistCount >= maxCapacity
         ArgumentCaptor<EventDB.Callback<Integer>> countCap =
                 ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).getWaitlistCount(eq("E"), countCap.capture());
-        // For capacity 2, waitlistCount >= 2 means full
-        countCap.getValue().onSuccess(2); // waitlistCount >= maxCapacity triggers "Event is full"
+        countCap.getValue().onSuccess(2);
 
         ArgumentCaptor<JoinWaitlistController.JoinResult> resCap =
                 ArgumentCaptor.forClass(JoinWaitlistController.JoinResult.class);
@@ -292,8 +265,6 @@ public class JoinWaitlistControllerTests {
         verify(mockEventDb, never()).joinWaitlist(anyString(), anyString(), any());
     }
 
-    // ---------------- joinWaitlist: success path ----------------
-
     @Test
     public void joinWaitlist_success() {
         JoinWaitlistController.Callback cb = mock(JoinWaitlistController.Callback.class);
@@ -301,31 +272,26 @@ public class JoinWaitlistControllerTests {
 
         controller.joinWaitlist(e, "dev1", cb);
 
-        // profile registered
         ArgumentCaptor<EntrantDB.Callback<Entrant>> profCap =
                 ArgumentCaptor.forClass(EntrantDB.Callback.class);
         verify(mockEntrantDb).getProfile(eq("dev1"), profCap.capture());
         profCap.getValue().onSuccess(entrant(true));
 
-        // not banned
         ArgumentCaptor<EntrantDB.Callback<Boolean>> banCap =
                 ArgumentCaptor.forClass(EntrantDB.Callback.class);
         verify(mockEntrantDb).isBanned(eq("dev1"), banCap.capture());
         banCap.getValue().onSuccess(false);
 
-        // not already joined
         ArgumentCaptor<EventDB.Callback<Boolean>> onCap =
                 ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).isEntrantOnWaitlist(eq("E"), eq("dev1"), onCap.capture());
         onCap.getValue().onSuccess(false);
 
-        // capacity available: waitlistCount is low enough
         ArgumentCaptor<EventDB.Callback<Integer>> countCap =
                 ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).getWaitlistCount(eq("E"), countCap.capture());
-        countCap.getValue().onSuccess(0); // Low waitlist count means capacity available
+        countCap.getValue().onSuccess(0);
 
-        // joinWaitlist called (with null location since context is null)
         ArgumentCaptor<EventDB.Callback<Void>> joinCap =
                 ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).joinWaitlist(eq("E"), eq("dev1"), isNull(), joinCap.capture());
@@ -340,8 +306,6 @@ public class JoinWaitlistControllerTests {
         assertEquals("Joined successfully", resCap.getValue().getMessage());
         assertFalse(resCap.getValue().needsProfileRegistration());
     }
-
-    // ---------------- joinWaitlist: failure propagation ----------------
 
     @Test
     public void joinWaitlist_joinDbError_yieldsGenericFailure() {
@@ -368,7 +332,7 @@ public class JoinWaitlistControllerTests {
         ArgumentCaptor<EventDB.Callback<Integer>> countCap =
                 ArgumentCaptor.forClass(EventDB.Callback.class);
         verify(mockEventDb).getWaitlistCount(eq("E"), countCap.capture());
-        countCap.getValue().onSuccess(0); // Low waitlist count means capacity available
+        countCap.getValue().onSuccess(0);
 
         ArgumentCaptor<EventDB.Callback<Void>> joinCap =
                 ArgumentCaptor.forClass(EventDB.Callback.class);
@@ -469,8 +433,6 @@ public class JoinWaitlistControllerTests {
         assertFalse(resCap.getValue().isSuccess());
         assertEquals("Failed to check profile", resCap.getValue().getMessage());
     }
-
-    // ---------------- passthrough ----------------
 
     @Test
     public void getWaitlistCount_forwardsToDb() {

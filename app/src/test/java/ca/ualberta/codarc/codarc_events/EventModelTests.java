@@ -49,8 +49,6 @@ public class EventModelTests {
         assertTrue(e.isOpen());
         assertEquals("org-abc", e.getOrganizerId());
         assertEquals("event:id123", e.getQrCode());
-
-        // Fields not in ctor remain null
         assertNull(e.getMaxCapacity());
         assertNull(e.getLocation());
     }
