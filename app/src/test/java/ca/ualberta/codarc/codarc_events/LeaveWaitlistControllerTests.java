@@ -1,6 +1,7 @@
 package ca.ualberta.codarc.codarc_events;
 
 import ca.ualberta.codarc.codarc_events.controllers.LeaveWaitlistController;
+import ca.ualberta.codarc.codarc_events.data.EntrantDB;
 import ca.ualberta.codarc.codarc_events.data.EventDB;
 import ca.ualberta.codarc.codarc_events.models.Event;
 import org.junit.Before;
@@ -14,12 +15,15 @@ import static org.mockito.Mockito.*;
 public class LeaveWaitlistControllerTests {
 
     private EventDB mockEventDb;
+    private EntrantDB mockEntrantDb;
     private LeaveWaitlistController controller;
 
     @Before
     public void setUp() {
         mockEventDb = mock(EventDB.class);
-        controller = new LeaveWaitlistController(mockEventDb);
+        mockEntrantDb = mock(EntrantDB.class);
+        // use DI constructor so we never call new EntrantDB() in tests
+        controller = new LeaveWaitlistController(mockEventDb, mockEntrantDb);
     }
 
     private static Event event(String id) {
