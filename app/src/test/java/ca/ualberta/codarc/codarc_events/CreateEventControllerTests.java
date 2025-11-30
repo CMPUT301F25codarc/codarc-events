@@ -277,6 +277,7 @@ public class CreateEventControllerTests {
         assertTrue(controller.canAddTag("sports", Collections.emptyList()));
     }
 
+    // Testing for pr
     @Test
     public void canAddTag_nullList_returnsTrue() {
         assertTrue(controller.canAddTag("sports", null));
