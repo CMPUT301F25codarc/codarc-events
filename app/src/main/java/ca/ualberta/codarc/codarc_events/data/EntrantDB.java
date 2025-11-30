@@ -12,7 +12,7 @@ import com.google.firebase.firestore.SetOptions;
 import com.google.firebase.firestore.WriteBatch;
 
 import java.util.ArrayList;
-
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -494,6 +494,211 @@ public class EntrantDB {
             .delete()
             .addOnSuccessListener(unused -> cb.onSuccess(null))
             .addOnFailureListener(cb::onError);
+    }
+
+    /**
+     * Gets all notifications across all entrants for admin review.
+     * Returns notifications with entrant deviceId, eventId, message, timestamp, category.
+     *
+     * @param callback callback with list of notification maps
+     */
+    public void getAllNotificationsForAdmin(Callback<List<Map<String, Object>>> callback) {
+        db.collection("entrants")
+                .get()
+                .addOnSuccessListener(entrantsSnapshot -> {
+                    if (entrantsSnapshot == null || entrantsSnapshot.isEmpty()) {
+                        callback.onSuccess(new ArrayList<>());
+                        return;
+                    }
+
+                    final int totalEntrants = entrantsSnapshot.size();
+                    final List<Map<String, Object>> allNotifications = Collections.synchronizedList(new ArrayList<>());
+                    final NotificationAggregator aggregator = new NotificationAggregator(totalEntrants, allNotifications, callback);
+
+                    if (totalEntrants == 0) {
+                        callback.onSuccess(allNotifications);
+                        return;
+                    }
+
+                    for (QueryDocumentSnapshot entrantDoc : entrantsSnapshot) {
+                        String deviceId = entrantDoc.getId();
+                        entrantDoc.getReference()
+                                .collection("notifications")
+                                .orderBy("createdAt", Query.Direction.DESCENDING)
+                                .get()
+                                .addOnSuccessListener(notificationsSnapshot -> {
+                                    if (notificationsSnapshot != null) {
+                                        for (QueryDocumentSnapshot notificationDoc : notificationsSnapshot) {
+                                            Map<String, Object> notificationData = new HashMap<>(notificationDoc.getData());
+                                            notificationData.put("id", notificationDoc.getId());
+                                            notificationData.put("entrantDeviceId", deviceId);
+                                            allNotifications.add(notificationData);
+                                        }
+                                    }
+                                    aggregator.onEntrantProcessed();
+                                })
+                                .addOnFailureListener(e -> {
+                                    aggregator.onEntrantProcessed();
+                                });
+                    }
+                })
+                .addOnFailureListener(callback::onError);
+    }
+
+    /**
+     * Helper class to track notification aggregation completion.
+     */
+    private static class NotificationAggregator {
+        private final int total;
+        private final List<Map<String, Object>> notifications;
+        private final Callback<List<Map<String, Object>>> callback;
+        private int completed;
+
+        NotificationAggregator(int total, List<Map<String, Object>> notifications,
+                              Callback<List<Map<String, Object>>> callback) {
+            this.total = total;
+            this.notifications = notifications;
+            this.callback = callback;
+            this.completed = 0;
+        }
+
+        synchronized void onEntrantProcessed() {
+            completed++;
+            if (completed == total) {
+                callback.onSuccess(notifications);
+            }
+        }
+    }
+
+    /**
+     * Removes an event from all entrants' event history.
+     *
+     * @param eventId the event ID to remove
+     * @param cb callback for completion
+     */
+    public void removeEventFromAllEntrants(String eventId, Callback<Void> cb) {
+        try {
+            ValidationHelper.requireNonEmpty(eventId, "eventId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
+            return;
+        }
+
+        db.collection("entrants")
+                .get()
+                .addOnSuccessListener(entrantsSnapshot -> {
+                    if (entrantsSnapshot == null || entrantsSnapshot.isEmpty()) {
+                        cb.onSuccess(null);
+                        return;
+                    }
+
+                    final int totalEntrants = entrantsSnapshot.size();
+                    final EventRemovalAggregator aggregator = new EventRemovalAggregator(totalEntrants, cb);
+
+                    for (QueryDocumentSnapshot entrantDoc : entrantsSnapshot) {
+                        String deviceId = entrantDoc.getId();
+                        removeEventFromEntrant(deviceId, eventId, new Callback<Void>() {
+                            @Override
+                            public void onSuccess(Void value) {
+                                aggregator.onEntrantProcessed();
+                            }
+
+                            @Override
+                            public void onError(@NonNull Exception e) {
+                                aggregator.onEntrantProcessed();
+                            }
+                        });
+                    }
+                })
+                .addOnFailureListener(cb::onError);
+    }
+
+    /**
+     * Removes all notifications for a specific event across all entrants.
+     *
+     * @param eventId the event ID
+     * @param cb callback for completion
+     */
+    public void removeNotificationsForEvent(String eventId, Callback<Void> cb) {
+        try {
+            ValidationHelper.requireNonEmpty(eventId, "eventId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
+            return;
+        }
+
+        db.collection("entrants")
+                .get()
+                .addOnSuccessListener(entrantsSnapshot -> {
+                    if (entrantsSnapshot == null || entrantsSnapshot.isEmpty()) {
+                        cb.onSuccess(null);
+                        return;
+                    }
+
+                    final int totalEntrants = entrantsSnapshot.size();
+                    final NotificationRemovalAggregator aggregator = new NotificationRemovalAggregator(totalEntrants, cb);
+
+                    for (QueryDocumentSnapshot entrantDoc : entrantsSnapshot) {
+                        String deviceId = entrantDoc.getId();
+                        entrantDoc.getReference()
+                                .collection("notifications")
+                                .whereEqualTo("eventId", eventId)
+                                .get()
+                                .addOnSuccessListener(notificationsSnapshot -> {
+                                    if (notificationsSnapshot != null && !notificationsSnapshot.isEmpty()) {
+                                        WriteBatch batch = db.batch();
+                                        for (QueryDocumentSnapshot notificationDoc : notificationsSnapshot) {
+                                            batch.delete(notificationDoc.getReference());
+                                        }
+                                        batch.commit()
+                                                .addOnSuccessListener(unused -> aggregator.onEntrantProcessed())
+                                                .addOnFailureListener(e -> aggregator.onEntrantProcessed());
+                                    } else {
+                                        aggregator.onEntrantProcessed();
+                                    }
+                                })
+                                .addOnFailureListener(e -> aggregator.onEntrantProcessed());
+                    }
+                })
+                .addOnFailureListener(cb::onError);
+    }
+
+    private static class EventRemovalAggregator {
+        private final int total;
+        private final Callback<Void> callback;
+        private int completed;
+
+        EventRemovalAggregator(int total, Callback<Void> callback) {
+            this.total = total;
+            this.callback = callback;
+            this.completed = 0;
+        }
+
+        synchronized void onEntrantProcessed() {
+            completed++;
+            if (completed == total) {
+                callback.onSuccess(null);
+            }
+        }
+    }
+
+    private static class NotificationRemovalAggregator {
+        private final int total;
+        private final Callback<Void> callback;
+        private int completed;
+
+        NotificationRemovalAggregator(int total, Callback<Void> callback) {
+            this.total = total;
+            this.callback = callback;
+            this.completed = 0;
+        }
+
+        synchronized void onEntrantProcessed() {
+            completed++;
+            if (completed == total) {
+                callback.onSuccess(null);
+            }
+        }
     }
 
 }

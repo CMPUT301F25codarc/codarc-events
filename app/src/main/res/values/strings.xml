@@ -217,5 +217,8 @@
     <string name="admin_view_events_title">View Events</string>
     <string name="admin_view_profiles_title">View Profiles</string>
     <string name="admin_view_images_title">View Images</string>
+    <string name="admin_notification_logs_title">Notification Logs</string>
+    <string name="admin_notification_logs_empty">No notifications recorded</string>
+    <string name="admin_notification_logs_error">Failed to load notification logs. Tap to retry.</string>
 
 </resources>

@@ -180,6 +180,53 @@ public class EventDB {
     }
 
     /**
+     * Gets events for a specific organizer, ordered by event date (newest first).
+     *
+     * @param organizerId the organizer device ID
+     * @param limit maximum number of events to return
+     * @param cb callback with list of Events
+     */
+    public void getEventsByOrganizer(String organizerId, int limit, Callback<List<Event>> cb) {
+        try {
+            ValidationHelper.requireNonEmpty(organizerId, "organizerId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
+            return;
+        }
+
+        db.collection("events")
+                .whereEqualTo("organizerId", organizerId)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    List<Event> events = new ArrayList<>();
+                    if (querySnapshot != null) {
+                        for (QueryDocumentSnapshot doc : querySnapshot) {
+                            Event event = parseEventFromDocument(doc);
+                            if (event != null) {
+                                events.add(event);
+                            }
+                        }
+                    }
+
+                    events.sort((e1, e2) -> {
+                        String date1 = e1.getEventDateTime();
+                        String date2 = e2.getEventDateTime();
+                        if (date1 == null && date2 == null) return 0;
+                        if (date1 == null) return 1;
+                        if (date2 == null) return -1;
+                        return date2.compareTo(date1);
+                    });
+
+                    if (events.size() > limit) {
+                        events = events.subList(0, limit);
+                    }
+
+                    cb.onSuccess(events);
+                })
+                .addOnFailureListener(cb::onError);
+    }
+
+    /**
      * Fetches a single event by its ID.
      */
     public void getEvent(String eventId, Callback<Event> cb) {

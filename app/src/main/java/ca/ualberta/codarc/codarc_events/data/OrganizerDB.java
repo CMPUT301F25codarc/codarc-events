@@ -176,5 +176,32 @@ public class OrganizerDB {
             })
             .addOnFailureListener(cb::onError);
     }
+
+    /**
+     * Gets all non-banned organizers for admin review.
+     *
+     * @param cb callback with list of organizers (excluding banned ones)
+     */
+    public void getAllOrganizers(Callback<List<Organizer>> cb) {
+        db.collection("organizers")
+            .get()
+            .addOnSuccessListener(querySnapshot -> {
+                List<Organizer> organizers = new ArrayList<>();
+                if (querySnapshot != null) {
+                    for (QueryDocumentSnapshot doc : querySnapshot) {
+                        Boolean banned = doc.getBoolean("banned");
+                        if (banned == null || !banned) {
+                            Organizer organizer = doc.toObject(Organizer.class);
+                            if (organizer != null) {
+                                organizer.setDeviceId(doc.getId());
+                                organizers.add(organizer);
+                            }
+                        }
+                    }
+                }
+                cb.onSuccess(organizers);
+            })
+            .addOnFailureListener(cb::onError);
+    }
 }
 

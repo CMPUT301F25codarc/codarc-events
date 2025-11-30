@@ -184,6 +184,37 @@ public class CreateEventActivity extends AppCompatActivity {
     }
 
     private void createEvent() {
+        checkBannedStatus();
+    }
+
+    private void checkBannedStatus() {
+        organizerDB.isBanned(organizerId, new OrganizerDB.Callback<Boolean>() {
+            @Override
+            public void onSuccess(Boolean banned) {
+                if (banned != null && banned) {
+                    showBannedDialog();
+                    return;
+                }
+                proceedWithEventCreation();
+            }
+
+            @Override
+            public void onError(@NonNull Exception e) {
+                Log.e("CreateEventActivity", "Failed to check banned status", e);
+                proceedWithEventCreation();
+            }
+        });
+    }
+
+    private void showBannedDialog() {
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Account Banned")
+                .setMessage("Your account has been banned. You cannot create events. Please contact an administrator if you believe this is an error.")
+                .setPositiveButton("OK", (dialog, which) -> dialog.dismiss())
+                .show();
+    }
+
+    private void proceedWithEventCreation() {
         String name = get(title);
         String desc = get(description);
         String dateTime = getDateValue(eventDateTime);

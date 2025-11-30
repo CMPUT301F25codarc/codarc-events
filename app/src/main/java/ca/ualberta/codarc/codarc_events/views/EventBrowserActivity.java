@@ -34,6 +34,7 @@ import ca.ualberta.codarc.codarc_events.adapters.EventCardAdapter;
 import ca.ualberta.codarc.codarc_events.controllers.FilterEventsController;
 import ca.ualberta.codarc.codarc_events.data.EntrantDB;
 import ca.ualberta.codarc.codarc_events.data.EventDB;
+import ca.ualberta.codarc.codarc_events.data.OrganizerDB;
 import ca.ualberta.codarc.codarc_events.data.TagDB;
 import ca.ualberta.codarc.codarc_events.data.UserDB;
 import ca.ualberta.codarc.codarc_events.models.Event;
@@ -93,10 +94,7 @@ public class EventBrowserActivity extends AppCompatActivity {
 
         ImageView plusIcon = findViewById(R.id.btn_plus);
         if (plusIcon != null) {
-            plusIcon.setOnClickListener(v -> {
-                Intent intent = new Intent(EventBrowserActivity.this, CreateEventActivity.class);
-                startActivity(intent);
-            });
+            plusIcon.setOnClickListener(v -> checkBannedAndNavigate(deviceId));
         }
 
         ImageView profileIcon = findViewById(R.id.iv_profile_settings);
@@ -184,6 +182,16 @@ public class EventBrowserActivity extends AppCompatActivity {
                 startActivity(intent);
                 return true;
             }
+            if (item.getItemId() == R.id.menu_admin_notification_logs) {
+                Intent intent = new Intent(this, AdminNotificationLogActivity.class);
+                startActivity(intent);
+                return true;
+            }
+            if (item.getItemId() == R.id.menu_admin_view_organizers) {
+                Intent intent = new Intent(this, AdminOrganizerListActivity.class);
+                startActivity(intent);
+                return true;
+            }
             return false;
         });
         popupMenu.show();
@@ -193,6 +201,36 @@ public class EventBrowserActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         loadEvents();
+    }
+
+    private void checkBannedAndNavigate(String deviceId) {
+        OrganizerDB organizerDB = new OrganizerDB();
+        organizerDB.isBanned(deviceId, new OrganizerDB.Callback<Boolean>() {
+            @Override
+            public void onSuccess(Boolean banned) {
+                if (banned != null && banned) {
+                    showBannedDialog();
+                } else {
+                    Intent intent = new Intent(EventBrowserActivity.this, CreateEventActivity.class);
+                    startActivity(intent);
+                }
+            }
+
+            @Override
+            public void onError(@NonNull Exception e) {
+                android.util.Log.e("EventBrowserActivity", "Failed to check banned status", e);
+                Intent intent = new Intent(EventBrowserActivity.this, CreateEventActivity.class);
+                startActivity(intent);
+            }
+        });
+    }
+
+    private void showBannedDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("Account Banned")
+                .setMessage("Your account has been banned. You cannot create events. Please contact an administrator if you believe this is an error.")
+                .setPositiveButton("OK", (dialog, which) -> dialog.dismiss())
+                .show();
     }
 
     private void loadEvents() {
