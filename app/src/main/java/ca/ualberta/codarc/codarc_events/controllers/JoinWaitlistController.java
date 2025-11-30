@@ -2,12 +2,15 @@ package ca.ualberta.codarc.codarc_events.controllers;
 
 import androidx.annotation.NonNull;
 
+import android.content.Context;
+import android.location.Location;
 import android.util.Log;
 
 import ca.ualberta.codarc.codarc_events.data.EntrantDB;
 import ca.ualberta.codarc.codarc_events.data.EventDB;
 import ca.ualberta.codarc.codarc_events.models.Entrant;
 import ca.ualberta.codarc.codarc_events.models.Event;
+import ca.ualberta.codarc.codarc_events.utils.LocationHelper;
 import ca.ualberta.codarc.codarc_events.utils.ValidationHelper;
 
 /**
@@ -99,6 +102,18 @@ public class JoinWaitlistController {
      * @param callback callback for completion
      */
     public void joinWaitlist(Event event, String deviceId, Callback callback) {
+        joinWaitlist(event, deviceId, null, callback);
+    }
+
+    /**
+     * Joins the waitlist for an event with optional location capture.
+     *
+     * @param event the event to join
+     * @param deviceId the device ID of the entrant
+     * @param context context for location capture (null to skip location)
+     * @param callback callback for completion
+     */
+    public void joinWaitlist(Event event, String deviceId, Context context, Callback callback) {
         try {
             ValidationHelper.requireNonNull(event, "event");
             ValidationHelper.requireNonEmpty(deviceId, "deviceId");
@@ -119,7 +134,7 @@ public class JoinWaitlistController {
                     callback.onResult(JoinResult.requiresProfileRegistration());
                     return;
                 }
-                checkBanStatusAndJoin(event, deviceId, callback);
+                checkBanStatusAndJoin(event, deviceId, context, callback);
             }
 
             @Override
@@ -132,7 +147,7 @@ public class JoinWaitlistController {
     /**
      * Checks ban status and proceeds with join logic.
      */
-    private void checkBanStatusAndJoin(Event event, String deviceId, Callback callback) {
+    private void checkBanStatusAndJoin(Event event, String deviceId, Context context, Callback callback) {
                 entrantDB.isBanned(deviceId, new EntrantDB.Callback<Boolean>() {
                     @Override
                     public void onSuccess(Boolean isBanned) {
@@ -140,13 +155,13 @@ public class JoinWaitlistController {
                             callback.onResult(JoinResult.failure("You are banned from joining events"));
                             return;
                         }
-                        checkAlreadyJoinedAndJoin(event, deviceId, callback);
+                        checkAlreadyJoinedAndJoin(event, deviceId, context, callback);
                     }
 
                     @Override
                     public void onError(@NonNull Exception e) {
                         Log.w("JoinWaitlistController", "Failed to check ban status", e);
-                        checkAlreadyJoinedAndJoin(event, deviceId, callback);
+                        checkAlreadyJoinedAndJoin(event, deviceId, context, callback);
             }
         });
     }
@@ -156,9 +171,10 @@ public class JoinWaitlistController {
      *
      * @param event the event to join
      * @param deviceId the device ID of the entrant
+     * @param context context for location capture
      * @param callback callback for completion
      */
-    private void checkAlreadyJoinedAndJoin(Event event, String deviceId, Callback callback) {
+    private void checkAlreadyJoinedAndJoin(Event event, String deviceId, Context context, Callback callback) {
         eventDB.isEntrantOnWaitlist(event.getId(), deviceId, new EventDB.Callback<Boolean>() {
             @Override
             public void onSuccess(Boolean alreadyJoined) {
@@ -172,7 +188,7 @@ public class JoinWaitlistController {
                     return;
                 }
 
-                checkCapacityAndJoin(event, deviceId, callback);
+                checkCapacityAndJoin(event, deviceId, context, callback);
             }
 
             @Override
@@ -185,7 +201,7 @@ public class JoinWaitlistController {
     /**
      * Checks waitlist capacity and proceeds with joining.
      */
-    private void checkCapacityAndJoin(Event event, String deviceId, Callback callback) {
+    private void checkCapacityAndJoin(Event event, String deviceId, Context context, Callback callback) {
         eventDB.getWaitlistCount(event.getId(), new EventDB.Callback<Integer>() {
                     @Override
             public void onSuccess(Integer waitlistCount) {
@@ -196,7 +212,7 @@ public class JoinWaitlistController {
                             callback.onResult(JoinResult.failure("Event is full"));
                             return;
                         }
-                performJoin(event, deviceId, callback);
+                performJoin(event, deviceId, context, callback);
                                     }
 
                                     @Override
@@ -207,10 +223,42 @@ public class JoinWaitlistController {
     }
 
     /**
-     * Performs the actual waitlist join operation.
+     * Performs the actual waitlist join operation with optional location capture.
      */
-    private void performJoin(Event event, String deviceId, Callback callback) {
-        eventDB.joinWaitlist(event.getId(), deviceId, new EventDB.Callback<Void>() {
+    private void performJoin(Event event, String deviceId, Context context, Callback callback) {
+        if (context != null) {
+            captureLocationAndJoin(event, deviceId, context, callback);
+        } else {
+            joinWaitlistWithLocation(event, deviceId, null, callback);
+        }
+    }
+
+    /**
+     * Captures location and then joins waitlist.
+     */
+    private void captureLocationAndJoin(Event event, String deviceId, Context context, Callback callback) {
+        LocationHelper.getCurrentLocation(context, new LocationHelper.LocationCallback() {
+            @Override
+            public void onLocation(Location location) {
+                com.google.firebase.firestore.GeoPoint geoPoint = null;
+                if (location != null) {
+                    geoPoint = new com.google.firebase.firestore.GeoPoint(
+                        location.getLatitude(), 
+                        location.getLongitude()
+                    );
+                }
+                joinWaitlistWithLocation(event, deviceId, geoPoint, callback);
+            }
+        });
+    }
+
+    /**
+     * Joins waitlist with location data.
+     */
+    private void joinWaitlistWithLocation(Event event, String deviceId, 
+                                         com.google.firebase.firestore.GeoPoint location,
+                                         Callback callback) {
+        eventDB.joinWaitlist(event.getId(), deviceId, location, new EventDB.Callback<Void>() {
             @Override
             public void onSuccess(Void value) {
                 updateRegistrationHistory(event.getId(), deviceId);

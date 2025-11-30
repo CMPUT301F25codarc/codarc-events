@@ -108,6 +108,13 @@ public class EventSettingsActivity extends AppCompatActivity {
             intent.putExtra("eventId", event.getId());
             startActivity(intent);
         });
+
+        MaterialButton viewMapBtn = findViewById(R.id.btn_view_map);
+        viewMapBtn.setOnClickListener(v -> {
+            Intent intent = new Intent(this, EntrantMapActivity.class);
+            intent.putExtra("eventId", event.getId());
+            startActivity(intent);
+        });
     }
 
     private void setupImagePicker() {

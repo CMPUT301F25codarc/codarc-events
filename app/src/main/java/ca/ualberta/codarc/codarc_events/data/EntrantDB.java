@@ -753,5 +753,56 @@ public class EntrantDB {
                 .addOnFailureListener(callback::onError);
     }
 
+    /**
+     * Gets notification preference for an entrant.
+     *
+     * @param deviceId the device ID
+     * @param callback callback with preference (defaults to true if not set)
+     */
+    public void getNotificationPreference(String deviceId, Callback<Boolean> callback) {
+        try {
+            ValidationHelper.requireNonEmpty(deviceId, "deviceId");
+        } catch (IllegalArgumentException e) {
+            callback.onError(e);
+            return;
+        }
+
+        db.collection("entrants").document(deviceId)
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    if (snapshot != null && snapshot.exists()) {
+                        Boolean enabled = snapshot.getBoolean("notificationEnabled");
+                        callback.onSuccess(enabled != null ? enabled : true);
+                    } else {
+                        callback.onSuccess(true);
+                    }
+                })
+                .addOnFailureListener(callback::onError);
+    }
+
+    /**
+     * Sets notification preference for an entrant.
+     *
+     * @param deviceId the device ID
+     * @param enabled whether notifications are enabled
+     * @param callback callback for completion
+     */
+    public void setNotificationPreference(String deviceId, boolean enabled, Callback<Void> callback) {
+        try {
+            ValidationHelper.requireNonEmpty(deviceId, "deviceId");
+        } catch (IllegalArgumentException e) {
+            callback.onError(e);
+            return;
+        }
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("notificationEnabled", enabled);
+
+        db.collection("entrants").document(deviceId)
+                .set(data, SetOptions.merge())
+                .addOnSuccessListener(unused -> callback.onSuccess(null))
+                .addOnFailureListener(callback::onError);
+    }
+
 }
 

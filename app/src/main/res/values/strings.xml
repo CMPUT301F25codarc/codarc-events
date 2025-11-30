@@ -232,4 +232,18 @@
     <!-- FCM Cloud Function URL -->
     <string name="fcm_function_url">https://us-central1-codarc-events.cloudfunctions.net/sendPushNotification</string>
 
+    <!-- Notification Preferences -->
+    <string name="notification_preferences_label">Enable Notifications</string>
+    <string name="notification_preference_updated">Notification preferences updated</string>
+    <string name="notification_preference_error">Failed to update notification preference</string>
+
+    <!-- Google Maps API Key -->
+    <string name="google_maps_api_key">AIzaSyAVu6yddo47hX0eamnPUPHlmhm0MsM0R6Q</string>
+
+    <!-- Map Strings -->
+    <string name="view_map">View Map</string>
+    <string name="map_no_locations">No location data available</string>
+    <string name="map_load_error">Failed to load map data</string>
+    <string name="map_organizer_only">Only event organizers can view the map</string>
+
 </resources>

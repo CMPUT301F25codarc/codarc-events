@@ -1,8 +1,11 @@
 package ca.ualberta.codarc.codarc_events.views;
 
-import android.graphics.Bitmap;
-import android.os.Bundle;
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.os.Build;
+import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.ImageButton;
@@ -13,6 +16,8 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
@@ -29,6 +34,7 @@ import ca.ualberta.codarc.codarc_events.data.EventDB;
 import ca.ualberta.codarc.codarc_events.models.Event;
 import ca.ualberta.codarc.codarc_events.utils.DateHelper;
 import ca.ualberta.codarc.codarc_events.utils.Identity;
+import ca.ualberta.codarc.codarc_events.utils.LocationHelper;
 import com.google.android.material.button.MaterialButton;
 import com.google.zxing.BarcodeFormat;
 import com.journeyapps.barcodescanner.BarcodeEncoder;
@@ -47,6 +53,7 @@ public class EventDetailsActivity extends AppCompatActivity {
     private MaterialButton leaveBtn;
     private ImageButton settingsBtn;
     private String deviceId;
+    private static final int REQUEST_LOCATION_PERMISSION = 300;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -263,7 +270,25 @@ public class EventDetailsActivity extends AppCompatActivity {
     }
 
     private void performJoin() {
-        joinController.joinWaitlist(event, deviceId, new JoinWaitlistController.Callback() {
+        if (LocationHelper.hasLocationPermission(this)) {
+            proceedWithJoin();
+        } else {
+            requestLocationPermission();
+        }
+    }
+
+    private void requestLocationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                    REQUEST_LOCATION_PERMISSION);
+        } else {
+            proceedWithJoin();
+        }
+    }
+
+    private void proceedWithJoin() {
+        joinController.joinWaitlist(event, deviceId, this, new JoinWaitlistController.Callback() {
             @Override
             public void onResult(JoinWaitlistController.JoinResult result) {
                 runOnUiThread(() -> {
@@ -282,6 +307,15 @@ public class EventDetailsActivity extends AppCompatActivity {
                 });
             }
         });
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
+                                           @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_LOCATION_PERMISSION) {
+            proceedWithJoin();
+        }
     }
 
     private void showLeaveConfirmation() {

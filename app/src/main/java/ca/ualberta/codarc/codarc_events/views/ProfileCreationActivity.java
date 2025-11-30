@@ -12,7 +12,9 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.switchmaterial.SwitchMaterial;
 
+import androidx.annotation.NonNull;
 import ca.ualberta.codarc.codarc_events.R;
 import ca.ualberta.codarc.codarc_events.controllers.DeleteOwnProfileController;
 import ca.ualberta.codarc.codarc_events.data.EntrantDB;
@@ -32,6 +34,7 @@ public class ProfileCreationActivity extends AppCompatActivity {
     private EditText nameEt;
     private EditText emailEt;
     private EditText phoneEt;
+    private SwitchMaterial switchNotificationEnabled;
     private MaterialButton saveBtn;
     private MaterialButton deleteBtn;
     private ImageView backBtn;
@@ -44,6 +47,7 @@ public class ProfileCreationActivity extends AppCompatActivity {
         nameEt = findViewById(R.id.et_name);
         emailEt = findViewById(R.id.et_email);
         phoneEt = findViewById(R.id.et_phone);
+        switchNotificationEnabled = findViewById(R.id.switch_notification_enabled);
         saveBtn = findViewById(R.id.btn_create_profile);
         deleteBtn = findViewById(R.id.btn_delete_profile);
         backBtn = findViewById(R.id.iv_back);
@@ -54,6 +58,7 @@ public class ProfileCreationActivity extends AppCompatActivity {
         deviceId = Identity.getOrCreateDeviceId(this);
 
         loadProfile();
+        setupNotificationToggle();
 
         if (saveBtn != null) {
             saveBtn.setOnClickListener(v -> saveOrUpdateProfile());
@@ -93,11 +98,65 @@ public class ProfileCreationActivity extends AppCompatActivity {
                     if (entrant.getPhone() != null) {
                         phoneEt.setText(entrant.getPhone());
                     }
+                    if (switchNotificationEnabled != null) {
+                        switchNotificationEnabled.setChecked(entrant.isNotificationEnabled());
+                    }
+                } else {
+                    if (switchNotificationEnabled != null) {
+                        loadNotificationPreference();
+                    }
                 }
             }
 
             @Override
             public void onError(@androidx.annotation.NonNull Exception e) {
+                if (switchNotificationEnabled != null) {
+                    loadNotificationPreference();
+                }
+            }
+        });
+    }
+
+    private void loadNotificationPreference() {
+        entrantDB.getNotificationPreference(deviceId, new EntrantDB.Callback<Boolean>() {
+            @Override
+            public void onSuccess(Boolean enabled) {
+                if (switchNotificationEnabled != null) {
+                    switchNotificationEnabled.setChecked(enabled != null && enabled);
+                }
+            }
+
+            @Override
+            public void onError(@NonNull Exception e) {
+                if (switchNotificationEnabled != null) {
+                    switchNotificationEnabled.setChecked(true);
+                }
+            }
+        });
+    }
+
+    private void setupNotificationToggle() {
+        if (switchNotificationEnabled == null) {
+            return;
+        }
+
+        switchNotificationEnabled.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            saveNotificationPreference(isChecked);
+        });
+    }
+
+    private void saveNotificationPreference(boolean enabled) {
+        entrantDB.setNotificationPreference(deviceId, enabled, new EntrantDB.Callback<Void>() {
+            @Override
+            public void onSuccess(Void value) {
+                Toast.makeText(ProfileCreationActivity.this,
+                        R.string.notification_preference_updated, Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onError(@NonNull Exception e) {
+                Toast.makeText(ProfileCreationActivity.this,
+                        R.string.notification_preference_error, Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -184,6 +243,9 @@ public class ProfileCreationActivity extends AppCompatActivity {
                 if (existing != null && existing.isBanned()) {
                     entrant.setBanned(true);
                 }
+                if (switchNotificationEnabled != null) {
+                    entrant.setNotificationEnabled(switchNotificationEnabled.isChecked());
+                }
 
                 saveBtn.setEnabled(false);
                 
@@ -210,6 +272,9 @@ public class ProfileCreationActivity extends AppCompatActivity {
                 entrant.setEmail(email);
                 entrant.setPhone(phone);
                 entrant.setIsRegistered(true);
+                if (switchNotificationEnabled != null) {
+                    entrant.setNotificationEnabled(switchNotificationEnabled.isChecked());
+                }
                 
                 saveBtn.setEnabled(false);
                 createNewEntrantProfile(entrant);

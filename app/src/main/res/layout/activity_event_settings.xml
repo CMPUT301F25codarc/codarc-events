@@ -90,6 +90,17 @@
                 android:textSize="16sp"
                 android:layout_marginBottom="12dp" />
 
+            <!-- View Map -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_view_map"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/view_map"
+                android:textSize="16sp"
+                android:textColor="@color/primary_purple"
+                android:layout_marginBottom="12dp" />
+
             <!-- Update Poster -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_update_poster"

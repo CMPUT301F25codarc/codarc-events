@@ -13,6 +13,7 @@ import com.google.firebase.Timestamp;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -462,6 +463,18 @@ public class EventDB {
      * @param cb       callback for completion
      */
     public void joinWaitlist(String eventId, String deviceId, Callback<Void> cb) {
+        joinWaitlist(eventId, deviceId, null, cb);
+    }
+
+    /**
+     * Adds an entrant to the waitlist with optional location.
+     *
+     * @param eventId the event ID
+     * @param deviceId the device ID
+     * @param location optional location (GeoPoint) - captured when joining
+     * @param cb callback for completion
+     */
+    public void joinWaitlist(String eventId, String deviceId, com.google.firebase.firestore.GeoPoint location, Callback<Void> cb) {
         try {
             ValidationHelper.requireNonEmpty(eventId, "eventId");
             ValidationHelper.requireNonEmpty(deviceId, "deviceId");
@@ -472,6 +485,9 @@ public class EventDB {
         Map<String, Object> data = new HashMap<>();
         data.put("deviceId", deviceId);
         data.put("request_time", FieldValue.serverTimestamp());
+        if (location != null) {
+            data.put("joinLocation", location);
+        }
 
         db.collection("events").document(eventId)
                 .collection("waitingList").document(deviceId)
@@ -607,12 +623,58 @@ public class EventDB {
             return;
         }
 
+        readWaitlistLocations(eventId, winnerIds, replacementIds, new Callback<Map<String, com.google.firebase.firestore.GeoPoint>>() {
+            @Override
+            public void onSuccess(Map<String, com.google.firebase.firestore.GeoPoint> locationMap) {
+                writeWinnersWithLocation(eventId, winnerIds, replacementIds, locationMap, cb);
+            }
+
+            @Override
+            public void onError(@NonNull Exception e) {
+                cb.onError(e);
+            }
+        });
+    }
+
+    private void readWaitlistLocations(String eventId, List<String> winnerIds, List<String> replacementIds,
+                                       Callback<Map<String, com.google.firebase.firestore.GeoPoint>> callback) {
+        List<String> allIds = new ArrayList<>(winnerIds);
+        if (replacementIds != null && !replacementIds.isEmpty()) {
+            allIds.addAll(replacementIds);
+        }
+
+        if (allIds.isEmpty()) {
+            callback.onSuccess(new HashMap<>());
+            return;
+        }
+
+        LocationReadAggregator aggregator = new LocationReadAggregator(allIds.size(), callback);
+
+        for (String deviceId : allIds) {
+            db.collection("events").document(eventId)
+                    .collection("waitingList").document(deviceId)
+                    .get()
+                    .addOnSuccessListener(snapshot -> {
+                        com.google.firebase.firestore.GeoPoint location = null;
+                        if (snapshot != null && snapshot.exists()) {
+                            location = snapshot.getGeoPoint("joinLocation");
+                        }
+                        aggregator.onLocationRead(deviceId, location);
+                    })
+                    .addOnFailureListener(e -> {
+                        android.util.Log.w("EventDB", "Failed to read location for " + deviceId, e);
+                        aggregator.onLocationRead(deviceId, null);
+                    });
+        }
+    }
+
+    private void writeWinnersWithLocation(String eventId, List<String> winnerIds, List<String> replacementIds,
+                                         Map<String, com.google.firebase.firestore.GeoPoint> locationMap,
+                                         Callback<Void> cb) {
         WriteBatch batch = db.batch();
         long timestamp = System.currentTimeMillis();
 
-        // Move winners from waitingList to winners
         for (String winnerId : winnerIds) {
-            // Remove from waitingList
             DocumentReference waitlistRef = db.collection("events")
                     .document(eventId)
                     .collection("waitingList")
@@ -626,6 +688,10 @@ public class EventDB {
             Map<String, Object> data = new HashMap<>();
             data.put("deviceId", winnerId);
             data.put("invitedAt", timestamp);
+            com.google.firebase.firestore.GeoPoint location = locationMap.get(winnerId);
+            if (location != null) {
+                data.put("joinLocation", location);
+            }
             batch.set(winnersRef, data);
         }
 
@@ -644,6 +710,10 @@ public class EventDB {
                 Map<String, Object> data = new HashMap<>();
                 data.put("deviceId", replacementId);
                 data.put("addedToPoolAt", timestamp);
+                com.google.firebase.firestore.GeoPoint location = locationMap.get(replacementId);
+                if (location != null) {
+                    data.put("joinLocation", location);
+                }
                 batch.set(poolRef, data);
             }
         }
@@ -651,6 +721,28 @@ public class EventDB {
         batch.commit()
                 .addOnSuccessListener(unused -> cb.onSuccess(null))
                 .addOnFailureListener(cb::onError);
+    }
+
+    private static class LocationReadAggregator {
+        private final int total;
+        private final Map<String, com.google.firebase.firestore.GeoPoint> locationMap;
+        private final Callback<Map<String, com.google.firebase.firestore.GeoPoint>> callback;
+        private int completed;
+
+        LocationReadAggregator(int total, Callback<Map<String, com.google.firebase.firestore.GeoPoint>> callback) {
+            this.total = total;
+            this.callback = callback;
+            this.locationMap = new HashMap<>();
+            this.completed = 0;
+        }
+
+        synchronized void onLocationRead(String deviceId, com.google.firebase.firestore.GeoPoint location) {
+            locationMap.put(deviceId, location);
+            completed++;
+            if (completed >= total) {
+                callback.onSuccess(locationMap);
+            }
+        }
     }
     
     /**
@@ -711,6 +803,8 @@ public class EventDB {
                         return;
                     }
 
+                    com.google.firebase.firestore.GeoPoint location = snapshot.getGeoPoint("joinLocation");
+
                     WriteBatch batch = db.batch();
 
                     DocumentReference poolRef = db.collection("events")
@@ -719,7 +813,6 @@ public class EventDB {
                             .document(entrantId);
                     batch.delete(poolRef);
 
-                    // Add to winners
                     DocumentReference winnersRef = db.collection("events")
                             .document(eventId)
                             .collection("winners")
@@ -728,6 +821,9 @@ public class EventDB {
                     data.put("deviceId", entrantId);
                     data.put("invitedAt", System.currentTimeMillis());
                     data.put("isReplacement", true);
+                    if (location != null) {
+                        data.put("joinLocation", location);
+                    }
                     batch.set(winnersRef, data);
 
                     batch.commit()
@@ -754,28 +850,38 @@ public class EventDB {
             return;
         }
 
-        WriteBatch batch = db.batch();
-
         DocumentReference winnersRef = db.collection("events")
                 .document(eventId)
                 .collection("winners")
                 .document(deviceId);
-        batch.delete(winnersRef);
-
-        String targetCollection = enrolled ? "accepted" : "cancelled";
-        DocumentReference targetRef = db.collection("events")
-                .document(eventId)
-                .collection(targetCollection)
-                .document(deviceId);
         
-        Map<String, Object> data = new HashMap<>();
-        data.put("deviceId", deviceId);
-        data.put("respondedAt", System.currentTimeMillis());
-        batch.set(targetRef, data);
+        winnersRef.get().addOnSuccessListener(snapshot -> {
+            com.google.firebase.firestore.GeoPoint location = null;
+            if (snapshot != null && snapshot.exists()) {
+                location = snapshot.getGeoPoint("joinLocation");
+            }
+            
+            WriteBatch batch = db.batch();
+            batch.delete(winnersRef);
 
-        batch.commit()
-                .addOnSuccessListener(unused -> cb.onSuccess(null))
-                .addOnFailureListener(cb::onError);
+            String targetCollection = enrolled ? "accepted" : "cancelled";
+            DocumentReference targetRef = db.collection("events")
+                    .document(eventId)
+                    .collection(targetCollection)
+                    .document(deviceId);
+            
+            Map<String, Object> data = new HashMap<>();
+            data.put("deviceId", deviceId);
+            data.put("respondedAt", System.currentTimeMillis());
+            if (location != null) {
+                data.put("joinLocation", location);
+            }
+            batch.set(targetRef, data);
+
+            batch.commit()
+                    .addOnSuccessListener(unused -> cb.onSuccess(null))
+                    .addOnFailureListener(cb::onError);
+        }).addOnFailureListener(cb::onError);
     }
 
     public void getWinners(String eventId, Callback<List<Map<String, Object>>> cb) {
@@ -901,6 +1007,92 @@ public class EventDB {
     }
 
     /**
+     * Gets all entrants with location data for map display.
+     * Aggregates from waitlist, winners, accepted, and cancelled collections.
+     *
+     * Note: The complex async orchestration for querying 4 collections in parallel and aggregating
+     * results using the EntrantLocationAggregator helper class was implemented with assistance from
+     * Claude Sonnet 4.5 (Anthropic). The thread-safe coordination of multiple parallel Firestore queries
+     * and graceful handling of partial failures were developed with LLM assistance.
+     *
+     * @param eventId the event ID
+     * @param callback callback with list of entries including location
+     */
+    public void getEntrantsWithLocations(String eventId, Callback<List<Map<String, Object>>> callback) {
+        try {
+            ValidationHelper.requireNonEmpty(eventId, "eventId");
+        } catch (IllegalArgumentException e) {
+            callback.onError(e);
+            return;
+        }
+
+        List<Map<String, Object>> allEntries = Collections.synchronizedList(new ArrayList<>());
+        EntrantLocationAggregator aggregator = new EntrantLocationAggregator(4, allEntries, callback);
+
+        queryCollectionWithLocation(eventId, "waitingList", "request_time", aggregator);
+        queryCollectionWithLocation(eventId, "winners", "invitedAt", aggregator);
+        queryCollectionWithLocation(eventId, "accepted", "respondedAt", aggregator);
+        queryCollectionWithLocation(eventId, "cancelled", "respondedAt", aggregator);
+    }
+
+    private void queryCollectionWithLocation(String eventId, String collectionName, String timestampField,
+                                             EntrantLocationAggregator aggregator) {
+        android.util.Log.d("EventDB", "Querying " + collectionName + " for eventId: " + eventId);
+        db.collection("events").document(eventId)
+                .collection(collectionName)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    int totalDocs = querySnapshot != null ? querySnapshot.size() : 0;
+                    int withLocation = 0;
+                    if (querySnapshot != null) {
+                        for (QueryDocumentSnapshot doc : querySnapshot) {
+                            com.google.firebase.firestore.GeoPoint location = doc.getGeoPoint("joinLocation");
+                            if (location != null) {
+                                withLocation++;
+                                Map<String, Object> entry = new HashMap<>();
+                                entry.put("deviceId", doc.getId());
+                                entry.put("joinLocation", location);
+                                entry.put("timestamp", doc.get(timestampField));
+                                aggregator.addEntry(entry);
+                            }
+                        }
+                    }
+                    android.util.Log.d("EventDB", collectionName + ": " + totalDocs + " total, " + withLocation + " with location");
+                    aggregator.onCollectionComplete();
+                })
+                .addOnFailureListener(e -> {
+                    android.util.Log.w("EventDB", "Failed to query " + collectionName, e);
+                    aggregator.onCollectionComplete();
+                });
+    }
+
+    private static class EntrantLocationAggregator {
+        private final int totalCollections;
+        private final List<Map<String, Object>> entries;
+        private final Callback<List<Map<String, Object>>> callback;
+        private int completed;
+
+        EntrantLocationAggregator(int totalCollections, List<Map<String, Object>> entries,
+                                 Callback<List<Map<String, Object>>> callback) {
+            this.totalCollections = totalCollections;
+            this.entries = entries;
+            this.callback = callback;
+            this.completed = 0;
+        }
+
+        synchronized void addEntry(Map<String, Object> entry) {
+            entries.add(entry);
+        }
+
+        synchronized void onCollectionComplete() {
+            completed++;
+            if (completed >= totalCollections) {
+                callback.onSuccess(entries);
+            }
+        }
+    }
+
+    /**
      * Promotes an entrant from the waitlist directly to winners.
      * Used when replacement pool is empty and we need to select from waitlist.
      *
@@ -926,6 +1118,8 @@ public class EventDB {
                         return;
                     }
 
+                    com.google.firebase.firestore.GeoPoint location = snapshot.getGeoPoint("joinLocation");
+
                     WriteBatch batch = db.batch();
 
                     DocumentReference waitlistRef = db.collection("events")
@@ -934,7 +1128,6 @@ public class EventDB {
                             .document(entrantId);
                     batch.delete(waitlistRef);
 
-                    // Add to winners
                     DocumentReference winnersRef = db.collection("events")
                             .document(eventId)
                             .collection("winners")
@@ -943,6 +1136,9 @@ public class EventDB {
                     data.put("deviceId", entrantId);
                     data.put("invitedAt", System.currentTimeMillis());
                     data.put("isReplacement", true);
+                    if (location != null) {
+                        data.put("joinLocation", location);
+                    }
                     batch.set(winnersRef, data);
 
                     batch.commit()

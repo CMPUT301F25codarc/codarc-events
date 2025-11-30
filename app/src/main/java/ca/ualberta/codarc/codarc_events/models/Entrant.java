@@ -15,6 +15,7 @@ public class Entrant {
     private String phone;
     private boolean isRegistered;
     private boolean banned;
+    private boolean notificationEnabled = true;
 
     public Entrant() { }
 
@@ -33,6 +34,7 @@ public class Entrant {
         this.phone = "";
         this.isRegistered = false;
         this.banned = false;
+        this.notificationEnabled = true;
     }
 
     public String getDeviceId() {
@@ -103,5 +105,13 @@ public class Entrant {
     @PropertyName("banned")
     public void setBanned(boolean banned) {
         this.banned = banned;
+    }
+
+    public boolean isNotificationEnabled() {
+        return notificationEnabled;
+    }
+
+    public void setNotificationEnabled(boolean notificationEnabled) {
+        this.notificationEnabled = notificationEnabled;
     }
 }

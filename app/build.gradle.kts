@@ -69,6 +69,10 @@ dependencies {
     implementation("androidx.recyclerview:recyclerview:1.3.2")
     implementation("androidx.core:core:1.13.1")
 
+    // --- Google Maps & Location ---
+    implementation("com.google.android.gms:play-services-maps:18.2.0")
+    implementation("com.google.android.gms:play-services-location:21.0.1")
+
     // --- Unit tests (runs on JVM) ---
     testImplementation(libs.junit)
     testImplementation("org.mockito:mockito-core:5.14.2")

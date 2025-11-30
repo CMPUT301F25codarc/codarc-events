@@ -191,6 +191,7 @@ public class NotificationController {
 
     /**
      * Sends notifications to each entrant in the list.
+     * Filters entrants based on notification preference (except for "winner" category).
      *
      * @param eventId the event ID
      * @param message the notification message
@@ -201,6 +202,70 @@ public class NotificationController {
     private void sendNotifications(String eventId, String message, String categoryValue,
                                    List<Map<String, Object>> entrants,
                                    NotificationCallback callback) {
+        final int total = entrants.size();
+
+        if (total == 0) {
+            callback.onSuccess(0, 0);
+            return;
+        }
+
+        boolean isWinnerCategory = "winner".equals(categoryValue);
+        
+        if (isWinnerCategory) {
+            sendNotificationsToFilteredList(eventId, message, categoryValue, entrants, callback);
+        } else {
+            filterByPreferenceAndSend(eventId, message, categoryValue, entrants, callback);
+        }
+    }
+
+    /**
+     * Filters entrants by notification preference and sends notifications.
+     */
+    private void filterByPreferenceAndSend(String eventId, String message, String categoryValue,
+                                           List<Map<String, Object>> entrants,
+                                           NotificationCallback callback) {
+        final int total = entrants.size();
+        final List<String> enabledDeviceIds = Collections.synchronizedList(new ArrayList<>());
+        final PreferenceCheckAggregator aggregator = new PreferenceCheckAggregator(total, enabledDeviceIds, () -> {
+            List<Map<String, Object>> filteredEntrants = new ArrayList<>();
+            for (Map<String, Object> entry : entrants) {
+                Object deviceIdObj = entry.get("deviceId");
+                if (deviceIdObj != null && enabledDeviceIds.contains(deviceIdObj.toString())) {
+                    filteredEntrants.add(entry);
+                }
+            }
+            sendNotificationsToFilteredList(eventId, message, categoryValue, filteredEntrants, callback);
+        });
+
+        for (Map<String, Object> entry : entrants) {
+            Object deviceIdObj = entry.get("deviceId");
+            if (deviceIdObj == null) {
+                aggregator.onPreferenceChecked(null, false);
+                continue;
+            }
+
+            String deviceId = deviceIdObj.toString();
+            entrantDB.getNotificationPreference(deviceId, new EntrantDB.Callback<Boolean>() {
+                @Override
+                public void onSuccess(Boolean enabled) {
+                    aggregator.onPreferenceChecked(deviceId, enabled != null && enabled);
+                }
+
+                @Override
+                public void onError(@NonNull Exception e) {
+                    Log.d(TAG, "Failed to get notification preference for " + deviceId, e);
+                    aggregator.onPreferenceChecked(deviceId, true);
+                }
+            });
+        }
+    }
+
+    /**
+     * Sends notifications to a filtered list of entrants.
+     */
+    private void sendNotificationsToFilteredList(String eventId, String message, String categoryValue,
+                                                List<Map<String, Object>> entrants,
+                                                NotificationCallback callback) {
         final int total = entrants.size();
 
         if (total == 0) {
@@ -279,23 +344,52 @@ public class NotificationController {
             }
         });
 
-        for (String deviceId : deviceIds) {
-            entrantDB.getFCMToken(deviceId, new EntrantDB.Callback<String>() {
-                @Override
-                public void onSuccess(String token) {
-                    if (token != null && !token.isEmpty()) {
-                        tokens.add(token);
-                    }
-                    aggregator.onTokenFetched();
-                }
+        boolean isWinnerCategory = "winner".equals(categoryValue);
 
-                @Override
-                public void onError(@NonNull Exception e) {
-                    Log.d(TAG, "Failed to get FCM token for " + deviceId, e);
+        for (String deviceId : deviceIds) {
+            if (isWinnerCategory) {
+                fetchTokenForDevice(deviceId, tokens, aggregator);
+            } else {
+                checkPreferenceAndFetchToken(deviceId, tokens, aggregator);
+            }
+        }
+    }
+
+    private void fetchTokenForDevice(String deviceId, List<String> tokens, TokenFetchAggregator aggregator) {
+        entrantDB.getFCMToken(deviceId, new EntrantDB.Callback<String>() {
+            @Override
+            public void onSuccess(String token) {
+                if (token != null && !token.isEmpty()) {
+                    tokens.add(token);
+                }
+                aggregator.onTokenFetched();
+            }
+
+            @Override
+            public void onError(@NonNull Exception e) {
+                Log.d(TAG, "Failed to get FCM token for " + deviceId, e);
+                aggregator.onTokenFetched();
+            }
+        });
+    }
+
+    private void checkPreferenceAndFetchToken(String deviceId, List<String> tokens, TokenFetchAggregator aggregator) {
+        entrantDB.getNotificationPreference(deviceId, new EntrantDB.Callback<Boolean>() {
+            @Override
+            public void onSuccess(Boolean enabled) {
+                if (enabled != null && enabled) {
+                    fetchTokenForDevice(deviceId, tokens, aggregator);
+                } else {
                     aggregator.onTokenFetched();
                 }
-            });
-        }
+            }
+
+            @Override
+            public void onError(@NonNull Exception e) {
+                Log.d(TAG, "Failed to get notification preference for " + deviceId, e);
+                aggregator.onTokenFetched();
+            }
+        });
     }
 
     private static class TokenFetchAggregator {
@@ -312,6 +406,29 @@ public class NotificationController {
         }
 
         synchronized void onTokenFetched() {
+            completed++;
+            if (completed == total) {
+                onComplete.run();
+            }
+        }
+    }
+
+    private static class PreferenceCheckAggregator {
+        private final int total;
+        private final List<String> enabledDeviceIds;
+        private final Runnable onComplete;
+        private int completed = 0;
+
+        PreferenceCheckAggregator(int total, List<String> enabledDeviceIds, Runnable onComplete) {
+            this.total = total;
+            this.enabledDeviceIds = enabledDeviceIds;
+            this.onComplete = onComplete;
+        }
+
+        synchronized void onPreferenceChecked(String deviceId, boolean enabled) {
+            if (enabled && deviceId != null) {
+                enabledDeviceIds.add(deviceId);
+            }
             completed++;
             if (completed == total) {
                 onComplete.run();
