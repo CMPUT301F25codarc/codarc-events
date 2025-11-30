@@ -46,11 +46,6 @@ public class AdminProfileListAdapter extends RecyclerView.Adapter<AdminProfileLi
         this.removeClickListener = removeClickListener;
     }
 
-    /**
-     * Updates the list of profiles to display.
-     *
-     * @param profiles the new list of profiles
-     */
     public void setItems(List<Entrant> profiles) {
         this.profiles.clear();
         if (profiles != null) {
@@ -71,12 +66,10 @@ public class AdminProfileListAdapter extends RecyclerView.Adapter<AdminProfileLi
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Entrant entrant = profiles.get(position);
         
-        // Safety check - should not happen but prevents crashes
         if (entrant == null) {
             return;
         }
         
-        // Display name or deviceId if name is empty
         String displayName = entrant.getName();
         if (displayName == null || displayName.trim().isEmpty()) {
             displayName = entrant.getDeviceId() != null ? entrant.getDeviceId() : "Unknown";
@@ -92,7 +85,6 @@ public class AdminProfileListAdapter extends RecyclerView.Adapter<AdminProfileLi
             holder.email.setVisibility(View.GONE);
         }
         
-        // Display phone
         String phone = entrant.getPhone();
         if (phone != null && !phone.trim().isEmpty()) {
             holder.phone.setText(phone);
@@ -101,7 +93,6 @@ public class AdminProfileListAdapter extends RecyclerView.Adapter<AdminProfileLi
             holder.phone.setVisibility(View.GONE);
         }
         
-        // Display registration status
         if (entrant.getIsRegistered()) {
             holder.registrationStatus.setText(R.string.profile_registered);
             holder.registrationStatus.setVisibility(View.VISIBLE);
@@ -110,7 +101,6 @@ public class AdminProfileListAdapter extends RecyclerView.Adapter<AdminProfileLi
             holder.registrationStatus.setVisibility(View.VISIBLE);
         }
         
-        // Display banned status if applicable
         if (entrant.isBanned()) {
             holder.bannedStatus.setText(R.string.profile_banned);
             holder.bannedStatus.setVisibility(View.VISIBLE);
@@ -130,9 +120,6 @@ public class AdminProfileListAdapter extends RecyclerView.Adapter<AdminProfileLi
         return profiles.size();
     }
 
-    /**
-     * ViewHolder for profile items in the RecyclerView.
-     */
     public static class ViewHolder extends RecyclerView.ViewHolder {
         final TextView profileName;
         final TextView email;

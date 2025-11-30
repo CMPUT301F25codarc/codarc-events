@@ -157,7 +157,15 @@
     <string name="notification_decline_success">Invitation to join the event rejected.</string>
     <string name="notification_unknown_event">Event update</string>
     <string name="notification_response_error">Unable to update invitation. Please try again.</string>
-
+    <string name="export_csv_button">Export CSV</string>
+    <string name="export_csv_error">Unable to export attendee list right now.</string>
+    <string name="export_csv_event_unavailable">Event information not available</string>
+    <string name="cancel_entrant_button">Cancel</string>
+    <string name="cancel_entrant_success">Entrant cancelled</string>
+    <string name="cancel_entrant_error">Failed to cancel entrant</string>
+    <string name="cancel_entrant_invalid">Invalid entrant</string>
+    <string name="cancel_entrant_before_deadline">Cannot cancel entrants before registration deadline passes</string>
+  
     <!-- Lottery Info Strings -->
     <string name="lottery_info">Lottery Info</string>
     <string name="got_it">Got it</string>
@@ -220,5 +228,25 @@
     <string name="admin_view_events_title">View Events</string>
     <string name="admin_view_profiles_title">View Profiles</string>
     <string name="admin_view_images_title">View Images</string>
+    <string name="admin_notification_logs_title">Notification Logs</string>
+    <string name="admin_notification_logs_empty">No notifications recorded</string>
+    <string name="admin_notification_logs_error">Failed to load notification logs. Tap to retry.</string>
+
+    <!-- FCM Cloud Function URL -->
+    <string name="fcm_function_url">https://us-central1-codarc-events.cloudfunctions.net/sendPushNotification</string>
+
+    <!-- Notification Preferences -->
+    <string name="notification_preferences_label">Enable Notifications</string>
+    <string name="notification_preference_updated">Notification preferences updated</string>
+    <string name="notification_preference_error">Failed to update notification preference</string>
+
+    <!-- Google Maps API Key -->
+    <string name="google_maps_api_key">AIzaSyAVu6yddo47hX0eamnPUPHlmhm0MsM0R6Q</string>
+
+    <!-- Map Strings -->
+    <string name="view_map">View Map</string>
+    <string name="map_no_locations">No location data available</string>
+    <string name="map_load_error">Failed to load map data</string>
+    <string name="map_organizer_only">Only event organizers can view the map</string>
 
 </resources>

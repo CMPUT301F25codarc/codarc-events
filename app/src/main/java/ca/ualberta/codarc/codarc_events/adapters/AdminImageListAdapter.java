@@ -51,12 +51,6 @@ public class AdminImageListAdapter extends RecyclerView.Adapter<AdminImageListAd
         this.deleteClickListener = deleteClickListener;
     }
 
-    /**
-     * Updates the list of events to display.
-     * Filters to only show events with non-null, non-empty posterUrl.
-     *
-     * @param events the new list of events (will be filtered)
-     */
     public void setItems(List<Event> events) {
         this.events.clear();
         if (events != null) {
@@ -85,7 +79,6 @@ public class AdminImageListAdapter extends RecyclerView.Adapter<AdminImageListAd
         holder.eventName.setText(event.getName() != null ? event.getName() : "");
         holder.eventDate.setText(DateHelper.formatEventDate(event.getEventDateTime()));
 
-        // Load poster image using Glide
         String posterUrl = event.getPosterUrl();
         if (posterUrl != null && !posterUrl.trim().isEmpty()) {
             Glide.with(holder.itemView.getContext())
@@ -111,9 +104,6 @@ public class AdminImageListAdapter extends RecyclerView.Adapter<AdminImageListAd
         return events.size();
     }
 
-    /**
-     * ViewHolder for event image items in the RecyclerView.
-     */
     public static class ViewHolder extends RecyclerView.ViewHolder {
         final ImageView posterImage;
         final TextView eventName;

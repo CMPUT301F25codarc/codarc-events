@@ -39,3 +39,4 @@ local.properties
 # Keep only top-level .gitkeep
 # ----------------------------
 doc/storyboard/images/.gitkeep
+**/google-services.json

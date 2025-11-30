@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 import ca.ualberta.codarc.codarc_events.models.Organizer;
+import ca.ualberta.codarc.codarc_events.utils.ValidationHelper;
 
 /**
  * Handles Organizers collection - minimal, just deviceId and events list.
@@ -29,10 +30,17 @@ public class OrganizerDB {
         this.db = FirebaseFirestore.getInstance();
     }
     
-    // Creates organizer doc (called when user creates first event)
+    /**
+     * Creates an organizer document.
+     *
+     * @param deviceId the device ID
+     * @param cb callback for completion
+     */
     public void createOrganizer(String deviceId, Callback<Void> cb) {
-        if (deviceId == null || deviceId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("deviceId is empty"));
+        try {
+            ValidationHelper.requireNonEmpty(deviceId, "deviceId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
         
@@ -44,8 +52,10 @@ public class OrganizerDB {
     }
     
     public void organizerExists(String deviceId, Callback<Boolean> cb) {
-        if (deviceId == null || deviceId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("deviceId is empty"));
+        try {
+            ValidationHelper.requireNonEmpty(deviceId, "deviceId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
         
@@ -57,14 +67,19 @@ public class OrganizerDB {
             .addOnFailureListener(cb::onError);
     }
     
-    // Adds event to organizer's events subcollection
+    /**
+     * Adds an event to the organizer's events subcollection.
+     *
+     * @param deviceId the device ID
+     * @param eventId the event ID
+     * @param cb callback for completion
+     */
     public void addEventToOrganizer(String deviceId, String eventId, Callback<Void> cb) {
-        if (deviceId == null || deviceId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("deviceId is empty"));
-            return;
-        }
-        if (eventId == null || eventId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("eventId is empty"));
+        try {
+            ValidationHelper.requireNonEmpty(deviceId, "deviceId");
+            ValidationHelper.requireNonEmpty(eventId, "eventId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
         
@@ -79,8 +94,10 @@ public class OrganizerDB {
     }
     
     public void getOrganizerEvents(String deviceId, Callback<List<String>> cb) {
-        if (deviceId == null || deviceId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("deviceId is empty"));
+        try {
+            ValidationHelper.requireNonEmpty(deviceId, "deviceId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
         
@@ -103,12 +120,11 @@ public class OrganizerDB {
     }
     
     public void removeEventFromOrganizer(String deviceId, String eventId, Callback<Void> cb) {
-        if (deviceId == null || deviceId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("deviceId is empty"));
-            return;
-        }
-        if (eventId == null || eventId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("eventId is empty"));
+        try {
+            ValidationHelper.requireNonEmpty(deviceId, "deviceId");
+            ValidationHelper.requireNonEmpty(eventId, "eventId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
         
@@ -119,10 +135,18 @@ public class OrganizerDB {
             .addOnFailureListener(cb::onError);
     }
     
-    // Bans/unbans an organizer (admin only)
+    /**
+     * Sets the banned status of an organizer.
+     *
+     * @param deviceId the device ID
+     * @param banned true to ban, false to unban
+     * @param cb callback for completion
+     */
     public void setBannedStatus(String deviceId, boolean banned, Callback<Void> cb) {
-        if (deviceId == null || deviceId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("deviceId is empty"));
+        try {
+            ValidationHelper.requireNonEmpty(deviceId, "deviceId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
         
@@ -133,8 +157,10 @@ public class OrganizerDB {
     }
     
     public void isBanned(String deviceId, Callback<Boolean> cb) {
-        if (deviceId == null || deviceId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("deviceId is empty"));
+        try {
+            ValidationHelper.requireNonEmpty(deviceId, "deviceId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
         
@@ -145,8 +171,35 @@ public class OrganizerDB {
                     Boolean banned = snapshot.getBoolean("banned");
                     cb.onSuccess(banned != null && banned);
                 } else {
-                    cb.onSuccess(false); // Not an organizer, so not banned as organizer
+                    cb.onSuccess(false);
                 }
+            })
+            .addOnFailureListener(cb::onError);
+    }
+
+    /**
+     * Gets all non-banned organizers for admin review.
+     *
+     * @param cb callback with list of organizers (excluding banned ones)
+     */
+    public void getAllOrganizers(Callback<List<Organizer>> cb) {
+        db.collection("organizers")
+            .get()
+            .addOnSuccessListener(querySnapshot -> {
+                List<Organizer> organizers = new ArrayList<>();
+                if (querySnapshot != null) {
+                    for (QueryDocumentSnapshot doc : querySnapshot) {
+                        Boolean banned = doc.getBoolean("banned");
+                        if (banned == null || !banned) {
+                            Organizer organizer = doc.toObject(Organizer.class);
+                            if (organizer != null) {
+                                organizer.setDeviceId(doc.getId());
+                                organizers.add(organizer);
+                            }
+                        }
+                    }
+                }
+                cb.onSuccess(organizers);
             })
             .addOnFailureListener(cb::onError);
     }

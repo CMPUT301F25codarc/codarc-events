@@ -9,11 +9,14 @@ import java.util.Map;
 
 import ca.ualberta.codarc.codarc_events.data.EntrantDB;
 import ca.ualberta.codarc.codarc_events.data.EventDB;
+import ca.ualberta.codarc.codarc_events.utils.ValidationHelper;
 
 /**
  * Handles invitation accept/decline responses.
- * Updates event status and notification.
- * Automatically reselects replacements when invitations are declined.
+ * 
+ * Note: The automatic reselection logic with fallback chains (replacement pool → waitlist → log only)
+ * was implemented with assistance from Claude Sonnet 4.5 (Anthropic). The sophisticated error handling,
+ * state management, and multi-path fallback logic were developed with LLM assistance.
  */
 public class InvitationResponseController {
 
@@ -50,43 +53,46 @@ public class InvitationResponseController {
                                      boolean enroll,
                                      String response,
                                      ResponseCallback cb) {
-        if (eventId == null || eventId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("eventId is empty"));
-            return;
-        }
-        if (deviceId == null || deviceId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("deviceId is empty"));
-            return;
-        }
-        if (notificationId == null || notificationId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("notificationId is empty"));
+        try {
+            ValidationHelper.requireNonEmpty(eventId, "eventId");
+            ValidationHelper.requireNonEmpty(deviceId, "deviceId");
+            ValidationHelper.requireNonEmpty(notificationId, "notificationId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
 
         eventDB.setEnrolledStatus(eventId, deviceId, enroll, new EventDB.Callback<Void>() {
             @Override
             public void onSuccess(Void value) {
-                Map<String, Object> updates = new HashMap<>();
-                updates.put("read", true);
-                updates.put("response", response);
-                updates.put("respondedAt", System.currentTimeMillis());
+                updateNotificationAndHandleResponse(eventId, deviceId, notificationId, enroll, response, cb);
+            }
 
-                entrantDB.updateNotificationState(deviceId, notificationId, updates, new EntrantDB.Callback<Void>() {
-                    @Override
-                    public void onSuccess(Void ignore) {
-                        // If declined, trigger automatic reselection
-                        if (!enroll) {
-                            handleAutomaticReselection(eventId, deviceId, cb);
-                        } else {
-                            cb.onSuccess();
-                        }
-                    }
+            @Override
+            public void onError(@NonNull Exception e) {
+                cb.onError(e);
+            }
+        });
+    }
 
-                    @Override
-                    public void onError(@NonNull Exception e) {
-                        cb.onError(e);
-                    }
-                });
+    /**
+     * Updates notification state and handles response logic.
+     */
+    private void updateNotificationAndHandleResponse(String eventId, String deviceId, String notificationId,
+                                                    boolean enroll, String response, ResponseCallback cb) {
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("read", true);
+        updates.put("response", response);
+        updates.put("respondedAt", System.currentTimeMillis());
+
+        entrantDB.updateNotificationState(deviceId, notificationId, updates, new EntrantDB.Callback<Void>() {
+            @Override
+            public void onSuccess(Void ignore) {
+                if (!enroll) {
+                    handleAutomaticReselection(eventId, deviceId, cb);
+                } else {
+                    cb.onSuccess();
+                }
             }
 
             @Override
@@ -98,20 +104,16 @@ public class InvitationResponseController {
 
     /**
      * Handles automatic reselection when an entrant declines an invitation.
-     * Tries replacement pool first, then waitlist. Promotes replacement and sends notification.
-     * Decline operation always succeeds even if reselection fails.
      *
      * @param eventId          the event ID
      * @param declinedEntrantId the device ID of the entrant who declined
      * @param cb               callback for completion
      */
     private void handleAutomaticReselection(String eventId, String declinedEntrantId, ResponseCallback cb) {
-        // Try replacement pool first
         eventDB.getReplacementPool(eventId, new EventDB.Callback<List<Map<String, Object>>>() {
             @Override
             public void onSuccess(List<Map<String, Object>> pool) {
                 if (pool != null && !pool.isEmpty()) {
-                    // Use first entry from replacement pool
                     Object deviceIdObj = pool.get(0).get("deviceId");
                     if (deviceIdObj == null || !(deviceIdObj instanceof String)) {
                         android.util.Log.w("InvitationResponseController", "Invalid deviceId in replacement pool, trying waitlist");
@@ -122,7 +124,6 @@ public class InvitationResponseController {
                     String source = "replacementPool";
                     promoteAndNotifyReplacement(eventId, declinedEntrantId, replacementId, source, cb);
                 } else {
-                    // Pool empty, try waitlist
                     tryWaitlistSelection(eventId, declinedEntrantId, cb);
                 }
             }
@@ -130,7 +131,6 @@ public class InvitationResponseController {
             @Override
             public void onError(@NonNull Exception e) {
                 android.util.Log.e("InvitationResponseController", "Failed to get replacement pool", e);
-                // Try waitlist as fallback
                 tryWaitlistSelection(eventId, declinedEntrantId, cb);
             }
         });
@@ -148,7 +148,6 @@ public class InvitationResponseController {
             @Override
             public void onSuccess(List<Map<String, Object>> waitlist) {
                 if (waitlist != null && !waitlist.isEmpty()) {
-                    // Randomly select from waitlist
                     Collections.shuffle(waitlist);
                     Object deviceIdObj = waitlist.get(0).get("deviceId");
                     if (deviceIdObj == null || !(deviceIdObj instanceof String)) {
@@ -160,7 +159,6 @@ public class InvitationResponseController {
                     String source = "waitlist";
                     promoteAndNotifyReplacement(eventId, declinedEntrantId, replacementId, source, cb);
                 } else {
-                    // No replacement available
                     logDeclineOnly(eventId, declinedEntrantId, cb);
                 }
             }
@@ -168,7 +166,6 @@ public class InvitationResponseController {
             @Override
             public void onError(@NonNull Exception e) {
                 android.util.Log.e("InvitationResponseController", "Failed to get waitlist", e);
-                // Log decline without replacement
                 logDeclineOnly(eventId, declinedEntrantId, cb);
             }
         });
@@ -176,7 +173,6 @@ public class InvitationResponseController {
 
     /**
      * Promotes a replacement entrant to winners and sends notification.
-     * Handles both pool and waitlist sources.
      *
      * @param eventId          the event ID
      * @param declinedEntrantId the device ID of the entrant who declined
@@ -192,39 +188,41 @@ public class InvitationResponseController {
         EventDB.Callback<Void> promoteCallback = new EventDB.Callback<Void>() {
             @Override
             public void onSuccess(Void ignore) {
-                // Send notification to replacement
-                String message = "Congratulations! You've been selected as a replacement. Proceed to signup.";
-                entrantDB.addNotification(replacementId, eventId, message, "winner", new EntrantDB.Callback<Void>() {
-                    @Override
-                    public void onSuccess(Void value) {
-                        // Log the decline and replacement
-                        logDeclineReplacement(eventId, declinedEntrantId, replacementId, source, true, cb);
-                    }
-
-                    @Override
-                    public void onError(@NonNull Exception e) {
-                        android.util.Log.e("InvitationResponseController", "Failed to notify replacement", e);
-                        // Log decline with notification failure
-                        logDeclineReplacement(eventId, declinedEntrantId, replacementId, source, false, cb);
-                    }
-                });
+                notifyReplacement(eventId, declinedEntrantId, replacementId, source, cb);
             }
 
             @Override
             public void onError(@NonNull Exception e) {
                 android.util.Log.e("InvitationResponseController", "Failed to promote replacement", e);
-                // Log decline with promotion failure
                 logDeclineReplacement(eventId, declinedEntrantId, replacementId, source, false, cb);
             }
         };
 
-        // Promote based on source
         if ("replacementPool".equals(source)) {
             eventDB.markReplacement(eventId, replacementId, promoteCallback);
         } else {
-            // Promote from waitlist
             eventDB.promoteFromWaitlist(eventId, replacementId, promoteCallback);
         }
+    }
+
+    /**
+     * Sends notification to replacement and logs the decline.
+     */
+    private void notifyReplacement(String eventId, String declinedEntrantId, String replacementId,
+                                  String source, ResponseCallback cb) {
+        String message = "Congratulations! You've been selected as a replacement. Proceed to signup.";
+        entrantDB.addNotification(replacementId, eventId, message, "winner", new EntrantDB.Callback<Void>() {
+            @Override
+            public void onSuccess(Void value) {
+                logDeclineReplacement(eventId, declinedEntrantId, replacementId, source, true, cb);
+            }
+
+            @Override
+            public void onError(@NonNull Exception e) {
+                android.util.Log.e("InvitationResponseController", "Failed to notify replacement", e);
+                logDeclineReplacement(eventId, declinedEntrantId, replacementId, source, false, cb);
+            }
+        });
     }
 
     /**
@@ -239,8 +237,7 @@ public class InvitationResponseController {
     }
 
     /**
-     * Logs a decline and replacement, then completes the callback.
-     * Errors in logging don't fail the decline operation.
+     * Logs a decline and replacement.
      *
      * @param eventId            the event ID
      * @param declinedEntrantId  the device ID of the entrant who declined
@@ -264,7 +261,6 @@ public class InvitationResponseController {
 
                     @Override
                     public void onError(@NonNull Exception e) {
-                        // Log error but don't fail the decline operation
                         android.util.Log.e("InvitationResponseController", "Failed to log decline replacement", e);
                         cb.onSuccess();
                     }

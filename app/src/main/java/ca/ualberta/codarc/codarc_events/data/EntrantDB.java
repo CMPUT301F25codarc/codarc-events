@@ -12,17 +12,20 @@ import com.google.firebase.firestore.SetOptions;
 import com.google.firebase.firestore.WriteBatch;
 
 import java.util.ArrayList;
-
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import ca.ualberta.codarc.codarc_events.models.Entrant;
+import ca.ualberta.codarc.codarc_events.utils.ValidationHelper;
 
 /**
  * Handles Entrants collection - profile info and notifications.
  */
 public class EntrantDB {
+
+    private static final int BATCH_SIZE = 500;
 
     public interface Callback<T> {
         void onSuccess(T value);
@@ -35,7 +38,12 @@ public class EntrantDB {
         this.db = FirebaseFirestore.getInstance();
     }
 
-    // Backwards compat - just checks if exists
+    /**
+     * Checks if entrant exists.
+     *
+     * @param deviceId the device ID
+     * @param cb callback for completion
+     */
     public void getOrCreateEntrant(String deviceId, Callback<Void> cb) {
         entrantExists(deviceId, new Callback<Boolean>() {
             @Override
@@ -51,8 +59,10 @@ public class EntrantDB {
     }
 
     public void entrantExists(String deviceId, Callback<Boolean> cb) {
-        if (deviceId == null || deviceId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("deviceId is empty"));
+        try {
+            ValidationHelper.requireNonEmpty(deviceId, "deviceId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
         
@@ -64,10 +74,18 @@ public class EntrantDB {
             .addOnFailureListener(cb::onError);
     }
 
-    // Creates entrant doc (called when user joins first waitlist)
+    /**
+     * Creates an entrant document.
+     *
+     * @param entrant the entrant to create
+     * @param cb callback for completion
+     */
     public void createEntrant(Entrant entrant, Callback<Void> cb) {
-        if (entrant == null || entrant.getDeviceId() == null || entrant.getDeviceId().isEmpty()) {
-            cb.onError(new IllegalArgumentException("entrant or deviceId is invalid"));
+        try {
+            ValidationHelper.requireNonNull(entrant, "entrant");
+            ValidationHelper.requireNonEmpty(entrant.getDeviceId(), "entrant.deviceId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
         
@@ -78,8 +96,10 @@ public class EntrantDB {
     }
 
     public void getProfile(String deviceId, Callback<Entrant> cb) {
-        if (deviceId == null || deviceId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("deviceId is empty"));
+        try {
+            ValidationHelper.requireNonEmpty(deviceId, "deviceId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
         db.collection("entrants").document(deviceId)
@@ -94,15 +114,19 @@ public class EntrantDB {
                 .addOnFailureListener(cb::onError);
     }
 
-
-    // merge update so we don't lose existing fields
+    /**
+     * Updates or creates an entrant profile.
+     *
+     * @param deviceId the device ID
+     * @param entrant the entrant data
+     * @param cb callback for completion
+     */
     public void upsertProfile(String deviceId, Entrant entrant, Callback<Void> cb) {
-        if (deviceId == null || deviceId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("deviceId is empty"));
-            return;
-        }
-        if (entrant == null) {
-            cb.onError(new IllegalArgumentException("entrant is null"));
+        try {
+            ValidationHelper.requireNonEmpty(deviceId, "deviceId");
+            ValidationHelper.requireNonNull(entrant, "entrant");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
         entrant.setDeviceId(deviceId);
@@ -112,18 +136,25 @@ public class EntrantDB {
                 .addOnFailureListener(cb::onError);
     }
 
-    // Adds notification to entrant's notifications subcollection
+    /**
+     * Adds a notification to the entrant's notifications subcollection.
+     *
+     * @param deviceId the device ID
+     * @param eventId the event ID
+     * @param message the notification message
+     * @param category the notification category
+     * @param cb callback for completion
+     */
     public void addNotification(String deviceId,
                                 String eventId,
                                 String message,
                                 String category,
                                 Callback<Void> cb) {
-        if (deviceId == null || deviceId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("deviceId is empty"));
-            return;
-        }
-        if (message == null || message.isEmpty()) {
-            cb.onError(new IllegalArgumentException("message is empty"));
+        try {
+            ValidationHelper.requireNonEmpty(deviceId, "deviceId");
+            ValidationHelper.requireNonEmpty(message, "message");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
 
@@ -143,8 +174,10 @@ public class EntrantDB {
     }
 
     public void getNotifications(String deviceId, Callback<List<Map<String, Object>>> cb) {
-        if (deviceId == null || deviceId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("deviceId is empty"));
+        try {
+            ValidationHelper.requireNonEmpty(deviceId, "deviceId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
 
@@ -166,21 +199,27 @@ public class EntrantDB {
                 .addOnFailureListener(cb::onError);
     }
 
-    // Updates notification (read status, response, etc.)
+    /**
+     * Updates notification state.
+     *
+     * @param deviceId the device ID
+     * @param notificationId the notification ID
+     * @param updates map of fields to update
+     * @param cb callback for completion
+     */
     public void updateNotificationState(String deviceId,
                                         String notificationId,
                                         Map<String, Object> updates,
                                         Callback<Void> cb) {
-        if (deviceId == null || deviceId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("deviceId is empty"));
-            return;
-        }
-        if (notificationId == null || notificationId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("notificationId is empty"));
-            return;
-        }
-        if (updates == null || updates.isEmpty()) {
-            cb.onError(new IllegalArgumentException("updates is empty"));
+        try {
+            ValidationHelper.requireNonEmpty(deviceId, "deviceId");
+            ValidationHelper.requireNonEmpty(notificationId, "notificationId");
+            ValidationHelper.requireNonNull(updates, "updates");
+            if (updates.isEmpty()) {
+                throw new IllegalArgumentException("updates cannot be empty");
+            }
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
 
@@ -194,14 +233,19 @@ public class EntrantDB {
                 .addOnFailureListener(cb::onError);
     }
 
-    // Adds event to entrant's events subcollection
+    /**
+     * Adds an event to the entrant's events subcollection.
+     *
+     * @param deviceId the device ID
+     * @param eventId the event ID
+     * @param cb callback for completion
+     */
     public void addEventToEntrant(String deviceId, String eventId, Callback<Void> cb) {
-        if (deviceId == null || deviceId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("deviceId is empty"));
-            return;
-        }
-        if (eventId == null || eventId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("eventId is empty"));
+        try {
+            ValidationHelper.requireNonEmpty(deviceId, "deviceId");
+            ValidationHelper.requireNonEmpty(eventId, "eventId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
         
@@ -216,8 +260,10 @@ public class EntrantDB {
     }
 
     public void getEntrantEvents(String deviceId, Callback<List<String>> cb) {
-        if (deviceId == null || deviceId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("deviceId is empty"));
+        try {
+            ValidationHelper.requireNonEmpty(deviceId, "deviceId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
         
@@ -240,23 +286,21 @@ public class EntrantDB {
     }
 
     /**
-     * Retrieves the list of event IDs from the entrant's registration history.
-     * Queries the events subcollection under entrants/{deviceId}/events.
+     * Gets the entrant's registration history.
      *
      * @param deviceId the device ID of the entrant
-     * @param cb       callback that receives the list of event IDs
+     * @param cb callback that receives the list of event IDs
      */
     public void getRegistrationHistory(String deviceId, Callback<List<String>> cb) {
         getEntrantEvents(deviceId, cb);
     }
 
     public void removeEventFromEntrant(String deviceId, String eventId, Callback<Void> cb) {
-        if (deviceId == null || deviceId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("deviceId is empty"));
-            return;
-        }
-        if (eventId == null || eventId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("eventId is empty"));
+        try {
+            ValidationHelper.requireNonEmpty(deviceId, "deviceId");
+            ValidationHelper.requireNonEmpty(eventId, "eventId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
         
@@ -269,15 +313,15 @@ public class EntrantDB {
 
     /**
      * Deletes all events from the entrant's events subcollection.
-     * Used when admin removes a profile to clean up registration history.
-     * Handles Firestore batch write limit (500 operations per batch) by batching deletions.
      *
      * @param deviceId the device ID of the entrant
      * @param cb callback for completion
      */
     public void deleteAllEntrantEvents(String deviceId, Callback<Void> cb) {
-        if (deviceId == null || deviceId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("deviceId is empty"));
+        try {
+            ValidationHelper.requireNonEmpty(deviceId, "deviceId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
         
@@ -290,21 +334,18 @@ public class EntrantDB {
                     return;
                 }
                 
-                // Collect all documents to delete
                 List<QueryDocumentSnapshot> docs = new ArrayList<>();
                 for (QueryDocumentSnapshot doc : querySnapshot) {
                     docs.add(doc);
                 }
                 
-                // Delete in batches to respect Firestore's 500 operation limit
                 deleteInBatches(docs, 0, cb);
             })
             .addOnFailureListener(cb::onError);
     }
 
     /**
-     * Recursively deletes documents in batches to respect Firestore's batch write limit.
-     * Firestore allows maximum 500 operations per batch write.
+     * Deletes documents in batches.
      *
      * @param docs list of documents to delete
      * @param startIndex starting index for this batch
@@ -317,24 +358,29 @@ public class EntrantDB {
         }
         
         WriteBatch batch = db.batch();
-        int endIndex = Math.min(startIndex + 500, docs.size());
+        int endIndex = Math.min(startIndex + BATCH_SIZE, docs.size());
         
         for (int i = startIndex; i < endIndex; i++) {
             batch.delete(docs.get(i).getReference());
         }
         
         batch.commit()
-            .addOnSuccessListener(unused -> {
-                // Continue with next batch if there are more documents
-                deleteInBatches(docs, endIndex, cb);
-            })
+            .addOnSuccessListener(unused -> deleteInBatches(docs, endIndex, cb))
             .addOnFailureListener(cb::onError);
     }
     
-    // Bans/unbans an entrant (admin only)
+    /**
+     * Sets the banned status of an entrant.
+     *
+     * @param deviceId the device ID
+     * @param banned true to ban, false to unban
+     * @param cb callback for completion
+     */
     public void setBannedStatus(String deviceId, boolean banned, Callback<Void> cb) {
-        if (deviceId == null || deviceId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("deviceId is empty"));
+        try {
+            ValidationHelper.requireNonEmpty(deviceId, "deviceId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
         
@@ -345,43 +391,41 @@ public class EntrantDB {
     }
     
     public void isBanned(String deviceId, Callback<Boolean> cb) {
-        if (deviceId == null || deviceId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("deviceId is empty"));
+        try {
+            ValidationHelper.requireNonEmpty(deviceId, "deviceId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
         
         getProfile(deviceId, new Callback<Entrant>() {
             @Override
             public void onSuccess(Entrant entrant) {
-                if (entrant != null) {
-                    cb.onSuccess(entrant.isBanned());
-                } else {
-                    cb.onSuccess(false); // Not an entrant, so not banned as entrant
-                }
+                cb.onSuccess(entrant != null && entrant.isBanned());
             }
 
             @Override
             public void onError(@NonNull Exception e) {
-                // If entrant doesn't exist, they're not banned
                 cb.onSuccess(false);
             }
         });
     }
 
     /**
-     * Clears profile data but keeps the document (don't delete it).
-     * Also sets the banned flag to true to prevent re-registration.
+     * Clears profile data.
      *
      * @param deviceId the device ID of the entrant
+     * @param shouldBan true to set banned flag, false to keep it as is
      * @param cb callback for completion
      */
-    public void deleteProfile(String deviceId, Callback<Void> cb) {
-        if (deviceId == null || deviceId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("deviceId is empty"));
+    public void deleteProfile(String deviceId, boolean shouldBan, Callback<Void> cb) {
+        try {
+            ValidationHelper.requireNonEmpty(deviceId, "deviceId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
 
-        // Get existing entrant to preserve createdAtUtc
         getProfile(deviceId, new Callback<Entrant>() {
             @Override
             public void onSuccess(Entrant existing) {
@@ -390,26 +434,24 @@ public class EntrantDB {
                 cleared.setEmail("");
                 cleared.setPhone("");
                 cleared.setIsRegistered(false);
-                cleared.setBanned(true); // Set banned flag to prevent re-registration
+                cleared.setBanned(shouldBan);
                 upsertProfile(deviceId, cleared, cb);
             }
 
             @Override
             public void onError(@NonNull Exception e) {
-                // Entrant doesn't exist, create new one with cleared data and banned flag
                 Entrant cleared = new Entrant(deviceId, "", System.currentTimeMillis());
                 cleared.setEmail("");
                 cleared.setPhone("");
                 cleared.setIsRegistered(false);
-                cleared.setBanned(true); // Set banned flag to prevent re-registration
+                cleared.setBanned(shouldBan);
                 upsertProfile(deviceId, cleared, cb);
             }
         });
     }
 
     /**
-     * Retrieves all entrant profiles from Firestore.
-     * Used by admin to display list of all entrants.
+     * Gets all entrant profiles.
      *
      * @param cb callback that receives list of all entrants
      */
@@ -433,19 +475,17 @@ public class EntrantDB {
 
     /**
      * Removes a notification from the entrant's notifications subcollection.
-     * Used for lazy cleanup of notifications for deleted events.
      *
      * @param deviceId the device ID of the entrant
      * @param notificationId the notification ID to remove
      * @param cb callback for completion
      */
     public void removeNotification(String deviceId, String notificationId, Callback<Void> cb) {
-        if (deviceId == null || deviceId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("deviceId is empty"));
-            return;
-        }
-        if (notificationId == null || notificationId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("notificationId is empty"));
+        try {
+            ValidationHelper.requireNonEmpty(deviceId, "deviceId");
+            ValidationHelper.requireNonEmpty(notificationId, "notificationId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
         
@@ -454,6 +494,314 @@ public class EntrantDB {
             .delete()
             .addOnSuccessListener(unused -> cb.onSuccess(null))
             .addOnFailureListener(cb::onError);
+    }
+
+    /**
+     * Gets all notifications across all entrants for admin review.
+     * Returns notifications with entrant deviceId, eventId, message, timestamp, category.
+     *
+     * @param callback callback with list of notification maps
+     */
+    public void getAllNotificationsForAdmin(Callback<List<Map<String, Object>>> callback) {
+        db.collection("entrants")
+                .get()
+                .addOnSuccessListener(entrantsSnapshot -> {
+                    if (entrantsSnapshot == null || entrantsSnapshot.isEmpty()) {
+                        callback.onSuccess(new ArrayList<>());
+                        return;
+                    }
+
+                    final int totalEntrants = entrantsSnapshot.size();
+                    final List<Map<String, Object>> allNotifications = Collections.synchronizedList(new ArrayList<>());
+                    final NotificationAggregator aggregator = new NotificationAggregator(totalEntrants, allNotifications, callback);
+
+                    if (totalEntrants == 0) {
+                        callback.onSuccess(allNotifications);
+                        return;
+                    }
+
+                    for (QueryDocumentSnapshot entrantDoc : entrantsSnapshot) {
+                        String deviceId = entrantDoc.getId();
+                        entrantDoc.getReference()
+                                .collection("notifications")
+                                .orderBy("createdAt", Query.Direction.DESCENDING)
+                                .get()
+                                .addOnSuccessListener(notificationsSnapshot -> {
+                                    if (notificationsSnapshot != null) {
+                                        for (QueryDocumentSnapshot notificationDoc : notificationsSnapshot) {
+                                            Map<String, Object> notificationData = new HashMap<>(notificationDoc.getData());
+                                            notificationData.put("id", notificationDoc.getId());
+                                            notificationData.put("entrantDeviceId", deviceId);
+                                            allNotifications.add(notificationData);
+                                        }
+                                    }
+                                    aggregator.onEntrantProcessed();
+                                })
+                                .addOnFailureListener(e -> {
+                                    aggregator.onEntrantProcessed();
+                                });
+                    }
+                })
+                .addOnFailureListener(callback::onError);
+    }
+
+    /**
+     * Helper class to track notification aggregation completion.
+     */
+    private static class NotificationAggregator {
+        private final int total;
+        private final List<Map<String, Object>> notifications;
+        private final Callback<List<Map<String, Object>>> callback;
+        private int completed;
+
+        NotificationAggregator(int total, List<Map<String, Object>> notifications,
+                              Callback<List<Map<String, Object>>> callback) {
+            this.total = total;
+            this.notifications = notifications;
+            this.callback = callback;
+            this.completed = 0;
+        }
+
+        synchronized void onEntrantProcessed() {
+            completed++;
+            if (completed == total) {
+                callback.onSuccess(notifications);
+            }
+        }
+    }
+
+    /**
+     * Removes an event from all entrants' event history.
+     *
+     * @param eventId the event ID to remove
+     * @param cb callback for completion
+     */
+    public void removeEventFromAllEntrants(String eventId, Callback<Void> cb) {
+        try {
+            ValidationHelper.requireNonEmpty(eventId, "eventId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
+            return;
+        }
+
+        db.collection("entrants")
+                .get()
+                .addOnSuccessListener(entrantsSnapshot -> {
+                    if (entrantsSnapshot == null || entrantsSnapshot.isEmpty()) {
+                        cb.onSuccess(null);
+                        return;
+                    }
+
+                    final int totalEntrants = entrantsSnapshot.size();
+                    final EventRemovalAggregator aggregator = new EventRemovalAggregator(totalEntrants, cb);
+
+                    for (QueryDocumentSnapshot entrantDoc : entrantsSnapshot) {
+                        String deviceId = entrantDoc.getId();
+                        removeEventFromEntrant(deviceId, eventId, new Callback<Void>() {
+                            @Override
+                            public void onSuccess(Void value) {
+                                aggregator.onEntrantProcessed();
+                            }
+
+                            @Override
+                            public void onError(@NonNull Exception e) {
+                                aggregator.onEntrantProcessed();
+                            }
+                        });
+                    }
+                })
+                .addOnFailureListener(cb::onError);
+    }
+
+    /**
+     * Removes all notifications for a specific event across all entrants.
+     *
+     * @param eventId the event ID
+     * @param cb callback for completion
+     */
+    public void removeNotificationsForEvent(String eventId, Callback<Void> cb) {
+        try {
+            ValidationHelper.requireNonEmpty(eventId, "eventId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
+            return;
+        }
+
+        db.collection("entrants")
+                .get()
+                .addOnSuccessListener(entrantsSnapshot -> {
+                    if (entrantsSnapshot == null || entrantsSnapshot.isEmpty()) {
+                        cb.onSuccess(null);
+                        return;
+                    }
+
+                    final int totalEntrants = entrantsSnapshot.size();
+                    final NotificationRemovalAggregator aggregator = new NotificationRemovalAggregator(totalEntrants, cb);
+
+                    for (QueryDocumentSnapshot entrantDoc : entrantsSnapshot) {
+                        String deviceId = entrantDoc.getId();
+                        entrantDoc.getReference()
+                                .collection("notifications")
+                                .whereEqualTo("eventId", eventId)
+                                .get()
+                                .addOnSuccessListener(notificationsSnapshot -> {
+                                    if (notificationsSnapshot != null && !notificationsSnapshot.isEmpty()) {
+                                        WriteBatch batch = db.batch();
+                                        for (QueryDocumentSnapshot notificationDoc : notificationsSnapshot) {
+                                            batch.delete(notificationDoc.getReference());
+                                        }
+                                        batch.commit()
+                                                .addOnSuccessListener(unused -> aggregator.onEntrantProcessed())
+                                                .addOnFailureListener(e -> aggregator.onEntrantProcessed());
+                                    } else {
+                                        aggregator.onEntrantProcessed();
+                                    }
+                                })
+                                .addOnFailureListener(e -> aggregator.onEntrantProcessed());
+                    }
+                })
+                .addOnFailureListener(cb::onError);
+    }
+
+    private static class EventRemovalAggregator {
+        private final int total;
+        private final Callback<Void> callback;
+        private int completed;
+
+        EventRemovalAggregator(int total, Callback<Void> callback) {
+            this.total = total;
+            this.callback = callback;
+            this.completed = 0;
+        }
+
+        synchronized void onEntrantProcessed() {
+            completed++;
+            if (completed == total) {
+                callback.onSuccess(null);
+            }
+        }
+    }
+
+    private static class NotificationRemovalAggregator {
+        private final int total;
+        private final Callback<Void> callback;
+        private int completed;
+
+        NotificationRemovalAggregator(int total, Callback<Void> callback) {
+            this.total = total;
+            this.callback = callback;
+            this.completed = 0;
+        }
+
+        synchronized void onEntrantProcessed() {
+            completed++;
+            if (completed == total) {
+                callback.onSuccess(null);
+            }
+        }
+    }
+
+    /**
+     * Stores FCM token for an entrant.
+     *
+     * @param deviceId the device ID
+     * @param token the FCM token
+     * @param callback callback for completion
+     */
+    public void saveFCMToken(String deviceId, String token, Callback<Void> callback) {
+        try {
+            ValidationHelper.requireNonEmpty(deviceId, "deviceId");
+            ValidationHelper.requireNonEmpty(token, "token");
+        } catch (IllegalArgumentException e) {
+            callback.onError(e);
+            return;
+        }
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("fcmToken", token);
+
+        db.collection("entrants").document(deviceId)
+                .set(data, SetOptions.merge())
+                .addOnSuccessListener(unused -> callback.onSuccess(null))
+                .addOnFailureListener(callback::onError);
+    }
+
+    /**
+     * Gets FCM token for an entrant.
+     *
+     * @param deviceId the device ID
+     * @param callback callback with token (may be null if not set)
+     */
+    public void getFCMToken(String deviceId, Callback<String> callback) {
+        try {
+            ValidationHelper.requireNonEmpty(deviceId, "deviceId");
+        } catch (IllegalArgumentException e) {
+            callback.onError(e);
+            return;
+        }
+
+        db.collection("entrants").document(deviceId)
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    if (snapshot != null && snapshot.exists()) {
+                        String token = snapshot.getString("fcmToken");
+                        callback.onSuccess(token);
+                    } else {
+                        callback.onSuccess(null);
+                    }
+                })
+                .addOnFailureListener(callback::onError);
+    }
+
+    /**
+     * Gets notification preference for an entrant.
+     *
+     * @param deviceId the device ID
+     * @param callback callback with preference (defaults to true if not set)
+     */
+    public void getNotificationPreference(String deviceId, Callback<Boolean> callback) {
+        try {
+            ValidationHelper.requireNonEmpty(deviceId, "deviceId");
+        } catch (IllegalArgumentException e) {
+            callback.onError(e);
+            return;
+        }
+
+        db.collection("entrants").document(deviceId)
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    if (snapshot != null && snapshot.exists()) {
+                        Boolean enabled = snapshot.getBoolean("notificationEnabled");
+                        callback.onSuccess(enabled != null ? enabled : true);
+                    } else {
+                        callback.onSuccess(true);
+                    }
+                })
+                .addOnFailureListener(callback::onError);
+    }
+
+    /**
+     * Sets notification preference for an entrant.
+     *
+     * @param deviceId the device ID
+     * @param enabled whether notifications are enabled
+     * @param callback callback for completion
+     */
+    public void setNotificationPreference(String deviceId, boolean enabled, Callback<Void> callback) {
+        try {
+            ValidationHelper.requireNonEmpty(deviceId, "deviceId");
+        } catch (IllegalArgumentException e) {
+            callback.onError(e);
+            return;
+        }
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("notificationEnabled", enabled);
+
+        db.collection("entrants").document(deviceId)
+                .set(data, SetOptions.merge())
+                .addOnSuccessListener(unused -> callback.onSuccess(null))
+                .addOnFailureListener(callback::onError);
     }
 
 }

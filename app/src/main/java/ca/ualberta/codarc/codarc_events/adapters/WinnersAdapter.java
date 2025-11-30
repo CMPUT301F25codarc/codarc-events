@@ -11,6 +11,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.button.MaterialButton;
+
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -55,7 +57,6 @@ public class WinnersAdapter extends RecyclerView.Adapter<WinnersAdapter.ViewHold
                 : "Unknown";
         holder.timeText.setText(timeStr);
 
-        // Set status text and color
         String statusText;
         int nameColor;
         Boolean isEnrolled = item.getIsEnrolled();
@@ -64,16 +65,17 @@ public class WinnersAdapter extends RecyclerView.Adapter<WinnersAdapter.ViewHold
             nameColor = Color.BLACK;
         } else if (Boolean.TRUE.equals(isEnrolled)) {
             statusText = "Accepted";
-            nameColor = Color.parseColor("#4CAF50"); // Green
+            nameColor = Color.parseColor("#4CAF50");
         } else {
             statusText = "Declined";
-            nameColor = Color.parseColor("#F44336"); // Red
+            nameColor = Color.parseColor("#F44336");
         }
 
         holder.statusText.setText(statusText);
         holder.nameText.setTextColor(nameColor);
 
-        holder.cancelButton.setVisibility(statusText.equals("Pending") ? View.VISIBLE : View.GONE);
+        boolean isPending = isEnrolled == null;
+        holder.cancelButton.setVisibility(isPending ? View.VISIBLE : View.GONE);
         holder.cancelButton.setOnClickListener(v -> {
             if (actionListener != null) {
                 actionListener.onCancelRequested(item.getDeviceId());
@@ -90,7 +92,7 @@ public class WinnersAdapter extends RecyclerView.Adapter<WinnersAdapter.ViewHold
         TextView nameText;
         TextView timeText;
         TextView statusText;
-        Button cancelButton;
+        MaterialButton cancelButton;
 
         ViewHolder(View itemView) {
             super(itemView);

@@ -13,18 +13,15 @@ import ca.ualberta.codarc.codarc_events.data.TagDB;
 import ca.ualberta.codarc.codarc_events.data.UserDB;
 import ca.ualberta.codarc.codarc_events.models.Event;
 import ca.ualberta.codarc.codarc_events.models.User;
+import ca.ualberta.codarc.codarc_events.utils.ValidationHelper;
 
 /**
  * Handles event deletion by administrators.
- * Validates admin status, coordinates deletion of event data, poster, and related references.
  */
 public class DeleteEventController {
 
     private static final String TAG = "DeleteEventController";
 
-    /**
-     * Result object for event deletion operations.
-     */
     public static class DeleteEventResult {
         private final boolean success;
         private final String errorMessage;
@@ -67,73 +64,82 @@ public class DeleteEventController {
 
     /**
      * Deletes an event and all associated data.
-     * Validates admin status, then coordinates deletion of:
-     * - Event document and all subcollections
-     * - Event poster from Firebase Storage
-     * - Event reference from organizer's events
-     * - Tag usage count decrement
      *
      * @param eventId the event ID to delete
      * @param adminDeviceId the device ID of the admin performing the deletion
      * @param callback callback for completion
      */
     public void deleteEvent(String eventId, String adminDeviceId, Callback callback) {
-        if (eventId == null || eventId.isEmpty()) {
-            callback.onResult(DeleteEventResult.failure("Event ID is required"));
-            return;
-        }
-        if (adminDeviceId == null || adminDeviceId.isEmpty()) {
-            callback.onResult(DeleteEventResult.failure("Admin device ID is required"));
+        try {
+            ValidationHelper.requireNonEmpty(eventId, "eventId");
+            ValidationHelper.requireNonEmpty(adminDeviceId, "adminDeviceId");
+        } catch (IllegalArgumentException e) {
+            callback.onResult(DeleteEventResult.failure(e.getMessage()));
             return;
         }
 
-        // Step 1: Validate admin status
         validateAdminStatus(adminDeviceId, new ValidationCallback() {
             @Override
             public void onSuccess() {
-                // Step 2: Validate event exists and get event details
-                validateAndGetEvent(eventId, new EventCallback() {
-                    @Override
-                    public void onSuccess(Event event) {
-                        // Step 3: Delete poster (non-blocking)
-                        deletePoster(eventId);
-
-                        // Step 4: Remove from organizer's events (non-blocking)
-                        if (event.getOrganizerId() != null && !event.getOrganizerId().isEmpty()) {
-                            removeFromOrganizer(event.getOrganizerId(), eventId);
-                        }
-
-                        // Step 5: Decrement tag usage (non-blocking)
-                        if (event.getTags() != null && !event.getTags().isEmpty()) {
-                            decrementTagUsage(event.getTags());
-                        }
-
-                        // Step 6: Delete event document and all subcollections (critical operation)
-                        eventDB.deleteEvent(eventId, new EventDB.Callback<Void>() {
-                            @Override
-                            public void onSuccess(Void value) {
-                                Log.d(TAG, "Event deleted successfully: " + eventId);
-                                callback.onResult(DeleteEventResult.success());
-                            }
-
-                            @Override
-                            public void onError(@NonNull Exception e) {
-                                Log.e(TAG, "Failed to delete event: " + eventId, e);
-                                callback.onResult(DeleteEventResult.failure("Failed to delete event. Please try again."));
-                            }
-                        });
-                    }
-
-                    @Override
-                    public void onError(String errorMessage) {
-                        callback.onResult(DeleteEventResult.failure(errorMessage));
-                    }
-                });
+                proceedWithEventDeletion(eventId, callback);
             }
 
             @Override
             public void onError(String errorMessage) {
                 callback.onResult(DeleteEventResult.failure(errorMessage));
+            }
+        });
+    }
+
+    /**
+     * Proceeds with event deletion after admin validation.
+     */
+    private void proceedWithEventDeletion(String eventId, Callback callback) {
+        validateAndGetEvent(eventId, new EventCallback() {
+            @Override
+            public void onSuccess(Event event) {
+                performCleanupOperations(eventId, event);
+                deleteEventFromFirestore(eventId, callback);
+            }
+
+            @Override
+            public void onError(String errorMessage) {
+                callback.onResult(DeleteEventResult.failure(errorMessage));
+            }
+        });
+    }
+
+    /**
+     * Performs cleanup operations (poster deletion, organizer removal, tag decrement).
+     * These are fire-and-forget operations that don't block event deletion.
+     */
+    private void performCleanupOperations(String eventId, Event event) {
+        deletePoster(eventId);
+
+        if (event.getOrganizerId() != null && !event.getOrganizerId().isEmpty()) {
+            removeFromOrganizer(event.getOrganizerId(), eventId);
+        }
+
+        if (event.getTags() != null && !event.getTags().isEmpty()) {
+            decrementTagUsage(event.getTags());
+        }
+    }
+
+    /**
+     * Deletes the event from Firestore.
+     */
+    private void deleteEventFromFirestore(String eventId, Callback callback) {
+        eventDB.deleteEvent(eventId, new EventDB.Callback<Void>() {
+            @Override
+            public void onSuccess(Void value) {
+                Log.d(TAG, "Event deleted successfully: " + eventId);
+                callback.onResult(DeleteEventResult.success());
+            }
+
+            @Override
+            public void onError(@NonNull Exception e) {
+                Log.e(TAG, "Failed to delete event: " + eventId, e);
+                callback.onResult(DeleteEventResult.failure("Failed to delete event. Please try again."));
             }
         });
     }
@@ -186,7 +192,6 @@ public class DeleteEventController {
 
     /**
      * Deletes the event poster from Firebase Storage.
-     * Non-blocking - logs errors but doesn't fail the overall operation.
      *
      * @param eventId the event ID
      */
@@ -199,7 +204,6 @@ public class DeleteEventController {
 
             @Override
             public void onError(@NonNull Exception e) {
-                // Log warning but don't fail - poster may not exist
                 Log.w(TAG, "Failed to delete poster for event: " + eventId, e);
             }
         });
@@ -207,7 +211,6 @@ public class DeleteEventController {
 
     /**
      * Removes the event from the organizer's events subcollection.
-     * Non-blocking - logs errors but doesn't fail the overall operation.
      *
      * @param organizerId the organizer's device ID
      * @param eventId the event ID
@@ -221,7 +224,6 @@ public class DeleteEventController {
 
             @Override
             public void onError(@NonNull Exception e) {
-                // Log warning but don't fail - organizer may not exist
                 Log.w(TAG, "Failed to remove event from organizer: " + eventId, e);
             }
         });
@@ -229,7 +231,6 @@ public class DeleteEventController {
 
     /**
      * Decrements tag usage counts for the event's tags.
-     * Non-blocking - logs errors but doesn't fail the overall operation.
      *
      * @param tags the list of tags to decrement
      */
@@ -242,7 +243,6 @@ public class DeleteEventController {
 
             @Override
             public void onError(@NonNull Exception e) {
-                // Log warning but don't fail - tags are secondary
                 Log.w(TAG, "Failed to decrement tag usage", e);
             }
         });

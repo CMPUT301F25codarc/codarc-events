@@ -18,12 +18,7 @@ import static org.mockito.Mockito.*;
 import androidx.annotation.NonNull;
 
 /**
- * Robolectric-based JVM tests for ProfileController.
- * Requires test deps:
- *   testImplementation "org.robolectric:robolectric:<latest>"
- *   testImplementation "org.mockito:mockito-core:<latest>"
- *   testImplementation "org.mockito:mockito-inline:<latest>"
- *   testImplementation "junit:junit:4.13.2"
+ * Tests for ProfileController.
  */
 @RunWith(RobolectricTestRunner.class)
 @Config(manifest = Config.NONE, sdk = 28)
@@ -37,8 +32,6 @@ public class ProfileControllerTests {
         mockEntrantDb = mock(EntrantDB.class);
         controller = new ProfileController(mockEntrantDb);
     }
-
-    // ---------- validateAndCreateProfile: failures ----------
 
     @Test
     public void validate_nullDeviceId_fails() {
@@ -76,7 +69,6 @@ public class ProfileControllerTests {
         assertNull(res.getEntrant());
     }
 
-    // ---------- validateAndCreateProfile: success ----------
     @Test
     public void validate_success_allowsNullPhone_setsEmptyString() {
         ProfileController.ProfileResult res =
@@ -87,8 +79,6 @@ public class ProfileControllerTests {
         assertNotNull(e);
         assertEquals("", e.getPhone());
     }
-
-    // ---------- saveProfile ----------
 
     @Test
     public void saveProfile_nullDeviceId_onError() {
@@ -169,7 +159,7 @@ public class ProfileControllerTests {
 
         ArgumentCaptor<EntrantDB.Callback<Void>> cap =
                 ArgumentCaptor.forClass(EntrantDB.Callback.class);
-        verify(mockEntrantDb).deleteProfile(eq("dev1"), cap.capture());
+        verify(mockEntrantDb).deleteProfile(eq("dev1"), eq(false), cap.capture());
 
         cap.getValue().onSuccess(null);
 
@@ -185,7 +175,7 @@ public class ProfileControllerTests {
 
         ArgumentCaptor<EntrantDB.Callback<Void>> cap =
                 ArgumentCaptor.forClass(EntrantDB.Callback.class);
-        verify(mockEntrantDb).deleteProfile(eq("dev1"), cap.capture());
+        verify(mockEntrantDb).deleteProfile(eq("dev1"), eq(false), cap.capture());
 
         Exception oof = new Exception("nope");
         cap.getValue().onError(oof);
@@ -194,7 +184,6 @@ public class ProfileControllerTests {
         assertSame(oof, cb.error);
     }
 
-    // Simple helper to capture success/error without extra mocking noise
     private static class VoidCb implements EntrantDB.Callback<Void> {
         boolean succeeded = false;
         boolean errored = false;

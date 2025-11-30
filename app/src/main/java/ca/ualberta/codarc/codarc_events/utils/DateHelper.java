@@ -20,7 +20,7 @@ public class DateHelper {
             return output.format(date);
 
         } catch (Exception e) {
-            return rawTimeDate; // fallback if it doesn't work
+            return rawTimeDate;
         }
     }
 }

@@ -57,22 +57,18 @@ public class EventSettingsActivity extends AppCompatActivity {
             return;
         }
 
-        // Initialize data layer and controller
         eventDB = new EventDB();
         posterStorage = new PosterStorage();
         updatePosterController = new UpdatePosterController(eventDB, posterStorage);
 
-        // Setup image picker
         setupImagePicker();
 
-        // Get UI references
         updatePosterBtn = findViewById(R.id.btn_update_poster);
         progressBar = findViewById(R.id.progress_bar);
         if (progressBar != null) {
             progressBar.setVisibility(View.GONE);
         }
 
-        // Set up update poster button
         if (updatePosterBtn != null) {
             updatePosterBtn.setOnClickListener(v -> openImagePicker());
         }
@@ -112,11 +108,15 @@ public class EventSettingsActivity extends AppCompatActivity {
             intent.putExtra("eventId", event.getId());
             startActivity(intent);
         });
+
+        MaterialButton viewMapBtn = findViewById(R.id.btn_view_map);
+        viewMapBtn.setOnClickListener(v -> {
+            Intent intent = new Intent(this, EntrantMapActivity.class);
+            intent.putExtra("eventId", event.getId());
+            startActivity(intent);
+        });
     }
 
-    /**
-     * Sets up the image picker using Activity Result API.
-     */
     private void setupImagePicker() {
         imagePickerLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
@@ -133,21 +133,12 @@ public class EventSettingsActivity extends AppCompatActivity {
         );
     }
 
-    /**
-     * Opens the image picker to select a new poster image.
-     */
     private void openImagePicker() {
         Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
         intent.setType("image/*");
         imagePickerLauncher.launch(intent);
     }
 
-    /**
-     * Updates the event poster with the selected image.
-     * Uses UpdatePosterController to handle the business logic.
-     *
-     * @param imageUri the URI of the selected image
-     */
     private void updatePoster(Uri imageUri) {
         if (event == null || event.getId() == null) {
             Toast.makeText(this, "Event is invalid", Toast.LENGTH_SHORT).show();
@@ -173,7 +164,6 @@ public class EventSettingsActivity extends AppCompatActivity {
                     }
 
                     if (result.isSuccess()) {
-                        // Update local event object with new poster URL
                         event = result.getUpdatedEvent();
                         Toast.makeText(EventSettingsActivity.this,
                                 "Poster updated successfully", Toast.LENGTH_SHORT).show();

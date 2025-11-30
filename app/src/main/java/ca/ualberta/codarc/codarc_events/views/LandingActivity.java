@@ -1,13 +1,20 @@
 package ca.ualberta.codarc.codarc_events.views;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import com.google.android.material.button.MaterialButton;
 import ca.ualberta.codarc.codarc_events.R;
 import ca.ualberta.codarc.codarc_events.utils.Identity;
+import ca.ualberta.codarc.codarc_events.utils.NotificationChannelHelper;
 import ca.ualberta.codarc.codarc_events.data.UserDB;
 
 /**
@@ -20,24 +27,25 @@ import ca.ualberta.codarc.codarc_events.data.UserDB;
  */
 public class LandingActivity extends AppCompatActivity {
 
+    private static final int REQUEST_NOTIFICATION_PERMISSION = 200;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_landing);
 
-        // Stage 0: device identification - create User document
+        NotificationChannelHelper.createChannel(this);
+        requestNotificationPermission();
+
         String deviceId = Identity.getOrCreateDeviceId(this);
         UserDB userDB = new UserDB();
         userDB.ensureUserExists(deviceId, new UserDB.Callback<Void>() {
             @Override
             public void onSuccess(Void value) {
-                // Optional: brief confirmation toast per user story
-                // Toast.makeText(LandingActivity.this, "Identity verified", Toast.LENGTH_SHORT).show();
             }
 
             @Override
             public void onError(@androidx.annotation.NonNull Exception e) {
-                // Keep minimal; show a simple toast
                 Toast.makeText(LandingActivity.this, "Identity setup failed", Toast.LENGTH_SHORT).show();
             }
         });
@@ -47,7 +55,27 @@ public class LandingActivity extends AppCompatActivity {
             Intent intent = new Intent(this, EventBrowserActivity.class);
             startActivity(intent);
         });
+    }
 
+    private void requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                    != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.POST_NOTIFICATIONS},
+                        REQUEST_NOTIFICATION_PERMISSION);
+            }
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
+                                           @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_NOTIFICATION_PERMISSION) {
+            // Permission result is handled gracefully - notifications will still work in background
+            // even if permission is denied
+        }
     }
 }
 

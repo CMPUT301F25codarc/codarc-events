@@ -10,23 +10,24 @@ import ca.ualberta.codarc.codarc_events.models.Event;
 
 /**
  * Utility class for managing event tags.
- * Provides predefined tags, tag matching, and normalization functionality.
  */
 public class TagHelper {
 
     /**
      * Predefined tags available for event categorization.
      */
-    private static final List<String> PREDEFINED_TAGS = new ArrayList<String>() {{
-        add("sports");
-        add("music");
-        add("academic");
-        add("social");
-        add("arts");
-        add("technology");
-        add("food");
-        add("outdoor");
-    }};
+    private static final List<String> PREDEFINED_TAGS = new ArrayList<>();
+    
+    static {
+        PREDEFINED_TAGS.add("sports");
+        PREDEFINED_TAGS.add("music");
+        PREDEFINED_TAGS.add("academic");
+        PREDEFINED_TAGS.add("social");
+        PREDEFINED_TAGS.add("arts");
+        PREDEFINED_TAGS.add("technology");
+        PREDEFINED_TAGS.add("food");
+        PREDEFINED_TAGS.add("outdoor");
+    }
 
     /**
      * Returns the list of predefined tags.
@@ -39,11 +40,10 @@ public class TagHelper {
 
     /**
      * Filters available tags to find matches for the given query.
-     * Performs case-insensitive partial matching.
      *
      * @param query the search query string
      * @param availableTags the list of available tags to search in
-     * @return list of tags that match the query (case-insensitive)
+     * @return list of tags that match the query
      */
     public static List<String> filterMatchingTags(String query, List<String> availableTags) {
         if (query == null || query.trim().isEmpty()) {
@@ -90,20 +90,17 @@ public class TagHelper {
 
     /**
      * Collects all unique tags from a list of events.
-     * Combines predefined tags with custom tags found in events.
      *
      * @param events the list of events to extract tags from
-     * @return set of unique tag strings (normalized)
+     * @return set of unique tag strings
      */
     public static Set<String> collectAllUniqueTags(List<Event> events) {
         Set<String> allTags = new HashSet<>();
 
-        // Add all predefined tags
         for (String predefinedTag : PREDEFINED_TAGS) {
             allTags.add(normalizeTag(predefinedTag));
         }
 
-        // Add tags from events
         if (events != null) {
             for (Event event : events) {
                 if (event != null && event.getTags() != null) {

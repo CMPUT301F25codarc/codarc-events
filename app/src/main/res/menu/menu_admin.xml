@@ -9,6 +9,12 @@
     <item
         android:id="@+id/menu_admin_remove_images"
         android:title="@string/admin_view_images_title" />
+    <item
+        android:id="@+id/menu_admin_notification_logs"
+        android:title="@string/admin_notification_logs_title" />
+    <item
+        android:id="@+id/menu_admin_view_organizers"
+        android:title="View Organizers" />
     <!-- Future admin functions can be added here -->
 </menu>
 

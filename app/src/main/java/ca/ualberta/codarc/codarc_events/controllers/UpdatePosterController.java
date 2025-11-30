@@ -8,24 +8,10 @@ import ca.ualberta.codarc.codarc_events.data.PosterStorage;
 import ca.ualberta.codarc.codarc_events.models.Event;
 
 /**
- * Handles updating event posters - orchestrates poster upload and event update.
- * 
- * <p>This controller encapsulates the business logic for:
- * <ul>
- *   <li>Uploading a new poster image to Firebase Storage</li>
- *   <li>Updating the event document with the new poster URL</li>
- * </ul>
- * </p>
- * 
- * <p>The new image automatically overwrites the old file in Firebase Storage
- * since both use the same path: posters/{eventId}.jpg</p>
+ * Handles updating event posters.
  */
 public class UpdatePosterController {
 
-    /**
-     * Result object returned after updating a poster.
-     * Contains success status, error message (if any), and the updated event (if successful).
-     */
     public static class UpdatePosterResult {
         private final boolean isSuccess;
         private final String errorMessage;
@@ -71,8 +57,8 @@ public class UpdatePosterController {
     /**
      * Constructs an UpdatePosterController with the given dependencies.
      *
-     * @param eventDB the EventDB instance for updating events
-     * @param posterStorage the PosterStorage instance for uploading images
+     * @param eventDB the EventDB instance
+     * @param posterStorage the PosterStorage instance
      */
     public UpdatePosterController(EventDB eventDB, PosterStorage posterStorage) {
         this.eventDB = eventDB;
@@ -81,15 +67,8 @@ public class UpdatePosterController {
 
     /**
      * Updates the poster for an event.
-     * 
-     * <p>This method:
-     * <ol>
-     *   <li>Uploads the new image to Firebase Storage (overwrites existing file)</li>
-     *   <li>Updates the event document with the new poster URL</li>
-     * </ol>
-     * </p>
      *
-     * @param event the event to update (must have a valid ID)
+     * @param event the event to update
      * @param imageUri the URI of the new poster image
      * @param callback callback that receives the result of the operation
      */
@@ -104,11 +83,9 @@ public class UpdatePosterController {
             return;
         }
 
-        // Step 1: Upload poster to Firebase Storage
         posterStorage.uploadPoster(event.getId(), imageUri, new PosterStorage.Callback<String>() {
             @Override
             public void onSuccess(String posterUrl) {
-                // Step 2: Update event with new poster URL
                 event.setPosterUrl(posterUrl);
                 eventDB.addEvent(event, new EventDB.Callback<Void>() {
                     @Override

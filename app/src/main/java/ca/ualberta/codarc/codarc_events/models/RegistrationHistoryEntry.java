@@ -15,9 +15,6 @@ public class RegistrationHistoryEntry {
     private String eventDate;
     private String selectionStatus;
 
-    /**
-     * Default constructor for Firestore serialization.
-     */
     public RegistrationHistoryEntry() {
     }
 
@@ -36,56 +33,34 @@ public class RegistrationHistoryEntry {
         this.selectionStatus = selectionStatus;
     }
 
-    /**
-     * @return the event ID
-     */
     public String getEventId() {
         return eventId;
     }
 
-    /**
-     * @param eventId the event ID to set
-     */
     public void setEventId(String eventId) {
         this.eventId = eventId;
     }
 
-    /**
-     * @return the event name
-     */
     public String getEventName() {
         return eventName;
     }
 
-    /**
-     * @param eventName the event name to set
-     */
     public void setEventName(String eventName) {
         this.eventName = eventName;
     }
 
-    /**
-     * @return the event date in ISO format
-     */
     public String getEventDate() {
         return eventDate;
     }
 
-    /**
-     * @param eventDate the event date in ISO format to set
-     */
     public void setEventDate(String eventDate) {
         this.eventDate = eventDate;
     }
 
-    /** @return the selection status */
     public String getSelectionStatus() {
         return selectionStatus;
     }
 
-    /**
-     * @param selectionStatus the selection status to set
-     */
     public void setSelectionStatus(String selectionStatus) {
         this.selectionStatus = selectionStatus;
     }

@@ -27,9 +27,7 @@ public class FullScreenImageActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
-        // Hide system UI for immersive full-screen experience
         hideSystemUI();
-        
         setContentView(R.layout.activity_fullscreen_image);
 
         String imageUrl = getIntent().getStringExtra(EXTRA_IMAGE_URL);
@@ -42,23 +40,16 @@ public class FullScreenImageActivity extends AppCompatActivity {
         ImageView fullscreenImage = findViewById(R.id.fullscreen_image);
         ImageButton closeButton = findViewById(R.id.btn_close);
 
-        // Load image using Glide
         Glide.with(this)
                 .load(imageUrl)
                 .diskCacheStrategy(DiskCacheStrategy.ALL)
                 .error(R.drawable.sample_event_banner)
                 .into(fullscreenImage);
 
-        // Close button click listener
         closeButton.setOnClickListener(v -> finish());
-
-        // Also allow tapping the image to close
         fullscreenImage.setOnClickListener(v -> finish());
     }
 
-    /**
-     * Hides the system UI for an immersive full-screen experience.
-     */
     private void hideSystemUI() {
         View decorView = getWindow().getDecorView();
         decorView.setSystemUiVisibility(
@@ -69,7 +60,6 @@ public class FullScreenImageActivity extends AppCompatActivity {
                 | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
                 | View.SYSTEM_UI_FLAG_FULLSCREEN);
         
-        // Keep screen on while viewing
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     }
 

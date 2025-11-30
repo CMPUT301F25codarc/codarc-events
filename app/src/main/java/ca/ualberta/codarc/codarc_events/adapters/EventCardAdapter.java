@@ -63,13 +63,9 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.View
         holder.date.setText(DateHelper.formatEventDate(e.getEventDateTime()));
         holder.status.setText(e.isOpen() ? context.getString(R.string.status_open) : context.getString(R.string.status_closed));
 
-        // Display tags
         displayTags(holder, e);
-
-        // Fetch and display waitlist count
         fetchAndDisplayWaitlistCount(holder, eventId);
 
-        // Lottery Info popup
         holder.lotteryInfoBtn.setOnClickListener(v -> {
             View dialogView = LayoutInflater.from(context)
                     .inflate(R.layout.dialog_lottery_info, null);
@@ -80,7 +76,6 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.View
                     .show();
         });
 
-        // Event Details
         holder.itemView.setOnClickListener(v -> {
             Intent intent = new Intent(context, EventDetailsActivity.class);
             intent.putExtra("event", e);
@@ -140,7 +135,6 @@ public class EventCardAdapter extends RecyclerView.Adapter<EventCardAdapter.View
 
     /**
      * Fetches and displays the waitlist count for a specific event.
-     * Uses tagging to ensure we only update the correct ViewHolder.
      *
      * @param holder  the ViewHolder to update
      * @param eventId the event ID to fetch the count for
