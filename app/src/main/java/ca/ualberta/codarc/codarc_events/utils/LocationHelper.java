@@ -44,6 +44,7 @@ public class LocationHelper {
      * @param context the context
      * @param callback callback with location (may be null if unavailable)
      */
+    @SuppressWarnings("MissingPermission")
     public static void getCurrentLocation(Context context, LocationCallback callback) {
         if (!hasLocationPermission(context)) {
             callback.onLocation(null);
@@ -64,7 +65,8 @@ public class LocationHelper {
             requestFreshLocation(locationClient, callback);
         });
     }
-    
+
+    @SuppressWarnings("MissingPermission")
     private static void requestFreshLocation(FusedLocationProviderClient locationClient, LocationCallback callback) {
         CurrentLocationRequest currentLocationRequest = new CurrentLocationRequest.Builder()
                 .setPriority(Priority.PRIORITY_HIGH_ACCURACY)
