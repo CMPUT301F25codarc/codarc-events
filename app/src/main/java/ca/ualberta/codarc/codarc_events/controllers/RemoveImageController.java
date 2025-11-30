@@ -54,13 +54,6 @@ public class RemoveImageController {
         this.userDB = new UserDB();
     }
 
-    // For tests
-    public RemoveImageController(EventDB eventDB, PosterStorage posterStorage, UserDB userDB) {
-        this.eventDB = eventDB;
-        this.posterStorage = posterStorage;
-        this.userDB = userDB;
-    }
-
     /**
      * Removes an image (poster) from an event.
      *

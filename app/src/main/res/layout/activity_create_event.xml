@@ -180,16 +180,6 @@
 
         </com.google.android.material.textfield.TextInputLayout>
 
-        <com.google.android.material.materialswitch.MaterialSwitch
-            android:id="@+id/switch_geolocation"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/margin_small"
-            android:text="@string/event_require_geolocation"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/til_capacity" />
-
         <!-- Tags Section -->
         <TextView
             android:id="@+id/tv_tags_header"
@@ -200,7 +190,7 @@
             android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/switch_geolocation" />
+            app:layout_constraintTop_toBottomOf="@id/til_capacity" />
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/til_tag_input"

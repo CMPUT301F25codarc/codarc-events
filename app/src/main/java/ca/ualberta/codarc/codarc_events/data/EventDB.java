@@ -537,45 +537,45 @@ public class EventDB {
         WriteBatch batch = db.batch();
         
         DocumentReference waitlistRef = db.collection("events")
-                .document(eventId)
-                .collection("waitingList")
-                .document(deviceId);
+            .document(eventId)
+            .collection("waitingList")
+            .document(deviceId);
         batch.delete(waitlistRef);
         
         DocumentReference winnersRef = db.collection("events")
-                .document(eventId)
-                .collection("winners")
-                .document(deviceId);
+            .document(eventId)
+            .collection("winners")
+            .document(deviceId);
         batch.delete(winnersRef);
         
         DocumentReference acceptedRef = db.collection("events")
-                .document(eventId)
-                .collection("accepted")
-                .document(deviceId);
+            .document(eventId)
+            .collection("accepted")
+            .document(deviceId);
         batch.delete(acceptedRef);
-
+        
         // Remove from cancelled
         DocumentReference cancelledRef = db.collection("events")
-                .document(eventId)
-                .collection("cancelled")
-                .document(deviceId);
+            .document(eventId)
+            .collection("cancelled")
+            .document(deviceId);
         batch.delete(cancelledRef);
         
         DocumentReference replacementRef = db.collection("events")
-                .document(eventId)
-                .collection("replacementPool")
-                .document(deviceId);
+            .document(eventId)
+            .collection("replacementPool")
+            .document(deviceId);
         batch.delete(replacementRef);
-
+        
         batch.commit()
-                .addOnSuccessListener(unused -> {
-                    android.util.Log.d("EventDB", "Removed entrant from all event subcollections: " + deviceId);
-                    cb.onSuccess(null);
-                })
-                .addOnFailureListener(e -> {
-                    android.util.Log.e("EventDB", "Failed to remove entrant from event: " + eventId, e);
-                    cb.onError(e);
-                });
+            .addOnSuccessListener(unused -> {
+                android.util.Log.d("EventDB", "Removed entrant from all event subcollections: " + deviceId);
+                cb.onSuccess(null);
+            })
+            .addOnFailureListener(e -> {
+                android.util.Log.e("EventDB", "Failed to remove entrant from event: " + eventId, e);
+                cb.onError(e);
+            });
     }
 
     public void getWaitlist(String eventId, Callback<List<Map<String, Object>>> cb) {
@@ -792,7 +792,7 @@ public class EventDB {
             });
         }
     }
-
+    
     private void promoteReplacementToWinner(String eventId, String entrantId, Callback<Void> cb) {
         db.collection("events").document(eventId)
                 .collection("replacementPool").document(entrantId)
@@ -961,7 +961,7 @@ public class EventDB {
                 })
                 .addOnFailureListener(cb::onError);
     }
-
+    
     public void getReplacementPool(String eventId, Callback<List<Map<String, Object>>> cb) {
         try {
             ValidationHelper.requireNonEmpty(eventId, "eventId");
@@ -987,7 +987,7 @@ public class EventDB {
                 })
                 .addOnFailureListener(cb::onError);
     }
-
+    
     public void getReplacementPoolCount(String eventId, Callback<Integer> cb) {
         try {
             ValidationHelper.requireNonEmpty(eventId, "eventId");
@@ -995,7 +995,7 @@ public class EventDB {
             cb.onError(e);
             return;
         }
-
+        
         db.collection("events").document(eventId)
                 .collection("replacementPool")
                 .get()
@@ -1222,9 +1222,6 @@ public class EventDB {
             // Parse poster URL
             event.setPosterUrl(doc.getString("posterUrl"));
 
-            Boolean requireGeo = doc.getBoolean("requireGeolocation");
-            event.setRequireGeolocation(requireGeo != null && requireGeo);
-
             return event;
         } catch (Exception e) {
             android.util.Log.e("EventDB", "Failed to parse event from document", e);
@@ -1266,24 +1263,24 @@ public class EventDB {
             cb.onError(e);
             return;
         }
-
+        
         DocumentReference eventRef = db.collection("events").document(eventId);
         
         String[] subcollections = {
-                "waitingList",
-                "winners",
-                "accepted",
-                "cancelled",
-                "replacementPool",
-                "declineLogs"
+            "waitingList",
+            "winners", 
+            "accepted",
+            "cancelled",
+            "replacementPool",
+            "declineLogs"
         };
-
+        
         deleteSubcollections(eventRef, subcollections, 0, new Callback<Void>() {
             @Override
             public void onSuccess(Void value) {
                 deleteEventDocument(eventRef, eventId, cb);
             }
-
+            
             @Override
             public void onError(@NonNull Exception e) {
                 android.util.Log.w("EventDB", "Some subcollections failed to delete for event: " + eventId, e);
@@ -1315,13 +1312,13 @@ public class EventDB {
      * @param index current index in the array
      * @param cb callback for completion
      */
-    private void deleteSubcollections(DocumentReference eventRef, String[] subcollectionNames,
+    private void deleteSubcollections(DocumentReference eventRef, String[] subcollectionNames, 
                                       int index, Callback<Void> cb) {
         if (index >= subcollectionNames.length) {
             cb.onSuccess(null);
             return;
         }
-
+        
         String subcollectionName = subcollectionNames[index];
         eventRef.collection(subcollectionName)
             .get()
@@ -1375,11 +1372,11 @@ public class EventDB {
         int startIndex = batchIndex * BATCH_SIZE;
         int endIndex = Math.min(startIndex + BATCH_SIZE, docs.size());
         WriteBatch batch = db.batch();
-
+        
         for (int i = startIndex; i < endIndex; i++) {
             batch.delete(docs.get(i).getReference());
         }
-
+        
         batch.commit()
             .addOnSuccessListener(aVoid -> deleteDocumentsInBatches(eventRef, subcollectionName, docs, batchIndex + 1, cb))
             .addOnFailureListener(e -> {

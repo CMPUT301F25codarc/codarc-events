@@ -52,7 +52,7 @@ dependencies {
     // --- QR Code Scanning ---
     implementation("com.google.zxing:core:3.4.1")
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
-
+    
     // --- Image Loading ---
     implementation("com.github.bumptech.glide:glide:4.16.0")
 
@@ -88,12 +88,10 @@ dependencies {
     androidTestImplementation("androidx.test:rules:1.6.1")
     androidTestImplementation(libs.espresso.core)
     androidTestImplementation("androidx.test.espresso:espresso-intents:3.6.1")
-    androidTestImplementation("androidx.test.espresso:espresso-contrib:3.6.1") {
-        exclude(group = "com.google.protobuf", module = "protobuf-lite")
-    }
+    androidTestImplementation("androidx.test.espresso:espresso-contrib:3.6.1")
     androidTestImplementation("androidx.test.espresso:espresso-idling-resource:3.6.1")
 
-    // --- Orchestrator (optional for stable test runs) ---
+    // --- Optional for stable instrumentation ---
     androidTestUtil("androidx.test:orchestrator:1.5.1")
 }
 

@@ -25,7 +25,6 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
-import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 
@@ -71,7 +70,6 @@ public class CreateEventActivity extends AppCompatActivity {
     private Uri selectedImageUri;
     private PosterStorage posterStorage;
     private ActivityResultLauncher<Intent> imagePickerLauncher;
-    private MaterialSwitch switchGeolocation;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -94,7 +92,6 @@ public class CreateEventActivity extends AppCompatActivity {
         regOpen = findViewById(R.id.et_reg_open);
         regClose = findViewById(R.id.et_reg_close);
         capacity = findViewById(R.id.et_capacity);
-        switchGeolocation = findViewById(R.id.switch_geolocation);
 
         ivPoster = findViewById(R.id.iv_poster);
         btnChoosePoster = findViewById(R.id.btn_choose_poster);
@@ -225,10 +222,9 @@ public class CreateEventActivity extends AppCompatActivity {
         String open = getDateValue(regOpen);
         String close = getDateValue(regClose);
         String capacityStr = get(capacity);
-        boolean requireGeolocation = switchGeolocation != null && switchGeolocation.isChecked();
 
         CreateEventController.CreateEventResult result = controller.validateAndCreateEvent(
-                name, desc, dateTime, loc, open, close, capacityStr, selectedTags, null, requireGeolocation
+                name, desc, dateTime, loc, open, close, capacityStr, selectedTags, null
         );
 
         if (!result.isValid()) {
@@ -257,8 +253,8 @@ public class CreateEventActivity extends AppCompatActivity {
             public void onError(@NonNull Exception e) {
                 Log.e("CreateEventActivity", "Failed to create event", e);
                 runOnUiThread(() -> {
-                    Toast.makeText(CreateEventActivity.this, "Failed to create event. Please try again.", Toast.LENGTH_SHORT).show();
-                    progressBar.setVisibility(View.GONE);
+                Toast.makeText(CreateEventActivity.this, "Failed to create event. Please try again.", Toast.LENGTH_SHORT).show();
+                progressBar.setVisibility(View.GONE);
                 });
             }
         });
@@ -377,7 +373,7 @@ public class CreateEventActivity extends AppCompatActivity {
         List<String> predefinedTags = TagHelper.getPredefinedTags();
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
                 android.R.layout.simple_dropdown_item_1line, predefinedTags);
-
+        
         tagInput.setAdapter(adapter);
         tagInput.setThreshold(1);
 

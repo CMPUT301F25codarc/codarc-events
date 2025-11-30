@@ -20,7 +20,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Locale;
 
 import android.content.Intent;
 
@@ -95,7 +94,6 @@ public class ViewEnrolledActivity extends BaseEntrantListActivity {
     @Override
     protected void loadData() {
         loadEnrolled();
-        setupExportButton();
     }
 
     private void loadEnrolled() {
@@ -329,37 +327,5 @@ public class ViewEnrolledActivity extends BaseEntrantListActivity {
             }
         });
     }
-
-    private void setupExportButton() {
-        if (exportButton != null) {
-            exportButton.setOnClickListener(v -> shareAsCsv());
-        }
-    }
-
-    private void shareAsCsv() {
-        if (itemList == null || itemList.isEmpty()) {
-            Toast.makeText(this, R.string.export_csv_error, Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        StringBuilder csvBuilder = new StringBuilder();
-        csvBuilder.append("Name,DeviceId,RespondedAt\n");
-        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US);
-        for (WaitlistAdapter.WaitlistItem item : itemList) {
-            String time = item.getRequestTime() > 0
-                    ? format.format(new Date(item.getRequestTime()))
-                    : "";
-            csvBuilder.append('"').append(item.getName().replace("\"", "\"\""))
-                    .append("\",")
-                    .append('"').append(item.getDeviceId()).append("\",")
-                    .append('"').append(time).append('"')
-                    .append("\n");
-        }
-
-        Intent shareIntent = new Intent(Intent.ACTION_SEND);
-        shareIntent.setType("text/csv");
-        shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Enrolled entrants");
-        shareIntent.putExtra(Intent.EXTRA_TEXT, csvBuilder.toString());
-        startActivity(Intent.createChooser(shareIntent, getString(R.string.export_csv_button)));
-    }
 }
+
