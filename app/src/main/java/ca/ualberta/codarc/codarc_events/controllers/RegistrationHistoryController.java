@@ -134,15 +134,15 @@ public class RegistrationHistoryController {
     private void processSingleEvent(String eventId, String deviceId,
                                     List<RegistrationHistoryEntry> entries,
                                     EventProcessor processor) {
-        eventDB.eventExists(eventId, new EventDB.Callback<Boolean>() {
-            @Override
-            public void onSuccess(Boolean exists) {
-                if (!exists) {
-                    Log.d(TAG, "Event " + eventId + " no longer exists, filtering from history");
-                    cleanupDeletedEvent(deviceId, eventId);
+            eventDB.eventExists(eventId, new EventDB.Callback<Boolean>() {
+                @Override
+                public void onSuccess(Boolean exists) {
+                    if (!exists) {
+                        Log.d(TAG, "Event " + eventId + " no longer exists, filtering from history");
+                        cleanupDeletedEvent(deviceId, eventId);
                     processor.onEventProcessed();
-                    return;
-                }
+                        return;
+                    }
                 fetchEventAndDetermineStatus(eventId, deviceId, entries, processor);
             }
 
@@ -160,13 +160,13 @@ public class RegistrationHistoryController {
     private void fetchEventAndDetermineStatus(String eventId, String deviceId,
                                               List<RegistrationHistoryEntry> entries,
                                               EventProcessor processor) {
-        eventDB.getEvent(eventId, new EventDB.Callback<Event>() {
-            @Override
-            public void onSuccess(Event event) {
-                if (event == null) {
+                    eventDB.getEvent(eventId, new EventDB.Callback<Event>() {
+                        @Override
+                        public void onSuccess(Event event) {
+                            if (event == null) {
                     processor.onEventProcessed();
-                    return;
-                }
+                                return;
+                            }
                 determineStatusAndAddEntry(event, deviceId, entries, processor);
             }
 
@@ -184,20 +184,20 @@ public class RegistrationHistoryController {
     private void determineStatusAndAddEntry(Event event, String deviceId,
                                            List<RegistrationHistoryEntry> entries,
                                            EventProcessor processor) {
-        determineSelectionStatus(event, deviceId, new SelectionStatusCallback() {
-            @Override
-            public void onStatus(String status) {
-                RegistrationHistoryEntry entry = new RegistrationHistoryEntry(
-                        event.getId(),
-                        event.getName(),
-                        event.getEventDateTime(),
-                        status
-                );
-                entries.add(entry);
+                            determineSelectionStatus(event, deviceId, new SelectionStatusCallback() {
+                                @Override
+                                public void onStatus(String status) {
+                                    RegistrationHistoryEntry entry = new RegistrationHistoryEntry(
+                                            event.getId(),
+                                            event.getName(),
+                                            event.getEventDateTime(),
+                                            status
+                                    );
+                                        entries.add(entry);
                 processor.onEventProcessed();
-            }
-        });
-    }
+                                }
+                            });
+                        }
 
     /**
      * Helper class to track event processing completion.
@@ -217,8 +217,8 @@ public class RegistrationHistoryController {
         synchronized void onEventProcessed() {
             completed++;
             if (completed == total) {
-                sortAndReturn(entries, callback);
-            }
+                            sortAndReturn(entries, callback);
+                        }
         }
     }
 

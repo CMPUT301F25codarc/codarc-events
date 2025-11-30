@@ -133,20 +133,20 @@ public class JoinWaitlistController {
      * Checks ban status and proceeds with join logic.
      */
     private void checkBanStatusAndJoin(Event event, String deviceId, Callback callback) {
-        entrantDB.isBanned(deviceId, new EntrantDB.Callback<Boolean>() {
-            @Override
-            public void onSuccess(Boolean isBanned) {
-                if (isBanned != null && isBanned) {
-                    callback.onResult(JoinResult.failure("You are banned from joining events"));
-                    return;
-                }
-                checkAlreadyJoinedAndJoin(event, deviceId, callback);
-            }
+                entrantDB.isBanned(deviceId, new EntrantDB.Callback<Boolean>() {
+                    @Override
+                    public void onSuccess(Boolean isBanned) {
+                        if (isBanned != null && isBanned) {
+                            callback.onResult(JoinResult.failure("You are banned from joining events"));
+                            return;
+                        }
+                        checkAlreadyJoinedAndJoin(event, deviceId, callback);
+                    }
 
-            @Override
-            public void onError(@NonNull Exception e) {
-                Log.w("JoinWaitlistController", "Failed to check ban status", e);
-                checkAlreadyJoinedAndJoin(event, deviceId, callback);
+                    @Override
+                    public void onError(@NonNull Exception e) {
+                        Log.w("JoinWaitlistController", "Failed to check ban status", e);
+                        checkAlreadyJoinedAndJoin(event, deviceId, callback);
             }
         });
     }
@@ -187,20 +187,20 @@ public class JoinWaitlistController {
      */
     private void checkCapacityAndJoin(Event event, String deviceId, Callback callback) {
         eventDB.getWaitlistCount(event.getId(), new EventDB.Callback<Integer>() {
-            @Override
+                    @Override
             public void onSuccess(Integer waitlistCount) {
                 if (waitlistCount == null) {
                     waitlistCount = 0;
                 }
                 if (!EventValidationHelper.hasWaitlistCapacity(event, waitlistCount)) {
-                    callback.onResult(JoinResult.failure("Event is full"));
-                    return;
-                }
+                            callback.onResult(JoinResult.failure("Event is full"));
+                            return;
+                        }
                 performJoin(event, deviceId, callback);
-            }
+                                    }
 
-            @Override
-            public void onError(@NonNull Exception e) {
+                                    @Override
+                                    public void onError(@NonNull Exception e) {
                 callback.onResult(JoinResult.failure("Failed to check availability"));
             }
         });
@@ -214,22 +214,22 @@ public class JoinWaitlistController {
             @Override
             public void onSuccess(Void value) {
                 updateRegistrationHistory(event.getId(), deviceId);
-                callback.onResult(JoinResult.success("Joined successfully"));
-            }
+                                callback.onResult(JoinResult.success("Joined successfully"));
+                            }
 
-            @Override
-            public void onError(@NonNull Exception e) {
-                callback.onResult(JoinResult.failure("Failed to join. Please try again."));
-            }
-        });
-    }
+                            @Override
+                            public void onError(@NonNull Exception e) {
+                                callback.onResult(JoinResult.failure("Failed to join. Please try again."));
+                            }
+                        });
+                    }
 
     /**
      * Updates registration history (fire-and-forget operation).
      */
     private void updateRegistrationHistory(String eventId, String deviceId) {
         entrantDB.addEventToEntrant(deviceId, eventId, new EntrantDB.Callback<Void>() {
-            @Override
+                    @Override
             public void onSuccess(Void v) {
                 // Success - no action needed
             }

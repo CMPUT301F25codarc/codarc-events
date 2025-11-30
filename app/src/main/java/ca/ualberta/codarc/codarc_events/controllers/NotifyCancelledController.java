@@ -86,15 +86,15 @@ public class NotifyCancelledController {
                 NotificationController.NotificationCategory.CANCELLED,
                 "No cancelled entrants found",
                 new NotificationController.NotificationCallback() {
-                    @Override
+            @Override
                     public void onSuccess(int notifiedCount, int failedCount) {
                         callback.onSuccess(notifiedCount, failedCount);
-                    }
+            }
 
-                    @Override
-                    public void onError(@NonNull Exception e) {
-                        callback.onError(e);
-                    }
+            @Override
+            public void onError(@NonNull Exception e) {
+                callback.onError(e);
+            }
                 }
         );
     }

@@ -45,7 +45,7 @@ public class ViewCancelledActivity extends BaseEntrantListActivity {
     @Override
     protected int getRecyclerViewId() {
         return R.id.rv_entrants;
-    }
+        }
 
     @Override
     protected int getEmptyStateId() {
@@ -59,12 +59,12 @@ public class ViewCancelledActivity extends BaseEntrantListActivity {
         recyclerView.setAdapter(adapter);
     }
 
-    @Override
+            @Override
     protected boolean needsOrganizerAccess() {
         return true;
-    }
+            }
 
-    @Override
+            @Override
     protected void initializeActivity() {
         notifyController = new NotifyCancelledController(eventDB, entrantDB);
         btnNotifyCancelled = findViewById(R.id.btn_notify_cancelled);

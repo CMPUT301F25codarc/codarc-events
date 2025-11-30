@@ -74,13 +74,13 @@ public class RemoveImageController {
             @Override
             public void onSuccess() {
                 proceedWithImageRemoval(eventId, callback);
-            }
+                    }
 
-            @Override
-            public void onError(String errorMessage) {
-                callback.onResult(RemoveImageResult.failure(errorMessage));
-            }
-        });
+                    @Override
+                    public void onError(String errorMessage) {
+                        callback.onResult(RemoveImageResult.failure(errorMessage));
+                    }
+                });
     }
 
     /**

@@ -61,7 +61,7 @@ public class AdminImageListActivity extends BaseAdminListActivity {
     protected void initializeActivity() {
         eventDB = new EventDB();
         removeImageController = new RemoveImageController();
-    }
+        }
 
     @Override
     protected void loadData() {

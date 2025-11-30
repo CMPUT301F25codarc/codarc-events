@@ -44,7 +44,7 @@ public class ManageWaitlistActivity extends BaseEntrantListActivity {
     @Override
     protected int getRecyclerViewId() {
         return R.id.rv_entrants;
-    }
+        }
 
     @Override
     protected int getEmptyStateId() {
