@@ -4,6 +4,7 @@ import androidx.annotation.NonNull;
 
 import ca.ualberta.codarc.codarc_events.data.EntrantDB;
 import ca.ualberta.codarc.codarc_events.data.EventDB;
+import ca.ualberta.codarc.codarc_events.utils.FCMHelper;
 
 /**
  * Handles sending broadcast notifications to all enrolled entrants for an event.
@@ -55,6 +56,17 @@ public class NotifyEnrolledController {
      */
     public NotifyEnrolledController(EventDB eventDB, EntrantDB entrantDB) {
         this.notificationController = new NotificationController(eventDB, entrantDB);
+    }
+
+    /**
+     * Creates a new NotifyEnrolledController with FCM support.
+     *
+     * @param eventDB EventDB instance
+     * @param entrantDB EntrantDB instance
+     * @param fcmHelper FCMHelper instance (can be null)
+     */
+    public NotifyEnrolledController(EventDB eventDB, EntrantDB entrantDB, FCMHelper fcmHelper) {
+        this.notificationController = new NotificationController(eventDB, entrantDB, fcmHelper);
     }
 
     /**

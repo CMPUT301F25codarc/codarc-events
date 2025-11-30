@@ -70,11 +70,13 @@ public class WaitlistAdapter extends RecyclerView.Adapter<WaitlistAdapter.ViewHo
         private final String deviceId;
         private final String name;
         private final long requestTime;
+        private final String email;
 
-        public WaitlistItem(String deviceId, String name, long requestTime) {
+        public WaitlistItem(String deviceId, String name, long requestTime, String email) {
             this.deviceId = deviceId;
             this.name = name;
             this.requestTime = requestTime;
+            this.email = email != null ? email : "";
         }
 
         public String getDeviceId() {
@@ -87,6 +89,10 @@ public class WaitlistAdapter extends RecyclerView.Adapter<WaitlistAdapter.ViewHo
 
         public long getRequestTime() {
             return requestTime;
+        }
+
+        public String getEmail() {
+            return email;
         }
     }
 }

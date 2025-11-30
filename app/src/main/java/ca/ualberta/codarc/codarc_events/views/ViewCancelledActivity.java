@@ -26,6 +26,7 @@ import ca.ualberta.codarc.codarc_events.controllers.NotifyCancelledController;
 import ca.ualberta.codarc.codarc_events.data.EntrantDB;
 import ca.ualberta.codarc.codarc_events.data.EventDB;
 import ca.ualberta.codarc.codarc_events.models.Entrant;
+import ca.ualberta.codarc.codarc_events.utils.FCMHelper;
 
 /**
  * Displays list of cancelled entrants and allows drawing replacements and notifying them.
@@ -66,9 +67,19 @@ public class ViewCancelledActivity extends BaseEntrantListActivity {
 
             @Override
     protected void initializeActivity() {
-        notifyController = new NotifyCancelledController(eventDB, entrantDB);
+        FCMHelper fcmHelper = createFCMHelperIfConfigured();
+        notifyController = new NotifyCancelledController(eventDB, entrantDB, fcmHelper);
         btnNotifyCancelled = findViewById(R.id.btn_notify_cancelled);
         setupNotifyButton();
+    }
+
+    private FCMHelper createFCMHelperIfConfigured() {
+        String functionUrl = getString(R.string.fcm_function_url);
+        if (functionUrl != null && !functionUrl.isEmpty() && 
+            !functionUrl.contains("YOUR_REGION") && !functionUrl.contains("YOUR_PROJECT_ID")) {
+            return new FCMHelper(functionUrl);
+        }
+        return null;
     }
 
     @Override
@@ -121,7 +132,7 @@ public class ViewCancelledActivity extends BaseEntrantListActivity {
                         name = entrant.getName();
                     }
                     long timestamp = parseTimestamp(invitedAtObj);
-                    itemList.add(new WaitlistAdapter.WaitlistItem(deviceId, name, timestamp));
+                    itemList.add(new WaitlistAdapter.WaitlistItem(deviceId, name, timestamp, ""));
 
                     checkAndUpdateUI(completed, totalEntries);
                 }
@@ -129,7 +140,7 @@ public class ViewCancelledActivity extends BaseEntrantListActivity {
                 @Override
                 public void onError(@NonNull Exception e) {
                     long timestamp = parseTimestamp(invitedAtObj);
-                    itemList.add(new WaitlistAdapter.WaitlistItem(deviceId, deviceId, timestamp));
+                    itemList.add(new WaitlistAdapter.WaitlistItem(deviceId, deviceId, timestamp, ""));
                     checkAndUpdateUI(completed, totalEntries);
                 }
             });

@@ -88,4 +88,37 @@ public class EventValidationHelper {
 
         return waitlistCount < maxCapacity;
     }
+
+    /**
+     * Checks if registration deadline has passed.
+     * Assumes event has registration close time (enforced in CreateEventController).
+     *
+     * @param event the event to check
+     * @return true if registration deadline has passed, false otherwise
+     */
+    public static boolean hasRegistrationDeadlinePassed(Event event) {
+        if (event == null) {
+            return false;
+        }
+
+        try {
+            SimpleDateFormat isoFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US);
+            long now = System.currentTimeMillis();
+            String regClose = event.getRegistrationClose();
+
+            if (regClose == null || regClose.isEmpty()) {
+                Log.w(TAG, "Event missing registration close time: " + event.getId());
+                return false;
+            }
+
+            long closeTime = isoFormat.parse(regClose).getTime();
+            return now > closeTime;
+        } catch (java.text.ParseException e) {
+            Log.e(TAG, "Error parsing registration close time", e);
+            return false;
+        } catch (Exception e) {
+            Log.e(TAG, "Unexpected error checking registration deadline", e);
+            return false;
+        }
+    }
 }

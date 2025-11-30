@@ -41,5 +41,13 @@
         android:paddingStart="16dp"
         android:paddingEnd="8dp" />
 
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_cancel_winner"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/cancel_entrant_button"
+        android:visibility="gone"
+        android:contentDescription="Cancel this entrant" />
+
 </LinearLayout>
 

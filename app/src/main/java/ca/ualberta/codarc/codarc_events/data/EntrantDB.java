@@ -701,5 +701,57 @@ public class EntrantDB {
         }
     }
 
+    /**
+     * Stores FCM token for an entrant.
+     *
+     * @param deviceId the device ID
+     * @param token the FCM token
+     * @param callback callback for completion
+     */
+    public void saveFCMToken(String deviceId, String token, Callback<Void> callback) {
+        try {
+            ValidationHelper.requireNonEmpty(deviceId, "deviceId");
+            ValidationHelper.requireNonEmpty(token, "token");
+        } catch (IllegalArgumentException e) {
+            callback.onError(e);
+            return;
+        }
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("fcmToken", token);
+
+        db.collection("entrants").document(deviceId)
+                .set(data, SetOptions.merge())
+                .addOnSuccessListener(unused -> callback.onSuccess(null))
+                .addOnFailureListener(callback::onError);
+    }
+
+    /**
+     * Gets FCM token for an entrant.
+     *
+     * @param deviceId the device ID
+     * @param callback callback with token (may be null if not set)
+     */
+    public void getFCMToken(String deviceId, Callback<String> callback) {
+        try {
+            ValidationHelper.requireNonEmpty(deviceId, "deviceId");
+        } catch (IllegalArgumentException e) {
+            callback.onError(e);
+            return;
+        }
+
+        db.collection("entrants").document(deviceId)
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    if (snapshot != null && snapshot.exists()) {
+                        String token = snapshot.getString("fcmToken");
+                        callback.onSuccess(token);
+                    } else {
+                        callback.onSuccess(null);
+                    }
+                })
+                .addOnFailureListener(callback::onError);
+    }
+
 }
 

@@ -1,12 +1,17 @@
 package ca.ualberta.codarc.codarc_events.controllers;
 
+import android.util.Log;
 import androidx.annotation.NonNull;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import ca.ualberta.codarc.codarc_events.data.EntrantDB;
 import ca.ualberta.codarc.codarc_events.data.EventDB;
+import ca.ualberta.codarc.codarc_events.utils.FCMHelper;
 import ca.ualberta.codarc.codarc_events.utils.ValidationHelper;
 
 /**
@@ -70,9 +75,11 @@ public class NotificationController {
     }
 
     private static final int MAX_MESSAGE_LENGTH = 500;
+    private static final String TAG = "NotificationController";
 
     private final EventDB eventDB;
     private final EntrantDB entrantDB;
+    private final FCMHelper fcmHelper;
 
     /**
      * Creates a new NotificationController.
@@ -83,6 +90,20 @@ public class NotificationController {
     public NotificationController(EventDB eventDB, EntrantDB entrantDB) {
         this.eventDB = eventDB;
         this.entrantDB = entrantDB;
+        this.fcmHelper = null;
+    }
+
+    /**
+     * Creates a new NotificationController with FCM support.
+     *
+     * @param eventDB EventDB instance
+     * @param entrantDB EntrantDB instance
+     * @param fcmHelper FCMHelper instance (can be null)
+     */
+    public NotificationController(EventDB eventDB, EntrantDB entrantDB, FCMHelper fcmHelper) {
+        this.eventDB = eventDB;
+        this.entrantDB = entrantDB;
+        this.fcmHelper = fcmHelper;
     }
 
     /**
@@ -181,20 +202,18 @@ public class NotificationController {
                                    List<Map<String, Object>> entrants,
                                    NotificationCallback callback) {
         final int total = entrants.size();
-        final int[] completed = {0};
-        final int[] failed = {0};
 
         if (total == 0) {
             callback.onSuccess(0, 0);
             return;
         }
 
+        final NotificationSender sender = new NotificationSender(total, callback);
+
         for (Map<String, Object> entry : entrants) {
             Object deviceIdObj = entry.get("deviceId");
             if (deviceIdObj == null) {
-                completed[0]++;
-                failed[0]++;
-                checkNotificationCompletion(completed, failed, total, callback);
+                sender.onError();
                 continue;
             }
 
@@ -203,33 +222,128 @@ public class NotificationController {
                     new EntrantDB.Callback<Void>() {
                         @Override
                         public void onSuccess(Void value) {
-                            completed[0]++;
-                            checkNotificationCompletion(completed, failed, total, callback);
+                            sender.onSuccess();
                         }
 
                         @Override
                         public void onError(@NonNull Exception e) {
-                            failed[0]++;
-                            android.util.Log.e("NotificationController",
-                                    "Failed to send notification to " + deviceId, e);
-                            checkNotificationCompletion(completed, failed, total, callback);
+                            Log.e(TAG, "Failed to send notification to " + deviceId, e);
+                            sender.onError();
                         }
                     });
+        }
+
+        if (fcmHelper != null) {
+            sendFCMPushNotifications(entrants, eventId, message, categoryValue);
         }
     }
 
     /**
-     * Checks if all notifications have been processed and calls the callback.
-     *
-     * @param completed array tracking completed notifications
-     * @param failed array tracking failed notifications
-     * @param total total number of notifications to send
-     * @param callback callback to invoke when all notifications are processed
+     * Sends FCM push notifications to entrants.
+     * Fire-and-forget: errors are logged but don't affect Firestore notification saving.
+     * 
+     * Note: The FCM token fetching and aggregation logic (fetchTokensAndSend and
+     * TokenFetchAggregator) was implemented with assistance from Claude Sonnet 4.5 (Anthropic).
+     * The thread-safe token collection pattern using Collections.synchronizedList() and the
+     * aggregator helper class for coordinating multiple async token fetches were developed
+     * with LLM assistance.
      */
-    private void checkNotificationCompletion(int[] completed, int[] failed, int total,
-                                             NotificationCallback callback) {
-        if (completed[0] + failed[0] == total) {
-            callback.onSuccess(completed[0], failed[0]);
+    private void sendFCMPushNotifications(List<Map<String, Object>> entrants,
+                                         String eventId, String message,
+                                         String categoryValue) {
+        List<String> deviceIds = new ArrayList<>();
+        for (Map<String, Object> entry : entrants) {
+            Object deviceIdObj = entry.get("deviceId");
+            if (deviceIdObj != null) {
+                deviceIds.add(deviceIdObj.toString());
+            }
+        }
+
+        if (deviceIds.isEmpty()) {
+            return;
+        }
+
+        fetchTokensAndSend(deviceIds, eventId, message, categoryValue);
+    }
+
+    private void fetchTokensAndSend(List<String> deviceIds, String eventId,
+                                    String message, String categoryValue) {
+        final int total = deviceIds.size();
+        final List<String> tokens = Collections.synchronizedList(new ArrayList<>());
+        final TokenFetchAggregator aggregator = new TokenFetchAggregator(total, tokens, () -> {
+            if (!tokens.isEmpty() && fcmHelper != null) {
+                Map<String, String> data = new HashMap<>();
+                data.put("eventId", eventId);
+                data.put("category", categoryValue);
+                fcmHelper.sendNotifications(tokens, "Event Notification", message, data);
+            }
+        });
+
+        for (String deviceId : deviceIds) {
+            entrantDB.getFCMToken(deviceId, new EntrantDB.Callback<String>() {
+                @Override
+                public void onSuccess(String token) {
+                    if (token != null && !token.isEmpty()) {
+                        tokens.add(token);
+                    }
+                    aggregator.onTokenFetched();
+                }
+
+                @Override
+                public void onError(@NonNull Exception e) {
+                    Log.d(TAG, "Failed to get FCM token for " + deviceId, e);
+                    aggregator.onTokenFetched();
+                }
+            });
+        }
+    }
+
+    private static class TokenFetchAggregator {
+        private final int total;
+        private final List<String> tokens;
+        private final Runnable onComplete;
+        private int completed;
+
+        TokenFetchAggregator(int total, List<String> tokens, Runnable onComplete) {
+            this.total = total;
+            this.tokens = tokens;
+            this.onComplete = onComplete;
+            this.completed = 0;
+        }
+
+        synchronized void onTokenFetched() {
+            completed++;
+            if (completed == total) {
+                onComplete.run();
+            }
+        }
+    }
+
+    private static class NotificationSender {
+        private final int total;
+        private final NotificationCallback callback;
+        private int completed = 0;
+        private int failed = 0;
+
+        NotificationSender(int total, NotificationCallback callback) {
+            this.total = total;
+            this.callback = callback;
+        }
+
+        synchronized void onSuccess() {
+            completed++;
+            checkCompletion();
+        }
+
+        synchronized void onError() {
+            failed++;
+            checkCompletion();
+        }
+
+        private void checkCompletion() {
+            if (completed + failed == total) {
+                callback.onSuccess(completed, failed);
+            }
         }
     }
 }

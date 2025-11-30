@@ -47,6 +47,7 @@ dependencies {
     implementation("com.google.firebase:firebase-firestore")
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-storage")
+    implementation("com.google.firebase:firebase-messaging")
     
     // --- QR Code Scanning ---
     implementation("com.google.zxing:core:3.4.1")
@@ -55,6 +56,10 @@ dependencies {
     // --- Image Loading ---
     implementation("com.github.bumptech.glide:glide:4.16.0")
 
+    // --- HTTP & JSON ---
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.google.code.gson:gson:2.10.1")
+
     // --- Navigation & UI ---
     implementation(libs.navigation.fragment)
     implementation(libs.navigation.ui)
@@ -62,6 +67,7 @@ dependencies {
     implementation(libs.material)
     implementation(libs.constraintlayout)
     implementation("androidx.recyclerview:recyclerview:1.3.2")
+    implementation("androidx.core:core:1.13.1")
 
     // --- Unit tests (runs on JVM) ---
     testImplementation(libs.junit)

@@ -24,6 +24,9 @@ import ca.ualberta.codarc.codarc_events.controllers.NotifyWinnersController;
 import ca.ualberta.codarc.codarc_events.data.EntrantDB;
 import ca.ualberta.codarc.codarc_events.data.EventDB;
 import ca.ualberta.codarc.codarc_events.models.Entrant;
+import ca.ualberta.codarc.codarc_events.models.Event;
+import ca.ualberta.codarc.codarc_events.controllers.EventValidationHelper;
+import ca.ualberta.codarc.codarc_events.utils.FCMHelper;
 
 /**
  * Displays list of winners for an event.
@@ -35,6 +38,7 @@ public class ViewWinnersActivity extends BaseEntrantListActivity {
     private MaterialButton btnNotifyWinners;
     private NotifyWinnersController notifyController;
     private List<WinnersAdapter.WinnerItem> itemList;
+    private Event currentEvent;
 
     @Override
     protected int getLayoutResourceId() {
@@ -54,7 +58,7 @@ public class ViewWinnersActivity extends BaseEntrantListActivity {
     @Override
     protected void setupAdapter() {
         itemList = new ArrayList<>();
-        adapter = new WinnersAdapter(itemList);
+        adapter = new WinnersAdapter(itemList, this::cancelWinner);
         recyclerView.setAdapter(adapter);
     }
 
@@ -65,9 +69,19 @@ public class ViewWinnersActivity extends BaseEntrantListActivity {
 
     @Override
     protected void initializeActivity() {
-        notifyController = new NotifyWinnersController(eventDB, entrantDB);
+        FCMHelper fcmHelper = createFCMHelperIfConfigured();
+        notifyController = new NotifyWinnersController(eventDB, entrantDB, fcmHelper);
         btnNotifyWinners = findViewById(R.id.btn_notify_winners);
         setupNotifyButton();
+    }
+
+    private FCMHelper createFCMHelperIfConfigured() {
+        String functionUrl = getString(R.string.fcm_function_url);
+        if (functionUrl != null && !functionUrl.isEmpty() && 
+            !functionUrl.contains("YOUR_REGION") && !functionUrl.contains("YOUR_PROJECT_ID")) {
+            return new FCMHelper(functionUrl);
+        }
+        return null;
     }
 
     @Override
@@ -76,6 +90,22 @@ public class ViewWinnersActivity extends BaseEntrantListActivity {
     }
 
     private void loadWinners() {
+        eventDB.getEvent(eventId, new EventDB.Callback<Event>() {
+            @Override
+            public void onSuccess(Event event) {
+                currentEvent = event;
+                loadWinnersList();
+            }
+
+            @Override
+            public void onError(@NonNull Exception e) {
+                Log.e("ViewWinnersActivity", "Failed to load event", e);
+                Toast.makeText(ViewWinnersActivity.this, "Failed to load event", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void loadWinnersList() {
         eventDB.getWinners(eventId, new EventDB.Callback<List<Map<String, Object>>>() {
             @Override
             public void onSuccess(List<Map<String, Object>> entries) {
@@ -105,7 +135,10 @@ public class ViewWinnersActivity extends BaseEntrantListActivity {
         }
 
         final int totalEntries = entries.size();
-        final int[] completed = {0};
+        WinnerNameAggregator aggregator = new WinnerNameAggregator(totalEntries, () -> {
+            adapter.notifyDataSetChanged();
+            hideEmptyState();
+        });
 
         for (Map<String, Object> entry : entries) {
             String deviceId = (String) entry.get("deviceId");
@@ -120,29 +153,65 @@ public class ViewWinnersActivity extends BaseEntrantListActivity {
                             ? entrant.getName() : deviceId;
                     long timestamp = parseTimestamp(invitedAtObj);
                     itemList.add(new WinnersAdapter.WinnerItem(deviceId, name, timestamp, isEnrolled));
-                    checkAndUpdateUI(completed, totalEntries);
+                    aggregator.onWinnerFetched();
                 }
 
                 @Override
                 public void onError(@NonNull Exception e) {
                     long timestamp = parseTimestamp(invitedAtObj);
                     itemList.add(new WinnersAdapter.WinnerItem(deviceId, deviceId, timestamp, isEnrolled));
-                    checkAndUpdateUI(completed, totalEntries);
+                    aggregator.onWinnerFetched();
                 }
             });
         }
     }
 
-    private void checkAndUpdateUI(int[] completed, int totalEntries) {
-        completed[0]++;
-        if (completed[0] == totalEntries) {
-            adapter.notifyDataSetChanged();
-            hideEmptyState();
+    private static class WinnerNameAggregator {
+        private final int total;
+        private final Runnable onComplete;
+        private int completed = 0;
+
+        WinnerNameAggregator(int total, Runnable onComplete) {
+            this.total = total;
+            this.onComplete = onComplete;
+        }
+
+        synchronized void onWinnerFetched() {
+            completed++;
+            if (completed == total) {
+                onComplete.run();
+            }
         }
     }
 
     private void setupNotifyButton() {
         btnNotifyWinners.setOnClickListener(v -> showNotifyDialog());
+    }
+
+    private void cancelWinner(String deviceId) {
+        if (deviceId == null || deviceId.isEmpty()) {
+            Toast.makeText(this, R.string.cancel_entrant_invalid, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (currentEvent == null || !EventValidationHelper.hasRegistrationDeadlinePassed(currentEvent)) {
+            Toast.makeText(this, R.string.cancel_entrant_before_deadline, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        eventDB.setEnrolledStatus(eventId, deviceId, false, new EventDB.Callback<Void>() {
+            @Override
+            public void onSuccess(Void value) {
+                Toast.makeText(ViewWinnersActivity.this, R.string.cancel_entrant_success, Toast.LENGTH_SHORT).show();
+                loadWinners();
+            }
+
+            @Override
+            public void onError(@NonNull Exception e) {
+                Log.e("ViewWinnersActivity", "Failed to cancel entrant", e);
+                Toast.makeText(ViewWinnersActivity.this, R.string.cancel_entrant_error, Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     /**
