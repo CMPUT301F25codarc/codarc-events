@@ -1,6 +1,6 @@
 package ca.ualberta.codarc.codarc_events;
 
-import ca.ualberta.codarc.codarc_events.controllers.RemoveProfileController;
+import ca.ualberta.codarc.codarc_events.controllers.AdminRemoveProfileController;
 import ca.ualberta.codarc.codarc_events.data.EntrantDB;
 import ca.ualberta.codarc.codarc_events.data.EventDB;
 import ca.ualberta.codarc.codarc_events.data.UserDB;
@@ -23,29 +23,29 @@ public class RemoveProfileControllerTests {
     private EntrantDB mockEntrantDb;
     private EventDB mockEventDb;
     private UserDB mockUserDb;
-    private RemoveProfileController controller;
+    private AdminRemoveProfileController controller;
 
     @Before
     public void setUp() {
         mockEntrantDb = mock(EntrantDB.class);
         mockEventDb = mock(EventDB.class);
         mockUserDb = mock(UserDB.class);
-        controller = new RemoveProfileController(mockEntrantDb, mockEventDb, mockUserDb);
+        controller = new AdminRemoveProfileController(mockEntrantDb, mockEventDb, mockUserDb);
     }
 
     // ---------- validation ----------
 
     @Test
     public void removeProfile_emptyEntrantDeviceId_failsFast() {
-        RemoveProfileController.Callback cb = mock(RemoveProfileController.Callback.class);
+        AdminRemoveProfileController.Callback cb = mock(AdminRemoveProfileController.Callback.class);
 
         controller.removeProfile("", "admin1", cb);
 
-        ArgumentCaptor<RemoveProfileController.RemoveProfileResult> resCap =
-                ArgumentCaptor.forClass(RemoveProfileController.RemoveProfileResult.class);
+        ArgumentCaptor<AdminRemoveProfileController.RemoveProfileResult> resCap =
+                ArgumentCaptor.forClass(AdminRemoveProfileController.RemoveProfileResult.class);
         verify(cb).onResult(resCap.capture());
 
-        RemoveProfileController.RemoveProfileResult res = resCap.getValue();
+        AdminRemoveProfileController.RemoveProfileResult res = resCap.getValue();
         assertFalse(res.isSuccess());
         assertEquals("Entrant device ID is required", res.getErrorMessage());
 
@@ -54,15 +54,15 @@ public class RemoveProfileControllerTests {
 
     @Test
     public void removeProfile_emptyAdminDeviceId_failsFast() {
-        RemoveProfileController.Callback cb = mock(RemoveProfileController.Callback.class);
+        AdminRemoveProfileController.Callback cb = mock(AdminRemoveProfileController.Callback.class);
 
         controller.removeProfile("dev1", "", cb);
 
-        ArgumentCaptor<RemoveProfileController.RemoveProfileResult> resCap =
-                ArgumentCaptor.forClass(RemoveProfileController.RemoveProfileResult.class);
+        ArgumentCaptor<AdminRemoveProfileController.RemoveProfileResult> resCap =
+                ArgumentCaptor.forClass(AdminRemoveProfileController.RemoveProfileResult.class);
         verify(cb).onResult(resCap.capture());
 
-        RemoveProfileController.RemoveProfileResult res = resCap.getValue();
+        AdminRemoveProfileController.RemoveProfileResult res = resCap.getValue();
         assertFalse(res.isSuccess());
         assertEquals("Admin device ID is required", res.getErrorMessage());
 
@@ -73,7 +73,7 @@ public class RemoveProfileControllerTests {
 
     @Test
     public void removeProfile_nonAdmin_returnsAdminRequiredError() {
-        RemoveProfileController.Callback cb = mock(RemoveProfileController.Callback.class);
+        AdminRemoveProfileController.Callback cb = mock(AdminRemoveProfileController.Callback.class);
 
         controller.removeProfile("dev1", "admin1", cb);
 
@@ -89,11 +89,11 @@ public class RemoveProfileControllerTests {
         // Trigger non admin success path (no Log)
         userCap.getValue().onSuccess(mockUser);
 
-        ArgumentCaptor<RemoveProfileController.RemoveProfileResult> resCap =
-                ArgumentCaptor.forClass(RemoveProfileController.RemoveProfileResult.class);
+        ArgumentCaptor<AdminRemoveProfileController.RemoveProfileResult> resCap =
+                ArgumentCaptor.forClass(AdminRemoveProfileController.RemoveProfileResult.class);
         verify(cb).onResult(resCap.capture());
 
-        RemoveProfileController.RemoveProfileResult res = resCap.getValue();
+        AdminRemoveProfileController.RemoveProfileResult res = resCap.getValue();
         assertFalse(res.isSuccess());
         assertEquals("Admin access required", res.getErrorMessage());
 
@@ -104,7 +104,7 @@ public class RemoveProfileControllerTests {
 
     @Test
     public void removeProfile_adminAndEntrantWithEvents_callsExpectedDbOperations() {
-        RemoveProfileController.Callback cb = mock(RemoveProfileController.Callback.class);
+        AdminRemoveProfileController.Callback cb = mock(AdminRemoveProfileController.Callback.class);
 
         controller.removeProfile("dev1", "admin1", cb);
 
@@ -160,10 +160,12 @@ public class RemoveProfileControllerTests {
         verify(mockEntrantDb).deleteAllEntrantEvents(eq("dev1"), delEventsCap.capture());
 
         // Verify profile wipe
+        // Note: AdminRemoveProfileController uses DeleteOwnProfileController internally,
+        // which calls deleteProfileInternal, which then calls entrantDB.deleteProfile with shouldBan=true
         @SuppressWarnings("unchecked")
         ArgumentCaptor<EntrantDB.Callback<Void>> delProfileCap =
                 ArgumentCaptor.forClass(EntrantDB.Callback.class);
-        verify(mockEntrantDb).deleteProfile(eq("dev1"), delProfileCap.capture());
+        verify(mockEntrantDb).deleteProfile(eq("dev1"), eq(true), delProfileCap.capture());
 
         // Important: do NOT call delEventsCap.getValue().onSuccess(...)
         // or delProfileCap.getValue().onSuccess(...), since those paths log
