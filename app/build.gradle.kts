@@ -88,7 +88,9 @@ dependencies {
     androidTestImplementation("androidx.test:rules:1.6.1")
     androidTestImplementation(libs.espresso.core)
     androidTestImplementation("androidx.test.espresso:espresso-intents:3.6.1")
-    androidTestImplementation("androidx.test.espresso:espresso-contrib:3.6.1")
+    androidTestImplementation("androidx.test.espresso:espresso-contrib:3.6.1") {
+        exclude(group = "com.google.protobuf", module = "protobuf-lite")
+    }
     androidTestImplementation("androidx.test.espresso:espresso-idling-resource:3.6.1")
 
     // --- Optional for stable instrumentation ---
