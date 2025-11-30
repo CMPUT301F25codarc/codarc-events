@@ -22,6 +22,7 @@ public class Event implements Serializable {
     private String location;
     private List<String> tags;
     private String posterUrl;
+    private boolean requireGeolocation;
 
     public Event() { }
 
@@ -94,6 +95,9 @@ public class Event implements Serializable {
     /** @return the poster image URL */
     public String getPosterUrl() { return posterUrl; }
 
+    /** @return true if entrants must share their location when joining */
+    public boolean isRequireGeolocation() { return requireGeolocation; }
+
     // Setters
 
     /** @param id sets the event ID */
@@ -130,5 +134,7 @@ public class Event implements Serializable {
 
     /** @param posterUrl sets the poster image URL */
     public void setPosterUrl(String posterUrl) { this.posterUrl = posterUrl; }
-}
 
+    /** @param requireGeolocation sets whether geolocation is required */
+    public void setRequireGeolocation(boolean requireGeolocation) { this.requireGeolocation = requireGeolocation; }
+}

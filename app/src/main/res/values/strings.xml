@@ -125,13 +125,14 @@
     <string name="registration_open_hint">Registration Opens</string>
     <string name="registration_close_hint">Registration Closes</string>
     <string name="event_capacity_hint">Capacity</string>
+    <string name="event_require_geolocation">Require entrants to share location when joining</string>
     <string name="capacity_unlimited_hint">Leave empty for unlimited</string>
     <string name="event_poster_title">Event Poster</string>
     <string name="poster_image_description">Event poster image</string>
     <string name="choose_poster_button">Choose Poster</string>
     <string name="cancel_button">Cancel</string>
     <string name="create_event_button">Create Event</string>
-  
+
     <!-- Notification Strings -->
     <string name="notify_winners_button">Notify Winners</string>
     <string name="notify_cancelled_button">Notify Cancelled</string>
@@ -149,19 +150,21 @@
     <string name="notification_decline">Decline</string>
     <string name="notification_status_accepted">Invitation accepted</string>
     <string name="notification_status_declined">Invitation declined</string>
+    <string name="export_csv_button">Export CSV</string>
+    <string name="export_csv_error">Unable to export attendee list right now.</string>
     <string name="notification_status_acknowledged">Notification acknowledged</string>
     <string name="notification_accept_success">You are successfully registered for this event.</string>
     <string name="notification_decline_success">Invitation to join the event rejected.</string>
     <string name="notification_unknown_event">Event update</string>
     <string name="notification_response_error">Unable to update invitation. Please try again.</string>
-  
+
     <!-- Lottery Info Strings -->
     <string name="lottery_info">Lottery Info</string>
     <string name="got_it">Got it</string>
     <string name="lottery_info_title">Fair and Random Selection</string>
     <string name="lottery_info_description">Selection is performed through a random lottery to ensure fairness and equal opportunity. All entrants in the waiting list have an equal chance of being selected once registration closes. The selection does not depend on when you joined or on any personal details. Every participant is treated equally, making the lottery process transparent and unbiased.</string>
     <string name="lottery_info_footer">For transparency, organizers cannot influence the lottery results.</string>
-    
+
     <!-- Event Card Strings -->
     <string name="status_open">Status: Open</string>
     <string name="status_closed">Status: Closed</string>
@@ -179,5 +182,43 @@
     <string name="registration_history_not_selected">Not Selected</string>
     <string name="view_history">View History</string>
     <string name="back">Back</string>
+
+    <!-- Admin Event List Strings -->
+    <string name="admin_remove_events_title">Remove Events</string>
+    <string name="admin_event_list_empty">No events found</string>
+    <string name="admin_event_list_error">Failed to load events. Tap to retry.</string>
+    <string name="admin_delete_event_confirm">Are you sure you want to delete \"%1$s\"?\n\nThis action cannot be undone.</string>
+    <string name="admin_delete_event_success">Event removed successfully</string>
+    <string name="admin_delete_event_error">Failed to remove event. Please try again.</string>
+    <string name="admin_access_required">Admin access required</string>
+    <string name="admin_check_status_error">Failed to check admin status</string>
+
+    <!-- Admin Profile List Strings -->
+    <string name="admin_remove_profiles_title">Remove Profiles</string>
+    <string name="admin_profile_list_empty">No profiles found</string>
+    <string name="admin_profile_list_error">Failed to load profiles. Tap to retry.</string>
+    <string name="admin_remove_profile_confirm">Are you sure you want to remove the profile for \"%1$s\"?\n\nThis will:\n- Wipe all profile information\n- Ban the user from re-registering\n- Remove them from all events\n\nThis action cannot be undone.</string>
+    <string name="admin_remove_profile_success">Profile removed successfully</string>
+    <string name="admin_remove_profile_error">Failed to remove profile. Please try again.</string>
+    <string name="profile_registered">Registered</string>
+    <string name="profile_not_registered">Not Registered</string>
+    <string name="profile_banned">Banned</string>
+    <string name="profile_banned_title">Account Banned</string>
+    <string name="profile_banned_message">Your account has been banned. You cannot create or update your profile. Please contact an administrator if you believe this is an error.</string>
+    <string name="profile_name_required">Name required</string>
+    <string name="profile_email_required">Valid email required</string>
+
+    <!-- Admin Image List Strings -->
+    <string name="admin_remove_images_title">Remove Images</string>
+    <string name="admin_image_list_empty">No events with images found</string>
+    <string name="admin_image_list_error">Failed to load events. Tap to retry.</string>
+    <string name="admin_delete_image_confirm">Are you sure you want to delete the image for \"%1$s\"?\n\nThis will:\n- Delete the image from storage\n- Remove the image from the event\n\nThis action cannot be undone.</string>
+    <string name="admin_delete_image_success">Image deleted successfully</string>
+    <string name="admin_delete_image_error">Failed to delete image. Please try again.</string>
+
+    <!-- Admin Browse/View Titles -->
+    <string name="admin_view_events_title">View Events</string>
+    <string name="admin_view_profiles_title">View Profiles</string>
+    <string name="admin_view_images_title">View Images</string>
 
 </resources>

@@ -1,7 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
-        android:id="@+id/menu_admin_placeholder"
-        android:title="Admin Functions (Coming Soon)" />
+        android:id="@+id/menu_admin_remove_events"
+        android:title="@string/admin_view_events_title" />
+    <item
+        android:id="@+id/menu_admin_remove_profiles"
+        android:title="@string/admin_view_profiles_title" />
+    <item
+        android:id="@+id/menu_admin_remove_images"
+        android:title="@string/admin_view_images_title" />
+    <!-- Future admin functions can be added here -->
 </menu>
 
