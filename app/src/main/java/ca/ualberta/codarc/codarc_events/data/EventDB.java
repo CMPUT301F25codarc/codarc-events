@@ -165,6 +165,30 @@ public class EventDB {
     }
 
     /**
+     * Fetches all events once (one-time read, not a listener).
+     * Use this when you don't need real-time updates.
+     *
+     * @param cb callback with the list of events
+     */
+    public void getAllEventsOnce(Callback<List<Event>> cb) {
+        db.collection("events")
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    List<Event> events = new ArrayList<>();
+                    if (querySnapshot != null) {
+                        for (QueryDocumentSnapshot doc : querySnapshot) {
+                            Event event = parseEventFromDocument(doc);
+                            if (event != null) {
+                                events.add(event);
+                            }
+                        }
+                    }
+                    cb.onSuccess(events);
+                })
+                .addOnFailureListener(cb::onError);
+    }
+
+    /**
      * Fetches a single event by its ID.
      */
     public void getEvent(String eventId, Callback<Event> cb) {
@@ -417,6 +441,70 @@ public class EventDB {
                 .delete()
                 .addOnSuccessListener(unused -> cb.onSuccess(null))
                 .addOnFailureListener(cb::onError);
+    }
+
+    /**
+     * Removes an entrant from all event subcollections (waitingList, winners, accepted, cancelled, replacementPool).
+     * Used when admin removes a profile to clean up all event associations.
+     * This operation is idempotent - safe to call multiple times.
+     *
+     * @param eventId the event ID
+     * @param deviceId the device ID of the entrant to remove
+     * @param cb callback for completion
+     */
+    public void removeEntrantFromEvent(String eventId, String deviceId, Callback<Void> cb) {
+        if (eventId == null || eventId.isEmpty() || deviceId == null || deviceId.isEmpty()) {
+            cb.onError(new IllegalArgumentException("eventId or deviceId is empty"));
+            return;
+        }
+        
+        // Use batch write to remove from all subcollections atomically
+        WriteBatch batch = db.batch();
+        
+        // Remove from waitingList
+        DocumentReference waitlistRef = db.collection("events")
+            .document(eventId)
+            .collection("waitingList")
+            .document(deviceId);
+        batch.delete(waitlistRef);
+        
+        // Remove from winners
+        DocumentReference winnersRef = db.collection("events")
+            .document(eventId)
+            .collection("winners")
+            .document(deviceId);
+        batch.delete(winnersRef);
+        
+        // Remove from accepted
+        DocumentReference acceptedRef = db.collection("events")
+            .document(eventId)
+            .collection("accepted")
+            .document(deviceId);
+        batch.delete(acceptedRef);
+        
+        // Remove from cancelled
+        DocumentReference cancelledRef = db.collection("events")
+            .document(eventId)
+            .collection("cancelled")
+            .document(deviceId);
+        batch.delete(cancelledRef);
+        
+        // Remove from replacementPool
+        DocumentReference replacementRef = db.collection("events")
+            .document(eventId)
+            .collection("replacementPool")
+            .document(deviceId);
+        batch.delete(replacementRef);
+        
+        batch.commit()
+            .addOnSuccessListener(unused -> {
+                android.util.Log.d("EventDB", "Removed entrant from all event subcollections: " + deviceId);
+                cb.onSuccess(null);
+            })
+            .addOnFailureListener(e -> {
+                android.util.Log.e("EventDB", "Failed to remove entrant from event: " + eventId, e);
+                cb.onError(e);
+            });
     }
 
     public void getWaitlist(String eventId, Callback<List<Map<String, Object>>> cb) {
@@ -886,5 +974,165 @@ public class EventDB {
         }
         // Fallback: convert to string
         return value.toString();
+    }
+
+    /**
+     * Deletes an event and all its subcollections from the events collection.
+     * Deletes: waitingList, winners, accepted, cancelled, replacementPool, declineLogs
+     *
+     * @param eventId the event ID to delete
+     * @param cb callback for completion
+     */
+    public void deleteEvent(String eventId, Callback<Void> cb) {
+        if (eventId == null || eventId.isEmpty()) {
+            cb.onError(new IllegalArgumentException("eventId cannot be null or empty"));
+            return;
+        }
+        
+        DocumentReference eventRef = db.collection("events").document(eventId);
+        
+        // Delete all subcollections first, then the event document
+        // Firestore doesn't support recursive deletion, so we need to delete each subcollection
+        String[] subcollections = {
+            "waitingList",
+            "winners", 
+            "accepted",
+            "cancelled",
+            "replacementPool",
+            "declineLogs"
+        };
+        
+        deleteSubcollections(eventRef, subcollections, 0, new Callback<Void>() {
+            @Override
+            public void onSuccess(Void value) {
+                // All subcollections deleted, now delete the event document
+                eventRef.delete()
+                    .addOnSuccessListener(aVoid -> {
+                        android.util.Log.d("EventDB", "Event deleted: " + eventId);
+                        cb.onSuccess(null);
+                    })
+                    .addOnFailureListener(e -> {
+                        android.util.Log.e("EventDB", "Failed to delete event: " + eventId, e);
+                        cb.onError(e);
+                    });
+            }
+            
+            @Override
+            public void onError(@NonNull Exception e) {
+                android.util.Log.e("EventDB", "Failed to delete subcollections for event: " + eventId, e);
+                // Continue with event deletion even if subcollection deletion fails
+                eventRef.delete()
+                    .addOnSuccessListener(aVoid -> {
+                        android.util.Log.d("EventDB", "Event deleted (with subcollection errors): " + eventId);
+                        cb.onSuccess(null);
+                    })
+                    .addOnFailureListener(deleteError -> {
+                        android.util.Log.e("EventDB", "Failed to delete event: " + eventId, deleteError);
+                        cb.onError(deleteError);
+                    });
+            }
+        });
+    }
+
+    /**
+     * Recursively deletes all documents in subcollections.
+     * 
+     * @param eventRef the event document reference
+     * @param subcollectionNames array of subcollection names to delete
+     * @param index current index in the array
+     * @param cb callback for completion
+     */
+    private void deleteSubcollections(DocumentReference eventRef, String[] subcollectionNames, 
+                                      int index, Callback<Void> cb) {
+        if (index >= subcollectionNames.length) {
+            // All subcollections processed
+            cb.onSuccess(null);
+            return;
+        }
+        
+        String subcollectionName = subcollectionNames[index];
+        eventRef.collection(subcollectionName)
+            .get()
+            .addOnSuccessListener(querySnapshot -> {
+                if (querySnapshot == null || querySnapshot.isEmpty()) {
+                    // No documents in this subcollection, move to next
+                    deleteSubcollections(eventRef, subcollectionNames, index + 1, cb);
+                    return;
+                }
+                
+                // Delete all documents in this subcollection
+                // Firestore batch limit is 500 operations, so split if needed
+                List<QueryDocumentSnapshot> docs = new ArrayList<>();
+                for (QueryDocumentSnapshot doc : querySnapshot) {
+                    docs.add(doc);
+                }
+                
+                deleteDocumentsInBatches(eventRef, subcollectionName, docs, 0, new Callback<Void>() {
+                    @Override
+                    public void onSuccess(Void value) {
+                        android.util.Log.d("EventDB", "Deleted subcollection: " + subcollectionName);
+                        // Move to next subcollection
+                        deleteSubcollections(eventRef, subcollectionNames, index + 1, cb);
+                    }
+                    
+                    @Override
+                    public void onError(@NonNull Exception e) {
+                        android.util.Log.w("EventDB", "Failed to delete subcollection: " + subcollectionName, e);
+                        // Continue with next subcollection even if this one fails
+                        deleteSubcollections(eventRef, subcollectionNames, index + 1, cb);
+                    }
+                });
+            })
+            .addOnFailureListener(e -> {
+                android.util.Log.w("EventDB", "Failed to query subcollection: " + subcollectionName, e);
+                // Continue with next subcollection even if query fails
+                deleteSubcollections(eventRef, subcollectionNames, index + 1, cb);
+            });
+    }
+
+    /**
+     * Deletes documents in batches to respect Firestore's 500 operation limit per batch.
+     *
+     * @param eventRef the event document reference
+     * @param subcollectionName name of the subcollection (for logging)
+     * @param docs list of documents to delete
+     * @param batchIndex current batch index (0-based)
+     * @param cb callback for completion
+     */
+    private void deleteDocumentsInBatches(DocumentReference eventRef, String subcollectionName,
+                                         List<QueryDocumentSnapshot> docs, int batchIndex,
+                                         Callback<Void> cb) {
+        if (docs.isEmpty()) {
+            cb.onSuccess(null);
+            return;
+        }
+        
+        final int BATCH_SIZE = 500;
+        int startIndex = batchIndex * BATCH_SIZE;
+        
+        if (startIndex >= docs.size()) {
+            // All batches processed
+            cb.onSuccess(null);
+            return;
+        }
+        
+        int endIndex = Math.min(startIndex + BATCH_SIZE, docs.size());
+        WriteBatch batch = db.batch();
+        
+        for (int i = startIndex; i < endIndex; i++) {
+            batch.delete(docs.get(i).getReference());
+        }
+        
+        batch.commit()
+            .addOnSuccessListener(aVoid -> {
+                android.util.Log.d("EventDB", "Deleted batch " + (batchIndex + 1) + " of subcollection: " + subcollectionName);
+                // Process next batch
+                deleteDocumentsInBatches(eventRef, subcollectionName, docs, batchIndex + 1, cb);
+            })
+            .addOnFailureListener(e -> {
+                android.util.Log.w("EventDB", "Failed to delete batch " + (batchIndex + 1) + " of subcollection: " + subcollectionName, e);
+                // Continue with next batch even if this one fails
+                deleteDocumentsInBatches(eventRef, subcollectionName, docs, batchIndex + 1, cb);
+            });
     }
 }

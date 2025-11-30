@@ -6,7 +6,10 @@
     android:layout_marginBottom="12dp"
     android:background="@color/notification_card_unread"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:padding="16dp"
+    android:clickable="true"
+    android:focusable="true"
+    android:foreground="?android:attr/selectableItemBackground">
 
     <TextView
         android:id="@+id/tv_notification_title"

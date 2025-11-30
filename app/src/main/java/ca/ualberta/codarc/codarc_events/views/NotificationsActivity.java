@@ -1,7 +1,9 @@
 package ca.ualberta.codarc.codarc_events.views;
 
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.ProgressBar;
@@ -67,17 +69,25 @@ public class NotificationsActivity extends AppCompatActivity {
         }
 
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new NotificationAdapter(new NotificationAdapter.NotificationActionListener() {
-            @Override
-            public void onAccept(@NonNull NotificationEntry entry) {
-                handleInvitationResponse(entry, true);
-            }
+        adapter = new NotificationAdapter(
+                new NotificationAdapter.NotificationActionListener() {
+                    @Override
+                    public void onAccept(@NonNull NotificationEntry entry) {
+                        handleInvitationResponse(entry, true);
+                    }
 
-            @Override
-            public void onDecline(@NonNull NotificationEntry entry) {
-                handleInvitationResponse(entry, false);
-            }
-        });
+                    @Override
+                    public void onDecline(@NonNull NotificationEntry entry) {
+                        handleInvitationResponse(entry, false);
+                    }
+                },
+                new NotificationAdapter.NotificationClickListener() {
+                    @Override
+                    public void onNotificationClick(@NonNull NotificationEntry entry) {
+                        navigateToEventDetails(entry);
+                    }
+                }
+        );
         recyclerView.setAdapter(adapter);
 
         loadNotifications();
@@ -102,6 +112,7 @@ public class NotificationsActivity extends AppCompatActivity {
                     adapter.setItems(notifications);
                     updateEmptyState(notifications.isEmpty());
                     resolveEventNames();
+                    cleanupDeletedEventNotifications();
                 });
             }
 
@@ -240,5 +251,94 @@ public class NotificationsActivity extends AppCompatActivity {
     private void updateEmptyState(boolean isEmpty) {
         emptyStateView.setVisibility(isEmpty ? View.VISIBLE : View.GONE);
         recyclerView.setVisibility(isEmpty ? View.GONE : View.VISIBLE);
+    }
+
+    /**
+     * Cleans up notifications for events that have been deleted.
+     * Checks if each notification's eventId exists in Firestore and removes
+     * notifications for non-existent events.
+     */
+    private void cleanupDeletedEventNotifications() {
+        // Create a copy to avoid ConcurrentModificationException
+        List<NotificationEntry> entriesToCheck = new ArrayList<>(notifications);
+        List<NotificationEntry> entriesToRemove = new ArrayList<>();
+        
+        for (NotificationEntry entry : entriesToCheck) {
+            String eventId = entry.getEventId();
+            if (eventId == null || eventId.isEmpty()) {
+                continue;
+            }
+            
+            eventDB.eventExists(eventId, new EventDB.Callback<Boolean>() {
+                @Override
+                public void onSuccess(Boolean exists) {
+                    if (!exists) {
+                        // Event doesn't exist, mark for removal
+                        String notificationId = entry.getId();
+                        if (notificationId != null && !notificationId.isEmpty()) {
+                            entriesToRemove.add(entry);
+                            // Remove from database
+                            entrantDB.removeNotification(deviceId, notificationId, new EntrantDB.Callback<Void>() {
+                                @Override
+                                public void onSuccess(Void value) {
+                                    runOnUiThread(() -> {
+                                        // Remove from list and update adapter
+                                        synchronized (notifications) {
+                                            notifications.remove(entry);
+                                        }
+                                        adapter.setItems(new ArrayList<>(notifications));
+                                        updateEmptyState(notifications.isEmpty());
+                                    });
+                                }
+                                
+                                @Override
+                                public void onError(@NonNull Exception e) {
+                                    Log.w("NotificationsActivity", "Failed to remove notification for deleted event", e);
+                                }
+                            });
+                        }
+                    }
+                }
+                
+                @Override
+                public void onError(@NonNull Exception e) {
+                    // Log error but continue - don't fail cleanup if check fails
+                    Log.w("NotificationsActivity", "Failed to check if event exists: " + eventId, e);
+                }
+            });
+        }
+    }
+
+    /**
+     * Navigates to EventDetailsActivity when a notification is clicked.
+     * Fetches the event from Firestore using the notification's eventId.
+     *
+     * @param entry the notification entry that was clicked
+     */
+    private void navigateToEventDetails(@NonNull NotificationEntry entry) {
+        String eventId = entry.getEventId();
+        if (eventId == null || eventId.isEmpty()) {
+            Toast.makeText(this, "Event information not available", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        eventDB.getEvent(eventId, new EventDB.Callback<Event>() {
+            @Override
+            public void onSuccess(Event event) {
+                if (event == null) {
+                    Toast.makeText(NotificationsActivity.this, "Event not found", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                Intent intent = new Intent(NotificationsActivity.this, EventDetailsActivity.class);
+                intent.putExtra("event", event);
+                startActivity(intent);
+            }
+
+            @Override
+            public void onError(@NonNull Exception e) {
+                Log.e("NotificationsActivity", "Failed to load event for navigation", e);
+                Toast.makeText(NotificationsActivity.this, "Failed to load event details", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 }
