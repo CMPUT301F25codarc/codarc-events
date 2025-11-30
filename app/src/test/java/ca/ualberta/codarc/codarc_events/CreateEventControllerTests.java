@@ -22,7 +22,7 @@ public class CreateEventControllerTests {
     @Test
     public void validateAndCreateEvent_success_trimsFields_setsGeneratedIdAndQr_openTrue() {
         var res = controller.validateAndCreateEvent(
-                NAME, DESC, EVENT_AT, LOCATION, REG_OPEN, REG_CLOSE, "", Collections.emptyList(), ""
+                NAME, DESC, EVENT_AT, LOCATION, REG_OPEN, REG_CLOSE, "", Collections.emptyList(), "", false
         );
 
         assertTrue(res.isValid());
@@ -55,7 +55,7 @@ public class CreateEventControllerTests {
     @Test
     public void validateAndCreateEvent_missingName_fails() {
         var r = controller.validateAndCreateEvent(
-                null, DESC, EVENT_AT, LOCATION, REG_OPEN, REG_CLOSE, "", Collections.emptyList(), ""
+                null, DESC, EVENT_AT, LOCATION, REG_OPEN, REG_CLOSE, "", Collections.emptyList(), "", false
         );
         assertFalse(r.isValid());
         assertEquals("Event name is required", r.getErrorMessage());
@@ -65,7 +65,7 @@ public class CreateEventControllerTests {
     @Test
     public void validateAndCreateEvent_emptyName_fails() {
         var r = controller.validateAndCreateEvent(
-                "  ", DESC, EVENT_AT, LOCATION, REG_OPEN, REG_CLOSE, "", Collections.emptyList(), ""
+                "  ", DESC, EVENT_AT, LOCATION, REG_OPEN, REG_CLOSE, "", Collections.emptyList(), "", false
         );
         assertFalse(r.isValid());
         assertEquals("Event name is required", r.getErrorMessage());
@@ -75,7 +75,7 @@ public class CreateEventControllerTests {
     @Test
     public void validateAndCreateEvent_missingEventDate_fails() {
         var r = controller.validateAndCreateEvent(
-                NAME, DESC, null, LOCATION, REG_OPEN, REG_CLOSE, "", Collections.emptyList(), ""
+                NAME, DESC, null, LOCATION, REG_OPEN, REG_CLOSE, "", Collections.emptyList(), "", false
         );
         assertFalse(r.isValid());
         assertEquals("Event date/time is required", r.getErrorMessage());
@@ -85,7 +85,7 @@ public class CreateEventControllerTests {
     @Test
     public void validateAndCreateEvent_emptyEventDate_fails() {
         var r = controller.validateAndCreateEvent(
-                NAME, DESC, "  ", LOCATION, REG_OPEN, REG_CLOSE, "", Collections.emptyList(), ""
+                NAME, DESC, "  ", LOCATION, REG_OPEN, REG_CLOSE, "", Collections.emptyList(), "", false
         );
         assertFalse(r.isValid());
         assertEquals("Event date/time is required", r.getErrorMessage());
@@ -95,7 +95,7 @@ public class CreateEventControllerTests {
     @Test
     public void validateAndCreateEvent_missingRegOpen_fails() {
         var r = controller.validateAndCreateEvent(
-                NAME, DESC, EVENT_AT, LOCATION, null, REG_CLOSE, "", Collections.emptyList(), ""
+                NAME, DESC, EVENT_AT, LOCATION, null, REG_CLOSE, "", Collections.emptyList(), "", false
         );
         assertFalse(r.isValid());
         assertEquals("Registration open date is required", r.getErrorMessage());
@@ -105,7 +105,7 @@ public class CreateEventControllerTests {
     @Test
     public void validateAndCreateEvent_emptyRegOpen_fails() {
         var r = controller.validateAndCreateEvent(
-                NAME, DESC, EVENT_AT, LOCATION, "  ", REG_CLOSE, "", Collections.emptyList(), ""
+                NAME, DESC, EVENT_AT, LOCATION, "  ", REG_CLOSE, "", Collections.emptyList(), "", false
         );
         assertFalse(r.isValid());
         assertEquals("Registration open date is required", r.getErrorMessage());
@@ -115,7 +115,7 @@ public class CreateEventControllerTests {
     @Test
     public void validateAndCreateEvent_missingRegClose_fails() {
         var r = controller.validateAndCreateEvent(
-                NAME, DESC, EVENT_AT, LOCATION, REG_OPEN, null, "", Collections.emptyList(), ""
+                NAME, DESC, EVENT_AT, LOCATION, REG_OPEN, null, "", Collections.emptyList(), "", false
         );
         assertFalse(r.isValid());
         assertEquals("Registration close date is required", r.getErrorMessage());
@@ -125,7 +125,7 @@ public class CreateEventControllerTests {
     @Test
     public void validateAndCreateEvent_emptyRegClose_fails() {
         var r = controller.validateAndCreateEvent(
-                NAME, DESC, EVENT_AT, LOCATION, REG_OPEN, "  ", "", Collections.emptyList(), ""
+                NAME, DESC, EVENT_AT, LOCATION, REG_OPEN, "  ", "", Collections.emptyList(), "", false
         );
         assertFalse(r.isValid());
         assertEquals("Registration close date is required", r.getErrorMessage());
@@ -135,7 +135,7 @@ public class CreateEventControllerTests {
     @Test
     public void validateAndCreateEvent_capacity_parsesPositiveInt() {
         var r = controller.validateAndCreateEvent(
-                NAME, DESC, EVENT_AT, LOCATION, REG_OPEN, REG_CLOSE, "42", Collections.emptyList(), ""
+                NAME, DESC, EVENT_AT, LOCATION, REG_OPEN, REG_CLOSE, "42", Collections.emptyList(), "", false
         );
         assertTrue(r.isValid());
         assertEquals(Integer.valueOf(42), r.getEvent().getMaxCapacity());
@@ -144,7 +144,7 @@ public class CreateEventControllerTests {
     @Test
     public void validateAndCreateEvent_capacity_zeroBecomesNull() {
         var r = controller.validateAndCreateEvent(
-                NAME, DESC, EVENT_AT, LOCATION, REG_OPEN, REG_CLOSE, "0", Collections.emptyList(), ""
+                NAME, DESC, EVENT_AT, LOCATION, REG_OPEN, REG_CLOSE, "0", Collections.emptyList(), "", false
         );
         assertTrue(r.isValid());
         assertNull(r.getEvent().getMaxCapacity());
@@ -153,7 +153,7 @@ public class CreateEventControllerTests {
     @Test
     public void validateAndCreateEvent_capacity_negativeBecomesNull() {
         var r = controller.validateAndCreateEvent(
-                NAME, DESC, EVENT_AT, LOCATION, REG_OPEN, REG_CLOSE, "-5", Collections.emptyList(), ""
+                NAME, DESC, EVENT_AT, LOCATION, REG_OPEN, REG_CLOSE, "-5", Collections.emptyList(), "", false
         );
         assertTrue(r.isValid());
         assertNull(r.getEvent().getMaxCapacity());
@@ -162,7 +162,7 @@ public class CreateEventControllerTests {
     @Test
     public void validateAndCreateEvent_capacity_badStringBecomesNull() {
         var r = controller.validateAndCreateEvent(
-                NAME, DESC, EVENT_AT, LOCATION, REG_OPEN, REG_CLOSE, "abc", Collections.emptyList(), ""
+                NAME, DESC, EVENT_AT, LOCATION, REG_OPEN, REG_CLOSE, "abc", Collections.emptyList(), "", false
         );
         assertTrue(r.isValid());
         assertNull(r.getEvent().getMaxCapacity());
@@ -174,7 +174,7 @@ public class CreateEventControllerTests {
     public void validateAndCreateEvent_withTags_setsTags() {
         var tags = Arrays.asList("music", "outdoor");
         var r = controller.validateAndCreateEvent(
-                NAME, DESC, EVENT_AT, LOCATION, REG_OPEN, REG_CLOSE, "", tags, ""
+                NAME, DESC, EVENT_AT, LOCATION, REG_OPEN, REG_CLOSE, "", tags, "", false
         );
         assertTrue(r.isValid());
         assertEquals(tags, r.getEvent().getTags());
@@ -184,7 +184,7 @@ public class CreateEventControllerTests {
     public void validateAndCreateEvent_withPosterUrl_setsPosterUrl() {
         String posterUrl = "https://example.com/poster.jpg";
         var r = controller.validateAndCreateEvent(
-                NAME, DESC, EVENT_AT, LOCATION, REG_OPEN, REG_CLOSE, "", Collections.emptyList(), posterUrl
+                NAME, DESC, EVENT_AT, LOCATION, REG_OPEN, REG_CLOSE, "", Collections.emptyList(), posterUrl, false
         );
         assertTrue(r.isValid());
         assertEquals(posterUrl, r.getEvent().getPosterUrl());
@@ -195,7 +195,7 @@ public class CreateEventControllerTests {
     @Test
     public void persistEvent_happyPath_forwardsToDbAddEvent() {
         var res = controller.validateAndCreateEvent(
-                NAME, DESC, EVENT_AT, LOCATION, REG_OPEN, REG_CLOSE, "", Collections.emptyList(), ""
+                NAME, DESC, EVENT_AT, LOCATION, REG_OPEN, REG_CLOSE, "", Collections.emptyList(), "", false
         );
         assertTrue(res.isValid());
         Event e = res.getEvent();
