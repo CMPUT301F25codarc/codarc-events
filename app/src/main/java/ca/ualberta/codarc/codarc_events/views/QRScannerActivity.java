@@ -24,16 +24,6 @@ import ca.ualberta.codarc.codarc_events.models.Event;
 
 /**
  * QR code scanning activity for entrants to view event details.
- * 
- * <p>This activity:
- * <ul>
- *   <li>Requests camera permission if not already granted</li>
- *   <li>Launches ZXing scanner to scan QR codes</li>
- *   <li>Validates and fetches events using QRScanController</li>
- *   <li>Navigates to EventDetailsActivity on successful scan</li>
- *   <li>Shows error messages for invalid or unreadable QR codes</li>
- * </ul>
- * </p>
  */
 public class QRScannerActivity extends AppCompatActivity {
 
@@ -44,7 +34,6 @@ public class QRScannerActivity extends AppCompatActivity {
     private final androidx.activity.result.ActivityResultLauncher<ScanOptions> barcodeLauncher =
             registerForActivityResult(new ScanContract(), result -> {
                 if (result.getContents() == null) {
-                    // User cancelled or scan failed
                     finish();
                     return;
                 }
@@ -69,19 +58,11 @@ public class QRScannerActivity extends AppCompatActivity {
         }
     }
 
-    /**
-     * Checks if camera permission is granted.
-     *
-     * @return true if permission is granted, false otherwise
-     */
     private boolean checkCameraPermission() {
         return ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
                 == PackageManager.PERMISSION_GRANTED;
     }
 
-    /**
-     * Requests camera permission from the user.
-     */
     private void requestCameraPermission() {
         if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.CAMERA)) {
             new AlertDialog.Builder(this)
@@ -115,9 +96,6 @@ public class QRScannerActivity extends AppCompatActivity {
         }
     }
 
-    /**
-     * Launches the ZXing QR code scanner.
-     */
     private void launchScanner() {
         ScanOptions options = new ScanOptions();
         options.setDesiredBarcodeFormats(ScanOptions.QR_CODE);
@@ -130,14 +108,7 @@ public class QRScannerActivity extends AppCompatActivity {
         barcodeLauncher.launch(options);
     }
 
-    /**
-     * Processes the scanned QR code data.
-     * Validates the QR code and fetches the corresponding event.
-     *
-     * @param qrData the raw QR code string data
-     */
     private void processQRCode(String qrData) {
-        // Show loading indicator
         if (progressBar != null) {
             progressBar.setVisibility(View.VISIBLE);
         }
@@ -146,7 +117,6 @@ public class QRScannerActivity extends AppCompatActivity {
             @Override
             public void onResult(QRScanController.QRScanResult result) {
                 runOnUiThread(() -> {
-                    // Hide loading indicator
                     if (progressBar != null) {
                         progressBar.setVisibility(View.GONE);
                     }
@@ -163,7 +133,6 @@ public class QRScannerActivity extends AppCompatActivity {
                     } else {
                         Toast.makeText(QRScannerActivity.this,
                                 result.getErrorMessage(), Toast.LENGTH_LONG).show();
-                        // Allow user to try scanning again
                         launchScanner();
                     }
                 });
@@ -171,11 +140,6 @@ public class QRScannerActivity extends AppCompatActivity {
         });
     }
 
-    /**
-     * Navigates to EventDetailsActivity with the scanned event.
-     *
-     * @param event the event to display
-     */
     private void navigateToEventDetails(Event event) {
         Intent intent = new Intent(this, EventDetailsActivity.class);
         intent.putExtra("event", event);

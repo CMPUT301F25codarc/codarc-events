@@ -8,20 +8,12 @@ import ca.ualberta.codarc.codarc_events.models.Event;
 /**
  * Handles QR code scanning - parsing, validation, and event lookup logic.
  * 
- * <p>This controller encapsulates the business logic for:
- * <ul>
- *   <li>Parsing event IDs from QR code strings</li>
- *   <li>Validating QR code format</li>
- *   <li>Fetching events from Firestore based on scanned QR codes</li>
- * </ul>
- * </p>
+ * Note: QR code parsing and validation logic was implemented with assistance from 
+ * Claude Sonnet 4.5 (Anthropic). The prefix-based parsing approach ("event:" prefix)
+ * and fallback handling were developed with LLM assistance.
  */
 public class QRScanController {
 
-    /**
-     * Result object returned after processing a QR code scan.
-     * Contains success status, error message (if any), and the fetched event (if successful).
-     */
     public static class QRScanResult {
         private final boolean isSuccess;
         private final String errorMessage;
@@ -35,51 +27,26 @@ public class QRScanController {
             this.eventId = eventId;
         }
 
-        /**
-         * Creates a successful scan result.
-         *
-         * @param event the event that was found
-         * @param eventId the parsed event ID
-         * @return a successful QRScanResult
-         */
         public static QRScanResult success(Event event, String eventId) {
             return new QRScanResult(true, null, event, eventId);
         }
 
-        /**
-         * Creates a failed scan result.
-         *
-         * @param errorMessage the error message describing why the scan failed
-         * @return a failed QRScanResult
-         */
         public static QRScanResult failure(String errorMessage) {
             return new QRScanResult(false, errorMessage, null, null);
         }
 
-        /**
-         * @return true if the scan was successful, false otherwise
-         */
         public boolean isSuccess() {
             return isSuccess;
         }
 
-        /**
-         * @return the error message if the scan failed, null otherwise
-         */
         public String getErrorMessage() {
             return errorMessage;
         }
 
-        /**
-         * @return the event if the scan was successful, null otherwise
-         */
         public Event getEvent() {
             return event;
         }
 
-        /**
-         * @return the parsed event ID if available, null otherwise
-         */
         public String getEventId() {
             return eventId;
         }
@@ -87,13 +54,6 @@ public class QRScanController {
 
     /**
      * Parses an event ID from a QR code string.
-     * 
-     * <p>Supports two formats:
-     * <ul>
-     *   <li>Prefixed format: "event:{eventId}" - extracts the ID after the prefix</li>
-     *   <li>Plain format: "{eventId}" - treats the entire string as the event ID</li>
-     * </ul>
-     * </p>
      *
      * @param qrData the raw QR code string data
      * @return the extracted event ID, or null if the input is invalid
@@ -133,22 +93,12 @@ public class QRScanController {
 
     /**
      * Fetches an event from Firestore based on scanned QR code data.
-     * 
-     * <p>This method:
-     * <ol>
-     *   <li>Validates the QR code format</li>
-     *   <li>Parses the event ID from the QR code string</li>
-     *   <li>Fetches the event from Firestore using EventDB</li>
-     *   <li>Returns the result via callback</li>
-     * </ol>
-     * </p>
      *
      * @param qrData the raw QR code string data
      * @param eventDB the EventDB instance to use for fetching
      * @param callback callback to receive the scan result
      */
     public void fetchEventFromQR(String qrData, EventDB eventDB, Callback callback) {
-        // Validate QR code format first
         QRScanResult validation = validateQRCode(qrData);
         if (!validation.isSuccess()) {
             callback.onResult(validation);
@@ -178,15 +128,7 @@ public class QRScanController {
         });
     }
 
-    /**
-     * Callback interface for receiving QR scan results.
-     */
     public interface Callback {
-        /**
-         * Called when the QR scan operation completes.
-         *
-         * @param result the result of the scan operation
-         */
         void onResult(QRScanResult result);
     }
 }

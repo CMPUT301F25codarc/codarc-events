@@ -11,6 +11,8 @@ import com.google.firebase.storage.UploadTask;
 
 import java.io.InputStream;
 
+import ca.ualberta.codarc.codarc_events.utils.ValidationHelper;
+
 /**
  * Handles Firebase Storage operations for event posters.
  * Stores posters at the path: posters/{eventId}.jpg
@@ -21,7 +23,6 @@ public class PosterStorage {
     private static final String POSTERS_PATH = "posters";
     private static final long MAX_FILE_SIZE = 5 * 1024 * 1024;
 
-    /** Lightweight async callback used by the data layer. */
     public interface Callback<T> {
         void onSuccess(T value);
         void onError(@NonNull Exception e);
@@ -29,7 +30,6 @@ public class PosterStorage {
 
     private final FirebaseStorage storage;
 
-    /** Construct using the default Firebase Storage instance. */
     public PosterStorage() {
         this.storage = FirebaseStorage.getInstance();
     }
@@ -43,12 +43,11 @@ public class PosterStorage {
      * @param callback callback that receives the download URL on success
      */
     public void uploadPoster(String eventId, Uri imageUri, Callback<String> callback) {
-        if (eventId == null || eventId.isEmpty()) {
-            callback.onError(new IllegalArgumentException("eventId cannot be null or empty"));
-            return;
-        }
-        if (imageUri == null) {
-            callback.onError(new IllegalArgumentException("imageUri cannot be null"));
+        try {
+            ValidationHelper.requireNonEmpty(eventId, "eventId");
+            ValidationHelper.requireNonNull(imageUri, "imageUri");
+        } catch (IllegalArgumentException e) {
+            callback.onError(e);
             return;
         }
 
@@ -57,11 +56,9 @@ public class PosterStorage {
                     .child(POSTERS_PATH)
                     .child(eventId + ".jpg");
 
-            // Upload the file
             UploadTask uploadTask = posterRef.putFile(imageUri);
 
             uploadTask.addOnSuccessListener(taskSnapshot -> {
-                // Get download URL
                 posterRef.getDownloadUrl()
                         .addOnSuccessListener(uri -> {
                             String downloadUrl = uri.toString();
@@ -98,8 +95,10 @@ public class PosterStorage {
      * @param callback callback for completion
      */
     public void deletePoster(String eventId, Callback<Void> callback) {
-        if (eventId == null || eventId.isEmpty()) {
-            callback.onError(new IllegalArgumentException("eventId cannot be null or empty"));
+        try {
+            ValidationHelper.requireNonEmpty(eventId, "eventId");
+        } catch (IllegalArgumentException e) {
+            callback.onError(e);
             return;
         }
 

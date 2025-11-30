@@ -46,13 +46,10 @@ import ca.ualberta.codarc.codarc_events.utils.TagHelper;
 
 /**
  * Create Event screen that lets organizers fill event info.
- * Includes date/time pickers and writes to Firestore.
  * 
- * In the refactored structure:
- * - Creates event in Events collection
- * - Creates Organizer document (if first event)
- * - Sets isOrganizer = true in Users collection (if first event)
- * - Adds event to Organizer's events subcollection
+ * Note: The complex async orchestration for poster upload during event creation (create event → 
+ * upload poster → update event with poster URL) was implemented with assistance from Claude Sonnet 4.5 (Anthropic).
+ * The sophisticated error handling, state management, and multi-step async coordination were developed with LLM assistance.
  */
 public class CreateEventActivity extends AppCompatActivity {
 
@@ -96,13 +93,11 @@ public class CreateEventActivity extends AppCompatActivity {
         regClose = findViewById(R.id.et_reg_close);
         capacity = findViewById(R.id.et_capacity);
 
-        // Poster UI setup
         ivPoster = findViewById(R.id.iv_poster);
         btnChoosePoster = findViewById(R.id.btn_choose_poster);
         selectedImageUri = null;
         setupImagePicker();
 
-        // Tag input setup
         selectedTags = new ArrayList<>();
         tagInputLayout = findViewById(R.id.til_tag_input);
         tagInput = findViewById(R.id.et_tag_input);
@@ -152,7 +147,6 @@ public class CreateEventActivity extends AppCompatActivity {
 
     /**
      * Retrieves date value from TextInputEditText, preferring ISO format stored in tag.
-     * Falls back to displayed text if tag is not available.
      *
      * @param input the TextInputEditText to read from
      * @return the ISO formatted date string if available, otherwise the displayed text
@@ -160,17 +154,14 @@ public class CreateEventActivity extends AppCompatActivity {
     private String getDateValue(TextInputEditText input) {
         String tagValue = (String) input.getTag();
         if (tagValue != null && !tagValue.isEmpty()) {
-            return tagValue;  // use ISO format if present
+            return tagValue;
         }
-        return get(input);  // fallback to displayed text
+        return get(input);
     }
     private String get(TextInputEditText input) {
         return input.getText() == null ? "" : input.getText().toString().trim();
     }
 
-    /**
-     * Sets up the image picker using Activity Result API.
-     */
     private void setupImagePicker() {
         imagePickerLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
@@ -186,21 +177,12 @@ public class CreateEventActivity extends AppCompatActivity {
         );
     }
 
-    /**
-     * Opens the image picker to select a poster image.
-     */
     private void openImagePicker() {
         Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
         intent.setType("image/*");
         imagePickerLauncher.launch(intent);
     }
 
-    /**
-     * Validates form inputs and creates a new event in Firestore.
-     * If a poster image is selected, creates the event first, then uploads the poster,
-     * then updates the event with the poster URL.
-     * Uses CreateEventController to handle business logic.
-     */
     private void createEvent() {
         String name = get(title);
         String desc = get(description);
@@ -210,7 +192,6 @@ public class CreateEventActivity extends AppCompatActivity {
         String close = getDateValue(regClose);
         String capacityStr = get(capacity);
 
-        // Use controller to validate and create event (without posterUrl for now)
         CreateEventController.CreateEventResult result = controller.validateAndCreateEvent(
                 name, desc, dateTime, loc, open, close, capacityStr, selectedTags, null
         );
@@ -223,28 +204,17 @@ public class CreateEventActivity extends AppCompatActivity {
         progressBar.setVisibility(View.VISIBLE);
 
         Event event = result.getEvent();
-
-        // Create event in Firestore first (required by Firebase Storage rules)
-        // Then upload poster if selected, then update event with posterUrl
         createEventFirst(event);
     }
 
-    /**
-     * Creates the event in Firestore first, then handles poster upload if needed.
-     *
-     * @param event the event object to create
-     */
     private void createEventFirst(Event event) {
-        // Persist event using controller (without posterUrl initially)
         controller.persistEvent(event, new EventDB.Callback<Void>() {
             @Override
             public void onSuccess(Void value) {
-                // Event created successfully, now upload poster if selected
                 if (selectedImageUri != null) {
                     uploadPosterAndUpdateEvent(event);
                 } else {
-                    // No image selected, proceed with organizer setup
-                handleOrganizerSetup(event);
+                    handleOrganizerSetup(event);
                 }
             }
 
@@ -259,16 +229,10 @@ public class CreateEventActivity extends AppCompatActivity {
         });
     }
 
-    /**
-     * Uploads the selected poster image, then updates the event with the poster URL.
-     *
-     * @param event the event object (already created in Firestore)
-     */
     private void uploadPosterAndUpdateEvent(Event event) {
         posterStorage.uploadPoster(event.getId(), selectedImageUri, new PosterStorage.Callback<String>() {
             @Override
             public void onSuccess(String posterUrl) {
-                // Upload successful, now update event with poster URL
                 event.setPosterUrl(posterUrl);
                 updateEventWithPosterUrl(event, posterUrl);
             }
@@ -281,35 +245,24 @@ public class CreateEventActivity extends AppCompatActivity {
                         : "Failed to upload poster. Please try again.";
                 runOnUiThread(() -> {
                     Toast.makeText(CreateEventActivity.this, errorMessage, Toast.LENGTH_SHORT).show();
-                    // Event was created but poster upload failed - still proceed
                     handleOrganizerSetup(event);
                 });
             }
         });
     }
 
-    /**
-     * Updates the event in Firestore with the poster URL.
-     *
-     * @param event the event object to update
-     * @param posterUrl the poster image URL
-     */
     private void updateEventWithPosterUrl(Event event, String posterUrl) {
-        // Update event with poster URL
         event.setPosterUrl(posterUrl);
 
-        // Persist updated event using controller
         controller.persistEvent(event, new EventDB.Callback<Void>() {
             @Override
             public void onSuccess(Void value) {
-                // Event updated successfully, now handle organizer setup
                 handleOrganizerSetup(event);
             }
 
             @Override
             public void onError(@NonNull Exception e) {
                 Log.e("CreateEventActivity", "Failed to update event with poster URL", e);
-                // Event was created and poster uploaded, but update failed - still proceed
                 runOnUiThread(() -> {
                     handleOrganizerSetup(event);
                 });
@@ -317,51 +270,36 @@ public class CreateEventActivity extends AppCompatActivity {
         });
     }
     
-    /**
-     * Handles organizer setup after event creation.
-     * Checks if organizer document exists, creates it if needed,
-     * sets isOrganizer flag in Users, and adds event to organizer's events.
-     */
     private void handleOrganizerSetup(Event event) {
         organizerDB.organizerExists(organizerId, new OrganizerDB.Callback<Boolean>() {
             @Override
             public void onSuccess(Boolean exists) {
                 if (!exists) {
-                    // First event - create Organizer document and set role
                     createNewOrganizer(event);
                 } else {
-                    // Already an organizer - just add event to their list
                     addEventToOrganizer(event);
                 }
             }
 
             @Override
             public void onError(@NonNull Exception e) {
-                // If check fails, try to create anyway (safer)
                 createNewOrganizer(event);
             }
         });
     }
     
-    /**
-     * Creates a new Organizer document and sets isOrganizer flag in Users.
-     * Then adds the event to the organizer's events subcollection.
-     */
     private void createNewOrganizer(Event event) {
         organizerDB.createOrganizer(organizerId, new OrganizerDB.Callback<Void>() {
             @Override
             public void onSuccess(Void value) {
-                // Set isOrganizer = true in Users collection
                 userDB.setOrganizerRole(organizerId, true, new UserDB.Callback<Void>() {
                     @Override
                     public void onSuccess(Void v) {
-                        // Now add event to organizer's events
                         addEventToOrganizer(event);
                     }
 
                     @Override
                     public void onError(@NonNull Exception e) {
-                        // Organizer created but role flag failed - not critical
                         addEventToOrganizer(event);
                     }
                 });
@@ -369,7 +307,6 @@ public class CreateEventActivity extends AppCompatActivity {
 
             @Override
             public void onError(@NonNull Exception e) {
-                // Organizer creation failed - still show success for event creation
                 Log.e("CreateEventActivity", "Failed to create organizer document", e);
                 Toast.makeText(CreateEventActivity.this, "Event created", Toast.LENGTH_SHORT).show();
                 progressBar.setVisibility(View.GONE);
@@ -378,9 +315,6 @@ public class CreateEventActivity extends AppCompatActivity {
         });
     }
     
-    /**
-     * Adds the event to the organizer's events subcollection.
-     */
     private void addEventToOrganizer(Event event) {
         organizerDB.addEventToOrganizer(organizerId, event.getId(), new OrganizerDB.Callback<Void>() {
             @Override
@@ -392,7 +326,6 @@ public class CreateEventActivity extends AppCompatActivity {
 
             @Override
             public void onError(@NonNull Exception e) {
-                // Event created but couldn't add to organizer's list - still show success
                 Log.e("CreateEventActivity", "Failed to add event to organizer's list", e);
                 Toast.makeText(CreateEventActivity.this, "Event created", Toast.LENGTH_SHORT).show();
                 progressBar.setVisibility(View.GONE);
@@ -413,7 +346,6 @@ public class CreateEventActivity extends AppCompatActivity {
         tagInput.setAdapter(adapter);
         tagInput.setThreshold(1);
 
-        // Add tag when user presses Enter (works for both predefined and custom tags)
         tagInput.setOnKeyListener((v, keyCode, event) -> {
             if (keyCode == KeyEvent.KEYCODE_ENTER && event.getAction() == KeyEvent.ACTION_DOWN) {
                 addTagFromInput();
@@ -422,9 +354,7 @@ public class CreateEventActivity extends AppCompatActivity {
             return false;
         });
 
-        // Add tag when user selects from autocomplete dropdown
         tagInput.setOnItemClickListener((parent, view, position, id) -> {
-            // Validate position to prevent IndexOutOfBoundsException
             if (position >= 0 && position < parent.getCount()) {
                 String selectedTag = (String) parent.getItemAtPosition(position);
                 if (selectedTag != null) {
@@ -434,8 +364,6 @@ public class CreateEventActivity extends AppCompatActivity {
             }
         });
 
-        // Filter autocomplete suggestions based on input
-        // Note: Users can still add custom tags by typing and pressing Enter even if no matches
         tagInput.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -450,7 +378,6 @@ public class CreateEventActivity extends AppCompatActivity {
                     adapter.getFilter().filter(null);
                 } else {
                     List<String> matches = TagHelper.filterMatchingTags(query, predefinedTags);
-                    // If no matches, show empty adapter (user can still add custom tag by pressing Enter)
                     ArrayAdapter<String> filteredAdapter = new ArrayAdapter<>(CreateEventActivity.this,
                             android.R.layout.simple_dropdown_item_1line, matches);
                     tagInput.setAdapter(filteredAdapter);
@@ -472,12 +399,10 @@ public class CreateEventActivity extends AppCompatActivity {
 
     /**
      * Adds a tag to the selected tags list and updates the UI.
-     * Delegates validation to controller.
      *
      * @param tag the tag string to add
      */
     private void addTag(String tag) {
-        // Use controller to validate tag (business logic)
         if (!controller.canAddTag(tag, selectedTags)) {
             Toast.makeText(this, "Tag already added", Toast.LENGTH_SHORT).show();
             return;

@@ -48,7 +48,6 @@ public class WinnersAdapter extends RecyclerView.Adapter<WinnersAdapter.ViewHold
                 : "Unknown";
         holder.timeText.setText(timeStr);
 
-        // Set status text and color
         String statusText;
         int nameColor;
         Boolean isEnrolled = item.getIsEnrolled();
@@ -57,10 +56,10 @@ public class WinnersAdapter extends RecyclerView.Adapter<WinnersAdapter.ViewHold
             nameColor = Color.BLACK;
         } else if (Boolean.TRUE.equals(isEnrolled)) {
             statusText = "Accepted";
-            nameColor = Color.parseColor("#4CAF50"); // Green
+            nameColor = Color.parseColor("#4CAF50");
         } else {
             statusText = "Declined";
-            nameColor = Color.parseColor("#F44336"); // Red
+            nameColor = Color.parseColor("#F44336");
         }
 
         holder.statusText.setText(statusText);

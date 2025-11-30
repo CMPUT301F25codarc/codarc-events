@@ -16,10 +16,15 @@ import ca.ualberta.codarc.codarc_events.data.EntrantDB;
 import ca.ualberta.codarc.codarc_events.data.EventDB;
 import ca.ualberta.codarc.codarc_events.models.Event;
 import ca.ualberta.codarc.codarc_events.models.RegistrationHistoryEntry;
+import ca.ualberta.codarc.codarc_events.utils.ValidationHelper;
 
 /**
  * Handles registration history retrieval and processing.
  * Fetches event history for entrants and determines selection status.
+ * 
+ * Note: The complex decision tree logic for determining selection status (checkAccepted → checkCancelled 
+ * → checkInvited → checkWaitlisted) was implemented with assistance from Claude Sonnet 4.5 (Anthropic).
+ * The sophisticated chained async state determination logic was developed with LLM assistance.
  */
 public class RegistrationHistoryController {
 
@@ -71,14 +76,14 @@ public class RegistrationHistoryController {
 
     /**
      * Loads the registration history for an entrant.
-     * Fetches event IDs from history, validates events exist, determines selection status,
-     * and returns entries sorted by event date (most recent first).
      *
      * @param deviceId the device ID of the entrant
      * @param callback callback that receives the history result
      */
     public void loadRegistrationHistory(String deviceId, Callback callback) {
-        if (deviceId == null || deviceId.isEmpty()) {
+        try {
+            ValidationHelper.requireNonEmpty(deviceId, "deviceId");
+        } catch (IllegalArgumentException e) {
             callback.onResult(HistoryResult.failure("Device ID is required"));
             return;
         }
@@ -110,101 +115,121 @@ public class RegistrationHistoryController {
      * @param callback callback that receives the final result
      */
     private void processEventIds(List<String> eventIds, String deviceId, Callback callback) {
-        List<RegistrationHistoryEntry> entries = new ArrayList<>();
-        final int[] completed = {0};
-        final int total = eventIds.size();
+        List<RegistrationHistoryEntry> entries = Collections.synchronizedList(new ArrayList<>());
+        EventProcessor processor = new EventProcessor(entries, eventIds.size(), callback);
 
-        if (total == 0) {
-            callback.onResult(HistoryResult.success(entries));
+        if (eventIds.isEmpty()) {
+            callback.onResult(HistoryResult.success(new ArrayList<>()));
             return;
         }
 
         for (String eventId : eventIds) {
-            // Check if event exists first
-            eventDB.eventExists(eventId, new EventDB.Callback<Boolean>() {
-                @Override
-                public void onSuccess(Boolean exists) {
-                    if (!exists) {
-                        Log.d(TAG, "Event " + eventId + " no longer exists, filtering from history");
-                        cleanupDeletedEvent(deviceId, eventId);
-                        synchronized (completed) {
-                            completed[0]++;
-                            if (completed[0] == total) {
-                                sortAndReturn(entries, callback);
-                            }
-                        }
-                        return;
-                    }
-
-                    eventDB.getEvent(eventId, new EventDB.Callback<Event>() {
-                        @Override
-                        public void onSuccess(Event event) {
-                            if (event == null) {
-                                synchronized (completed) {
-                                    completed[0]++;
-                                    if (completed[0] == total) {
-                                        sortAndReturn(entries, callback);
-                                    }
-                                }
-                                return;
-                            }
-
-                            determineSelectionStatus(event, deviceId, new SelectionStatusCallback() {
-                                @Override
-                                public void onStatus(String status) {
-                                    RegistrationHistoryEntry entry = new RegistrationHistoryEntry(
-                                            event.getId(),
-                                            event.getName(),
-                                            event.getEventDateTime(),
-                                            status
-                                    );
-                                    synchronized (entries) {
-                                        entries.add(entry);
-                                    }
-                                    synchronized (completed) {
-                                        completed[0]++;
-                                        if (completed[0] == total) {
-                                            sortAndReturn(entries, callback);
-                                        }
-                                    }
-                                }
-                            });
-                        }
-
-                        @Override
-                        public void onError(@NonNull Exception e) {
-                            Log.e(TAG, "Failed to fetch event " + eventId, e);
-                            synchronized (completed) {
-                                completed[0]++;
-                                if (completed[0] == total) {
-                                    sortAndReturn(entries, callback);
-                                }
-                            }
-                        }
-                    });
-                }
-
-                @Override
-                public void onError(@NonNull Exception e) {
-                    Log.e(TAG, "Failed to check if event exists: " + eventId, e);
-                    synchronized (completed) {
-                        completed[0]++;
-                        if (completed[0] == total) {
-                            sortAndReturn(entries, callback);
-                        }
-                    }
-                }
-            });
+            processSingleEvent(eventId, deviceId, entries, processor);
         }
     }
 
     /**
-     * Sorts entries by event date (most recent first) and returns the result.
+     * Processes a single event and adds it to the history entries.
+     */
+    private void processSingleEvent(String eventId, String deviceId,
+                                    List<RegistrationHistoryEntry> entries,
+                                    EventProcessor processor) {
+        eventDB.eventExists(eventId, new EventDB.Callback<Boolean>() {
+            @Override
+            public void onSuccess(Boolean exists) {
+                if (!exists) {
+                    Log.d(TAG, "Event " + eventId + " no longer exists, filtering from history");
+                    cleanupDeletedEvent(deviceId, eventId);
+                    processor.onEventProcessed();
+                    return;
+                }
+                fetchEventAndDetermineStatus(eventId, deviceId, entries, processor);
+            }
+
+            @Override
+            public void onError(@NonNull Exception e) {
+                Log.e(TAG, "Failed to check if event exists: " + eventId, e);
+                processor.onEventProcessed();
+            }
+        });
+    }
+
+    /**
+     * Fetches event details and determines selection status.
+     */
+    private void fetchEventAndDetermineStatus(String eventId, String deviceId,
+                                              List<RegistrationHistoryEntry> entries,
+                                              EventProcessor processor) {
+        eventDB.getEvent(eventId, new EventDB.Callback<Event>() {
+            @Override
+            public void onSuccess(Event event) {
+                if (event == null) {
+                    processor.onEventProcessed();
+                    return;
+                }
+                determineStatusAndAddEntry(event, deviceId, entries, processor);
+            }
+
+            @Override
+            public void onError(@NonNull Exception e) {
+                Log.e(TAG, "Failed to fetch event " + eventId, e);
+                processor.onEventProcessed();
+            }
+        });
+    }
+
+    /**
+     * Determines selection status and adds entry to history.
+     */
+    private void determineStatusAndAddEntry(Event event, String deviceId,
+                                           List<RegistrationHistoryEntry> entries,
+                                           EventProcessor processor) {
+        determineSelectionStatus(event, deviceId, new SelectionStatusCallback() {
+            @Override
+            public void onStatus(String status) {
+                RegistrationHistoryEntry entry = new RegistrationHistoryEntry(
+                        event.getId(),
+                        event.getName(),
+                        event.getEventDateTime(),
+                        status
+                );
+                entries.add(entry);
+                processor.onEventProcessed();
+            }
+        });
+    }
+
+    /**
+     * Helper class to track event processing completion.
+     */
+    private static class EventProcessor {
+        private final List<RegistrationHistoryEntry> entries;
+        private final int total;
+        private final Callback callback;
+        private int completed = 0;
+
+        EventProcessor(List<RegistrationHistoryEntry> entries, int total, Callback callback) {
+            this.entries = entries;
+            this.total = total;
+            this.callback = callback;
+        }
+
+        synchronized void onEventProcessed() {
+            completed++;
+            if (completed == total) {
+                sortAndReturn(entries, callback);
+            }
+        }
+    }
+
+    /**
+     * Sorts entries by event date and returns the result.
      *
      * @param entries the list of entries to sort
      * @param callback callback to receive the sorted result
      */
-    private void sortAndReturn(List<RegistrationHistoryEntry> entries, Callback callback) {
+    private static void sortAndReturn(List<RegistrationHistoryEntry> entries, Callback callback) {
+
         Collections.sort(entries, new Comparator<RegistrationHistoryEntry>() {
             @Override
             public int compare(RegistrationHistoryEntry e1, RegistrationHistoryEntry e2) {
@@ -215,7 +240,6 @@ public class RegistrationHistoryController {
                     if (date1 == null || date2 == null) {
                         return 0;
                     }
-                    // Most recent first (descending order)
                     return date2.compareTo(date1);
                 } catch (Exception e) {
                     Log.e(TAG, "Error sorting entries by date", e);
@@ -228,7 +252,6 @@ public class RegistrationHistoryController {
 
     /**
      * Determines the selection status for an entrant in an event.
-     * Checks collections in priority order: Accepted > Cancelled > Invited > Waitlisted.
      *
      * @param event   the event to check
      * @param deviceId the device ID of the entrant

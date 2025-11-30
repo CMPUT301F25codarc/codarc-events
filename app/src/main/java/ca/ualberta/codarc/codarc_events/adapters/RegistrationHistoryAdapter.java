@@ -70,25 +70,21 @@ public class RegistrationHistoryAdapter extends RecyclerView.Adapter<Registratio
                 return;
             }
 
-            // Set event name
             String eventName = entry.getEventName();
             if (eventName == null || eventName.isEmpty()) {
                 eventName = itemView.getContext().getString(R.string.notification_unknown_event);
             }
             eventNameView.setText(eventName);
 
-            // Set formatted event date
             String formattedDate = DateHelper.formatEventDate(entry.getEventDate());
             eventDateView.setText(formattedDate);
 
-            // Set selection status chip
             String status = entry.getSelectionStatus();
             if (status == null || status.isEmpty()) {
                 status = itemView.getContext().getString(R.string.registration_history_waitlisted);
             }
             statusChip.setText(status);
 
-            // Set chip color based on status
             int chipColorRes;
             int textColorRes;
             if ("Accepted".equals(status)) {
@@ -104,7 +100,6 @@ public class RegistrationHistoryAdapter extends RecyclerView.Adapter<Registratio
                 chipColorRes = R.color.chip_background;
                 textColorRes = android.R.color.holo_orange_dark;
             } else {
-                // Not Selected
                 chipColorRes = R.color.chip_background;
                 textColorRes = android.R.color.darker_gray;
             }

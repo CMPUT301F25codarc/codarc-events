@@ -24,7 +24,6 @@ import ca.ualberta.codarc.codarc_events.utils.Identity;
 
 /**
  * Displays the registration history for an entrant.
- * Shows a list of events the entrant has registered for, including selection status.
  */
 public class RegistrationHistoryActivity extends AppCompatActivity {
 

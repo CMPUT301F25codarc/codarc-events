@@ -9,19 +9,15 @@ import ca.ualberta.codarc.codarc_events.data.PosterStorage;
 import ca.ualberta.codarc.codarc_events.data.UserDB;
 import ca.ualberta.codarc.codarc_events.models.Event;
 import ca.ualberta.codarc.codarc_events.models.User;
+import ca.ualberta.codarc.codarc_events.utils.ValidationHelper;
 
 /**
  * Handles image removal by administrators.
- * Validates admin status, coordinates deletion of poster from Firebase Storage,
- * and updates the event document to set posterUrl to null.
  */
 public class RemoveImageController {
 
     private static final String TAG = "RemoveImageController";
 
-    /**
-     * Result object for image removal operations.
-     */
     public static class RemoveImageResult {
         private final boolean success;
         private final String errorMessage;
@@ -60,62 +56,67 @@ public class RemoveImageController {
 
     /**
      * Removes an image (poster) from an event.
-     * Validates admin status, then coordinates deletion of:
-     * - Poster image from Firebase Storage
-     * - Event document update (set posterUrl to null)
      *
      * @param eventId the event ID whose image should be removed
      * @param adminDeviceId the device ID of the admin performing the removal
      * @param callback callback for completion
      */
     public void removeImage(String eventId, String adminDeviceId, Callback callback) {
-        if (eventId == null || eventId.isEmpty()) {
-            callback.onResult(RemoveImageResult.failure("Event ID is required"));
-            return;
-        }
-        if (adminDeviceId == null || adminDeviceId.isEmpty()) {
-            callback.onResult(RemoveImageResult.failure("Admin device ID is required"));
+        try {
+            ValidationHelper.requireNonEmpty(eventId, "eventId");
+            ValidationHelper.requireNonEmpty(adminDeviceId, "adminDeviceId");
+        } catch (IllegalArgumentException e) {
+            callback.onResult(RemoveImageResult.failure(e.getMessage()));
             return;
         }
 
-        // Step 1: Validate admin status
         validateAdminStatus(adminDeviceId, new ValidationCallback() {
             @Override
             public void onSuccess() {
-                // Step 2: Validate event exists and has a poster
-                validateEventHasPoster(eventId, new EventCallback() {
-                    @Override
-                    public void onSuccess(Event event) {
-                        // Step 3: Delete poster from Firebase Storage (non-blocking)
-                        deletePoster(eventId);
-
-                        // Step 4: Update event document to set posterUrl to null
-                        event.setPosterUrl(null);
-                        eventDB.addEvent(event, new EventDB.Callback<Void>() {
-                            @Override
-                            public void onSuccess(Void value) {
-                                Log.d(TAG, "Event poster removed successfully: " + eventId);
-                                callback.onResult(RemoveImageResult.success());
-                            }
-
-                            @Override
-                            public void onError(@NonNull Exception e) {
-                                Log.e(TAG, "Failed to update event after removing poster: " + eventId, e);
-                                callback.onResult(RemoveImageResult.failure("Failed to update event. Please try again."));
-                            }
-                        });
-                    }
-
-                    @Override
-                    public void onError(String errorMessage) {
-                        callback.onResult(RemoveImageResult.failure(errorMessage));
-                    }
-                });
+                proceedWithImageRemoval(eventId, callback);
             }
 
             @Override
             public void onError(String errorMessage) {
                 callback.onResult(RemoveImageResult.failure(errorMessage));
+            }
+        });
+    }
+
+    /**
+     * Proceeds with image removal after admin validation.
+     */
+    private void proceedWithImageRemoval(String eventId, Callback callback) {
+        validateEventHasPoster(eventId, new EventCallback() {
+            @Override
+            public void onSuccess(Event event) {
+                deletePoster(eventId);
+                updateEventWithoutPoster(event, callback);
+            }
+
+            @Override
+            public void onError(String errorMessage) {
+                callback.onResult(RemoveImageResult.failure(errorMessage));
+            }
+        });
+    }
+
+    /**
+     * Updates the event to remove the poster URL.
+     */
+    private void updateEventWithoutPoster(Event event, Callback callback) {
+        event.setPosterUrl(null);
+        eventDB.addEvent(event, new EventDB.Callback<Void>() {
+            @Override
+            public void onSuccess(Void value) {
+                Log.d(TAG, "Event poster removed successfully: " + event.getId());
+                callback.onResult(RemoveImageResult.success());
+            }
+
+            @Override
+            public void onError(@NonNull Exception e) {
+                Log.e(TAG, "Failed to update event after removing poster: " + event.getId(), e);
+                callback.onResult(RemoveImageResult.failure("Failed to update event. Please try again."));
             }
         });
     }
@@ -179,7 +180,6 @@ public class RemoveImageController {
 
     /**
      * Deletes the event poster from Firebase Storage.
-     * Non-blocking - logs errors but doesn't fail the overall operation.
      *
      * @param eventId the event ID
      */
@@ -192,7 +192,6 @@ public class RemoveImageController {
 
             @Override
             public void onError(@NonNull Exception e) {
-                // Log warning but don't fail - poster may not exist in Storage
                 Log.w(TAG, "Failed to delete poster from Storage for event: " + eventId, e);
             }
         });

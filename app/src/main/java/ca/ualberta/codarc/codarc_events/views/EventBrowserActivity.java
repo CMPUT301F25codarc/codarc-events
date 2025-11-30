@@ -43,14 +43,6 @@ import ca.ualberta.codarc.codarc_events.utils.TagHelper;
 
 /**
  * Displays the list of available events for entrants.
- *
- * <p>This activity:
- * <ul>
- *   <li>Initializes and subscribes to Firestore via {@link EventDB#getAllEvents(EventDB.Callback)}.</li>
- *   <li>Displays all events in a RecyclerView using {@link EventCardAdapter}.</li>
- *   <li>Allows navigation to the profile screen (via iv_profile).</li>
- *   <li>Allows organizers to create a new event (via btn_plus).</li>
- * </ul></p>
  */
 public class EventBrowserActivity extends AppCompatActivity {
 
@@ -68,7 +60,6 @@ public class EventBrowserActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_event_browser);
 
-        // --- Ensure device has a unique ID (used as entrant identifier)
         String deviceId = Identity.getOrCreateDeviceId(this);
         new EntrantDB().getOrCreateEntrant(deviceId, new EntrantDB.Callback<Void>() {
             @Override
@@ -80,7 +71,6 @@ public class EventBrowserActivity extends AppCompatActivity {
             }
         });
 
-        // --- RecyclerView setup for events
         rvEvents = findViewById(R.id.rv_events);
         if (rvEvents == null) {
             android.util.Log.e("EventBrowserActivity", "RecyclerView not found in layout");
@@ -96,13 +86,11 @@ public class EventBrowserActivity extends AppCompatActivity {
         currentFilterCriteria = new FilterEventsController.FilterCriteria(null, false);
         loadEvents();
 
-        // Filter icon click handler
         filterIcon = findViewById(R.id.iv_filter);
         if (filterIcon != null) {
             filterIcon.setOnClickListener(v -> showFilterDialog());
         }
 
-        // --- "+" icon: opens CreateEventActivity for organizers
         ImageView plusIcon = findViewById(R.id.btn_plus);
         if (plusIcon != null) {
             plusIcon.setOnClickListener(v -> {
@@ -111,7 +99,6 @@ public class EventBrowserActivity extends AppCompatActivity {
             });
         }
 
-        // Profile icon: opens ProfileCreationActivity for profile management
         ImageView profileIcon = findViewById(R.id.iv_profile_settings);
         if (profileIcon != null) {
             profileIcon.setOnClickListener(v -> {
@@ -155,9 +142,6 @@ public class EventBrowserActivity extends AppCompatActivity {
         }
     }
 
-    /**
-     * Checks if the current user is an admin and shows the admin menu if they are.
-     */
     private void checkAdminAndShowMenu() {
         String deviceId = Identity.getOrCreateDeviceId(this);
         UserDB userDB = new UserDB();
@@ -181,9 +165,6 @@ public class EventBrowserActivity extends AppCompatActivity {
         });
     }
 
-    /**
-     * Shows the admin popup menu with available admin functions.
-     */
     private void showAdminMenu() {
         PopupMenu popupMenu = new PopupMenu(this, findViewById(R.id.btn_admin));
         popupMenu.getMenuInflater().inflate(R.menu.menu_admin, popupMenu.getMenu());
@@ -211,14 +192,9 @@ public class EventBrowserActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        // Refresh events when returning to this activity
-        // This ensures waitlist counts are updated if user joined from EventDetailsActivity
         loadEvents();
     }
 
-    /**
-     * Loads all events from Firestore and updates the adapter list.
-     */
     private void loadEvents() {
         eventDB.getAllEvents(new EventDB.Callback<List<Event>>() {
             @Override
@@ -237,9 +213,6 @@ public class EventBrowserActivity extends AppCompatActivity {
         });
     }
 
-    /**
-     * Shows the filter dialog for selecting tags and availability filter.
-     */
     private void showFilterDialog() {
         View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_filter_events, null);
         ChipGroup tagChipGroup = dialogView.findViewById(R.id.chip_group_filter_tags);
@@ -257,23 +230,19 @@ public class EventBrowserActivity extends AppCompatActivity {
                 .setView(dialogView)
                 .create();
 
-        // Get all tags from tags collection (more efficient than iterating events)
         TagDB tagDB = new TagDB();
         tagDB.getAllTags(new TagDB.Callback<List<String>>() {
             @Override
             public void onSuccess(List<String> allTagsList) {
-                // Sort tags
                 List<String> sortedTags = new ArrayList<>(allTagsList);
                 sortedTags.sort(String::compareToIgnoreCase);
                 
-                // Create chips for all available tags
                 createTagChips(tagChipGroup, sortedTags, selectedTags);
             }
 
             @Override
             public void onError(@NonNull Exception e) {
                 android.util.Log.e("EventBrowserActivity", "Failed to load tags, falling back to event iteration", e);
-                // Fallback to old method if tags collection fails
                 Set<String> allTags = TagHelper.collectAllUniqueTags(allEvents);
                 List<String> sortedTags = new ArrayList<>(allTags);
                 sortedTags.sort(String::compareToIgnoreCase);
@@ -281,7 +250,6 @@ public class EventBrowserActivity extends AppCompatActivity {
             }
         });
 
-        // Set availability checkbox state
         if (currentFilterCriteria != null) {
             availableCheckbox.setChecked(currentFilterCriteria.isAvailableOnly());
         }
@@ -305,9 +273,6 @@ public class EventBrowserActivity extends AppCompatActivity {
         dialog.show();
     }
 
-    /**
-     * Applies the current filter criteria to the event list.
-     */
     private void applyCurrentFilters() {
         if (currentFilterCriteria == null || currentFilterCriteria.isEmpty()) {
             eventList.clear();
@@ -338,9 +303,6 @@ public class EventBrowserActivity extends AppCompatActivity {
                 });
     }
 
-    /**
-     * Updates the filter icon appearance based on whether filters are active.
-     */
     private void updateFilterIcon() {
         if (filterIcon == null) {
             return;

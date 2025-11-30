@@ -14,7 +14,12 @@ public class EventValidationHelper {
 
     private static final String TAG = "EventValidationHelper";
 
-    // Check if current time is within registration window
+    /**
+     * Checks if current time is within registration window.
+     *
+     * @param event the event to check
+     * @return true if within registration window, false otherwise
+     */
     public static boolean isWithinRegistrationWindow(Event event) {
         if (event == null) {
             return false;
@@ -45,8 +50,7 @@ public class EventValidationHelper {
     }
 
     /**
-     * Check if event has capacity based on accepted participants.
-     * Returns true if no limit is set or if accepted count is below capacity.
+     * Checks if event has capacity based on accepted participants.
      *
      * @param event the event to check
      * @param acceptedCount the number of accepted participants
@@ -59,10 +63,29 @@ public class EventValidationHelper {
 
         Integer maxCapacity = event.getMaxCapacity();
         if (maxCapacity == null || maxCapacity <= 0) {
-            // No capacity limit set
             return true;
         }
 
         return acceptedCount < maxCapacity;
+    }
+
+    /**
+     * Checks if waitlist has capacity available.
+     *
+     * @param event the event to check
+     * @param waitlistCount the current number of entrants on the waitlist
+     * @return true if waitlist has capacity available, false otherwise
+     */
+    public static boolean hasWaitlistCapacity(Event event, int waitlistCount) {
+        if (event == null) {
+            return false;
+        }
+
+        Integer maxCapacity = event.getMaxCapacity();
+        if (maxCapacity == null || maxCapacity <= 0) {
+            return true;
+        }
+
+        return waitlistCount < maxCapacity;
     }
 }

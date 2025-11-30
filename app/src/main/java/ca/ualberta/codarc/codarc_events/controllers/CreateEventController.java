@@ -54,7 +54,7 @@ public class CreateEventController {
     }
 
     /**
-     * Validates and creates Event object (doesn't save to DB yet).
+     * Validates and creates Event object.
      *
      * @param name event name
      * @param description event description
@@ -72,7 +72,6 @@ public class CreateEventController {
                                                      String regOpen, String regClose,
                                                      String capacityStr, List<String> tags,
                                                      String posterUrl) {
-        // Validate required fields
         if (name == null || name.trim().isEmpty()) {
             return CreateEventResult.failure("Event name is required");
         }
@@ -86,11 +85,9 @@ public class CreateEventController {
             return CreateEventResult.failure("Registration close date is required");
         }
 
-        // Generate event ID and QR code
         String id = UUID.randomUUID().toString();
         String qrData = "event:" + id;
 
-        // Create Event object
         Event event = new Event();
         event.setId(id);
         event.setName(name.trim());
@@ -103,7 +100,6 @@ public class CreateEventController {
         event.setQrCode(qrData);
         event.setOpen(true);
 
-        // Parse capacity (optional field)
         if (capacityStr != null && !capacityStr.trim().isEmpty()) {
             try {
                 Integer maxCap = Integer.parseInt(capacityStr.trim());
@@ -115,16 +111,18 @@ public class CreateEventController {
             event.setMaxCapacity(null);
         }
 
-        // Set tags (optional field)
         event.setTags(tags);
-
-        // Set poster URL (optional field)
         event.setPosterUrl(posterUrl);
 
         return CreateEventResult.success(event);
     }
 
-    // Saves event to Firestore
+    /**
+     * Saves event to Firestore.
+     *
+     * @param event the event to save
+     * @param callback callback for completion
+     */
     public void persistEvent(Event event, EventDB.Callback<Void> callback) {
         if (event == null) {
             callback.onError(new IllegalArgumentException("Event cannot be null"));
@@ -134,8 +132,7 @@ public class CreateEventController {
     }
 
     /**
-     * Validates that a tag can be added (not duplicate).
-     * Business logic for tag validation.
+     * Validates that a tag can be added.
      *
      * @param tag the tag to validate
      * @param existingTags list of already selected tags
@@ -152,7 +149,6 @@ public class CreateEventController {
             return true;
         }
 
-        // Check if tag already exists (case-insensitive)
         for (String existingTag : existingTags) {
             if (ca.ualberta.codarc.codarc_events.utils.TagHelper.normalizeTag(existingTag).equals(normalizedTag)) {
                 return false;

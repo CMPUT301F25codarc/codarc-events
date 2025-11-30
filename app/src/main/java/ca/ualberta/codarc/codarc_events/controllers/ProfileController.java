@@ -51,7 +51,15 @@ public class ProfileController {
         this.entrantDB = entrantDB;
     }
 
-    // Validates and creates Entrant object (doesn't save to DB yet)
+    /**
+     * Validates and creates Entrant object.
+     *
+     * @param deviceId the device ID
+     * @param name the name
+     * @param email the email
+     * @param phone the phone
+     * @return ProfileResult with validation result
+     */
     public ProfileResult validateAndCreateProfile(String deviceId, String name, String email, String phone) {
         if (deviceId == null || deviceId.trim().isEmpty()) {
             return ProfileResult.failure("Device ID is required");
@@ -77,7 +85,13 @@ public class ProfileController {
         return ProfileResult.success(entrant);
     }
 
-    // Saves profile to Firestore
+    /**
+     * Saves profile to Firestore.
+     *
+     * @param deviceId the device ID
+     * @param entrant the entrant to save
+     * @param callback callback for completion
+     */
     public void saveProfile(String deviceId, Entrant entrant, EntrantDB.Callback<Void> callback) {
         if (deviceId == null || deviceId.isEmpty()) {
             callback.onError(new IllegalArgumentException("Device ID cannot be null or empty"));
@@ -90,13 +104,20 @@ public class ProfileController {
         entrantDB.upsertProfile(deviceId, entrant, callback);
     }
 
-    // Clears profile (doesn't delete document)
+    /**
+     * Clears profile.
+     *
+     * @param deviceId the device ID
+     * @param callback callback for completion
+     * @deprecated Use DeleteOwnProfileController for self-removal
+     */
+    @Deprecated
     public void deleteProfile(String deviceId, EntrantDB.Callback<Void> callback) {
         if (deviceId == null || deviceId.isEmpty()) {
             callback.onError(new IllegalArgumentException("Device ID cannot be null or empty"));
             return;
         }
-        entrantDB.deleteProfile(deviceId, callback);
+        entrantDB.deleteProfile(deviceId, false, callback);
     }
 }
 

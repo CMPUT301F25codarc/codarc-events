@@ -20,16 +20,20 @@ import java.util.Locale;
 import java.util.Map;
 
 import ca.ualberta.codarc.codarc_events.models.Event;
+import ca.ualberta.codarc.codarc_events.utils.ValidationHelper;
 
 /**
- * Tiny Firestore wrapper for events.
- *
- * We keep this intentionally small: list all events via a snapshot listener.
- * Additional calls (get one, waitlist ops) will be added as the stories require.
+ * Handles Firestore operations for events.
+ * 
+ * Note: Complex batch operations for marking winners and managing replacement pools
+ * (markWinners, markReplacement, promoteReplacementToWinner) were implemented with assistance 
+ * from Claude Sonnet 4.5 (Anthropic). The sophisticated batch write operations with multiple
+ * subcollection updates and state transitions were developed with LLM assistance.
  */
 public class EventDB {
 
-    /** Lightweight async callback used by the data layer. */
+    private static final int BATCH_SIZE = 500;
+
     public interface Callback<T> {
         void onSuccess(T value);
         void onError(@NonNull Exception e);
@@ -37,19 +41,19 @@ public class EventDB {
 
     private final FirebaseFirestore db;
 
-    /** Construct using the default Firestore instance. */
     public EventDB() {
         this.db = FirebaseFirestore.getInstance();
     }
 
     /**
-     * Add or update an event in Firestore.
-     * Explicitly handles all fields including tags to ensure proper serialization.
-     * Also maintains the tags collection for efficient tag queries.
+     * Adds or updates an event in Firestore.
      */
     public void addEvent(Event event, Callback<Void> cb) {
-        if (event == null || event.getId() == null) {
-            cb.onError(new IllegalArgumentException("Event or event ID is null"));
+        try {
+            ValidationHelper.requireNonNull(event, "event");
+            ValidationHelper.requireNonNull(event.getId(), "event.id");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
 
@@ -66,21 +70,17 @@ public class EventDB {
         eventData.put("registrationClose", event.getRegistrationClose());
         eventData.put("posterUrl", event.getPosterUrl());
         
-        // Explicitly save tags as an array
         if (event.getTags() != null && !event.getTags().isEmpty()) {
             eventData.put("tags", event.getTags());
         } else {
             eventData.put("tags", new ArrayList<String>());
         }
 
-        // Check if event already exists to handle tag updates
         db.collection("events").document(event.getId())
                 .get()
                 .addOnSuccessListener(existingDoc -> {
-                    // Extract old tags before lambda (must be final or effectively final)
                     final List<String> oldTags;
                     if (existingDoc != null && existingDoc.exists()) {
-                        // Event exists - get old tags for update
                         Object tagsObj = existingDoc.get("tags");
                         if (tagsObj instanceof List) {
                             @SuppressWarnings("unchecked")
@@ -93,17 +93,13 @@ public class EventDB {
                         oldTags = null;
                     }
 
-                    // Store event tags in final variable for lambda
                     final List<String> eventTags = event.getTags();
 
-                    // Save event
                     db.collection("events").document(event.getId())
                             .set(eventData)
                             .addOnSuccessListener(aVoid -> {
-                                // Update tags collection
                                 TagDB tagDB = new TagDB();
                                 if (oldTags == null) {
-                                    // New event - just add tags
                                     tagDB.addTags(eventTags, new TagDB.Callback<Void>() {
                                         @Override
                                         public void onSuccess(Void value) {
@@ -112,13 +108,11 @@ public class EventDB {
 
                                         @Override
                                         public void onError(@NonNull Exception e) {
-                                            // Log but don't fail event creation
                                             android.util.Log.w("EventDB", "Failed to update tags collection", e);
                                             cb.onSuccess(null);
                                         }
                                     });
                                 } else {
-                                    // Existing event - update tags
                                     tagDB.updateTags(oldTags, eventTags, new TagDB.Callback<Void>() {
                                         @Override
                                         public void onSuccess(Void value) {
@@ -127,7 +121,6 @@ public class EventDB {
 
                                         @Override
                                         public void onError(@NonNull Exception e) {
-                                            // Log but don't fail event update
                                             android.util.Log.w("EventDB", "Failed to update tags collection", e);
                                             cb.onSuccess(null);
                                         }
@@ -140,8 +133,7 @@ public class EventDB {
     }
 
     /**
-     * Streams all events in the `events` collection.
-     * The callback is invoked whenever data changes.
+     * Gets all events with real-time updates.
      */
     public void getAllEvents(Callback<List<Event>> cb) {
         db.collection("events").addSnapshotListener((snapshots, e) -> {
@@ -165,8 +157,7 @@ public class EventDB {
     }
 
     /**
-     * Fetches all events once (one-time read, not a listener).
-     * Use this when you don't need real-time updates.
+     * Fetches all events once.
      *
      * @param cb callback with the list of events
      */
@@ -192,8 +183,10 @@ public class EventDB {
      * Fetches a single event by its ID.
      */
     public void getEvent(String eventId, Callback<Event> cb) {
-        if (eventId == null || eventId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("eventId is empty"));
+        try {
+            ValidationHelper.requireNonEmpty(eventId, "eventId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
         db.collection("events").document(eventId)
@@ -214,8 +207,11 @@ public class EventDB {
     }
 
     public void isEntrantOnWaitlist(String eventId, String deviceId, Callback<Boolean> cb) {
-        if (eventId == null || eventId.isEmpty() || deviceId == null || deviceId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("eventId or deviceId is empty"));
+        try {
+            ValidationHelper.requireNonEmpty(eventId, "eventId");
+            ValidationHelper.requireNonEmpty(deviceId, "deviceId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
         db.collection("events").document(eventId)
@@ -229,15 +225,17 @@ public class EventDB {
 
     /**
      * Checks if an entrant is a winner for a specific event.
-     * Verifies if the entrant exists in the winners collection.
      *
      * @param eventId  the event ID
      * @param deviceId the device ID of the entrant
      * @param cb       callback that receives true if the entrant is a winner, false otherwise
      */
     public void isEntrantWinner(String eventId, String deviceId, Callback<Boolean> cb) {
-        if (eventId == null || eventId.isEmpty() || deviceId == null || deviceId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("eventId or deviceId is empty"));
+        try {
+            ValidationHelper.requireNonEmpty(eventId, "eventId");
+            ValidationHelper.requireNonEmpty(deviceId, "deviceId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
         db.collection("events").document(eventId)
@@ -250,15 +248,16 @@ public class EventDB {
     }
 
     /**
-     * Checks if an event document exists in Firestore.
-     * Used to filter out deleted events when loading registration history.
+     * Checks if an event exists in Firestore.
      *
      * @param eventId the event ID to check
      * @param cb      callback that receives true if the event exists, false otherwise
      */
     public void eventExists(String eventId, Callback<Boolean> cb) {
-        if (eventId == null || eventId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("eventId is empty"));
+        try {
+            ValidationHelper.requireNonEmpty(eventId, "eventId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
         db.collection("events").document(eventId)
@@ -270,15 +269,18 @@ public class EventDB {
     }
 
     /**
-     * Checks if an entrant is in the accepted collection for a specific event.
+     * Checks if an entrant is accepted for a specific event.
      *
      * @param eventId  the event ID
      * @param deviceId the device ID of the entrant
      * @param cb       callback that receives true if the entrant is accepted, false otherwise
      */
     public void isEntrantAccepted(String eventId, String deviceId, Callback<Boolean> cb) {
-        if (eventId == null || eventId.isEmpty() || deviceId == null || deviceId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("eventId or deviceId is empty"));
+        try {
+            ValidationHelper.requireNonEmpty(eventId, "eventId");
+            ValidationHelper.requireNonEmpty(deviceId, "deviceId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
         db.collection("events").document(eventId)
@@ -291,15 +293,18 @@ public class EventDB {
     }
 
     /**
-     * Checks if an entrant is in the cancelled collection for a specific event.
+     * Checks if an entrant is cancelled for a specific event.
      *
      * @param eventId  the event ID
      * @param deviceId the device ID of the entrant
      * @param cb       callback that receives true if the entrant is cancelled, false otherwise
      */
     public void isEntrantCancelled(String eventId, String deviceId, Callback<Boolean> cb) {
-        if (eventId == null || eventId.isEmpty() || deviceId == null || deviceId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("eventId or deviceId is empty"));
+        try {
+            ValidationHelper.requireNonEmpty(eventId, "eventId");
+            ValidationHelper.requireNonEmpty(deviceId, "deviceId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
         db.collection("events").document(eventId)
@@ -311,42 +316,47 @@ public class EventDB {
                 .addOnFailureListener(cb::onError);
     }
 
-    // Checks if user can join (not already in any list)
+    /**
+     * Checks if user can join the waitlist.
+     *
+     * @param eventId  the event ID
+     * @param deviceId the device ID of the entrant
+     * @param cb       callback that receives true if the entrant can join, false otherwise
+     */
     public void canJoinWaitlist(String eventId, String deviceId, Callback<Boolean> cb) {
-        if (eventId == null || eventId.isEmpty() || deviceId == null || deviceId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("eventId or deviceId is empty"));
+        try {
+            ValidationHelper.requireNonEmpty(eventId, "eventId");
+            ValidationHelper.requireNonEmpty(deviceId, "deviceId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
         
-        // Check if already in waitingList
         db.collection("events").document(eventId)
                 .collection("waitingList").document(deviceId)
                 .get()
                 .addOnSuccessListener(snapshot -> {
                     if (snapshot != null && snapshot.exists()) {
-                        cb.onSuccess(false); // Already on waitlist
+                        cb.onSuccess(false);
                         return;
                     }
                     
-                    // Check if in winners list
                     db.collection("events").document(eventId)
                             .collection("winners").document(deviceId)
                             .get()
                             .addOnSuccessListener(winnerSnapshot -> {
                                 if (winnerSnapshot != null && winnerSnapshot.exists()) {
-                                    cb.onSuccess(false); // Already a winner
+                                    cb.onSuccess(false);
                                     return;
                                 }
                                 
-                                // Check if in accepted list
                                 db.collection("events").document(eventId)
                                         .collection("accepted").document(deviceId)
                                         .get()
                                         .addOnSuccessListener(acceptedSnapshot -> {
                                             if (acceptedSnapshot != null && acceptedSnapshot.exists()) {
-                                                cb.onSuccess(false); // Already accepted
+                                                cb.onSuccess(false);
                                             } else {
-                                                // Can join if cancelled or not in any list
                                                 cb.onSuccess(true);
                                             }
                                         })
@@ -358,8 +368,10 @@ public class EventDB {
     }
 
     public void getWaitlistCount(String eventId, Callback<Integer> cb) {
-        if (eventId == null || eventId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("eventId is empty"));
+        try {
+            ValidationHelper.requireNonEmpty(eventId, "eventId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
         db.collection("events").document(eventId)
@@ -374,14 +386,15 @@ public class EventDB {
 
     /**
      * Gets the count of accepted participants for an event.
-     * This is used to check if the event has reached capacity.
      *
      * @param eventId the event ID
      * @param cb callback with the accepted count
      */
     public void getAcceptedCount(String eventId, Callback<Integer> cb) {
-        if (eventId == null || eventId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("eventId is empty"));
+        try {
+            ValidationHelper.requireNonEmpty(eventId, "eventId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
         db.collection("events").document(eventId)
@@ -394,29 +407,19 @@ public class EventDB {
                 .addOnFailureListener(cb::onError);
     }
 
-    // Real-time count (creates listener - remember to remove it!)
-    public void fetchAccurateWaitlistCount(String eventId, Callback<Integer> cb) {
-        if (eventId == null || eventId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("eventId is empty"));
-            return;
-        }
-
-        db.collection("events").document(eventId)
-                .collection("waitingList")
-                .addSnapshotListener((querySnapshot, e) -> {
-                    if (e != null) {
-                        cb.onError(e);
-                        return;
-                    }
-
-                    int count = querySnapshot != null ? querySnapshot.size() : 0;
-                    cb.onSuccess(count);
-                });
-    }
-
+    /**
+     * Adds an entrant to the waitlist.
+     *
+     * @param eventId  the event ID
+     * @param deviceId the device ID of the entrant
+     * @param cb       callback for completion
+     */
     public void joinWaitlist(String eventId, String deviceId, Callback<Void> cb) {
-        if (eventId == null || eventId.isEmpty() || deviceId == null || deviceId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("eventId or deviceId is empty"));
+        try {
+            ValidationHelper.requireNonEmpty(eventId, "eventId");
+            ValidationHelper.requireNonEmpty(deviceId, "deviceId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
         Map<String, Object> data = new HashMap<>();
@@ -430,10 +433,19 @@ public class EventDB {
                 .addOnFailureListener(cb::onError);
     }
 
-    // Removes from waitlist (idempotent - safe to call multiple times)
+    /**
+     * Removes an entrant from the waitlist.
+     *
+     * @param eventId  the event ID
+     * @param deviceId the device ID of the entrant
+     * @param cb       callback for completion
+     */
     public void leaveWaitlist(String eventId, String deviceId, Callback<Void> cb) {
-        if (eventId == null || eventId.isEmpty() || deviceId == null || deviceId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("eventId or deviceId is empty"));
+        try {
+            ValidationHelper.requireNonEmpty(eventId, "eventId");
+            ValidationHelper.requireNonEmpty(deviceId, "deviceId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
         db.collection("events").document(eventId)
@@ -444,38 +456,35 @@ public class EventDB {
     }
 
     /**
-     * Removes an entrant from all event subcollections (waitingList, winners, accepted, cancelled, replacementPool).
-     * Used when admin removes a profile to clean up all event associations.
-     * This operation is idempotent - safe to call multiple times.
+     * Removes an entrant from all event subcollections.
      *
      * @param eventId the event ID
      * @param deviceId the device ID of the entrant to remove
      * @param cb callback for completion
      */
     public void removeEntrantFromEvent(String eventId, String deviceId, Callback<Void> cb) {
-        if (eventId == null || eventId.isEmpty() || deviceId == null || deviceId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("eventId or deviceId is empty"));
+        try {
+            ValidationHelper.requireNonEmpty(eventId, "eventId");
+            ValidationHelper.requireNonEmpty(deviceId, "deviceId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
         
-        // Use batch write to remove from all subcollections atomically
         WriteBatch batch = db.batch();
         
-        // Remove from waitingList
         DocumentReference waitlistRef = db.collection("events")
             .document(eventId)
             .collection("waitingList")
             .document(deviceId);
         batch.delete(waitlistRef);
         
-        // Remove from winners
         DocumentReference winnersRef = db.collection("events")
             .document(eventId)
             .collection("winners")
             .document(deviceId);
         batch.delete(winnersRef);
         
-        // Remove from accepted
         DocumentReference acceptedRef = db.collection("events")
             .document(eventId)
             .collection("accepted")
@@ -489,7 +498,6 @@ public class EventDB {
             .document(deviceId);
         batch.delete(cancelledRef);
         
-        // Remove from replacementPool
         DocumentReference replacementRef = db.collection("events")
             .document(eventId)
             .collection("replacementPool")
@@ -508,8 +516,10 @@ public class EventDB {
     }
 
     public void getWaitlist(String eventId, Callback<List<Map<String, Object>>> cb) {
-        if (eventId == null || eventId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("eventId is empty"));
+        try {
+            ValidationHelper.requireNonEmpty(eventId, "eventId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
         db.collection("events").document(eventId)
@@ -530,14 +540,23 @@ public class EventDB {
                 .addOnFailureListener(cb::onError);
     }
 
-    // Moves winners from waitlist to winners, creates replacement pool
+    /**
+     * Marks entrants as winners and creates replacement pool.
+     *
+     * @param eventId        the event ID
+     * @param winnerIds      list of winner device IDs
+     * @param replacementIds list of replacement device IDs
+     * @param cb             callback for completion
+     */
     public void markWinners(String eventId, List<String> winnerIds, List<String> replacementIds, Callback<Void> cb) {
-        if (eventId == null || eventId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("eventId is empty"));
-            return;
-        }
-        if (winnerIds == null || winnerIds.isEmpty()) {
-            cb.onError(new IllegalArgumentException("winnerIds is empty"));
+        try {
+            ValidationHelper.requireNonEmpty(eventId, "eventId");
+            ValidationHelper.requireNonNull(winnerIds, "winnerIds");
+            if (winnerIds.isEmpty()) {
+                throw new IllegalArgumentException("winnerIds cannot be empty");
+            }
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
 
@@ -553,7 +572,6 @@ public class EventDB {
                     .document(winnerId);
             batch.delete(waitlistRef);
 
-            // Add to winners
             DocumentReference winnersRef = db.collection("events")
                     .document(eventId)
                     .collection("winners")
@@ -564,17 +582,14 @@ public class EventDB {
             batch.set(winnersRef, data);
         }
 
-        // Move replacement pool from waitingList to replacementPool
         if (replacementIds != null && !replacementIds.isEmpty()) {
             for (String replacementId : replacementIds) {
-                // Remove from waitingList
                 DocumentReference waitlistRef = db.collection("events")
                         .document(eventId)
                         .collection("waitingList")
                         .document(replacementId);
                 batch.delete(waitlistRef);
 
-                // Add to replacementPool
                 DocumentReference poolRef = db.collection("events")
                         .document(eventId)
                         .collection("replacementPool")
@@ -591,23 +606,35 @@ public class EventDB {
                 .addOnFailureListener(cb::onError);
     }
     
-    // Legacy - no replacement pool
+    /**
+     * Marks entrants as winners without replacement pool.
+     *
+     * @param eventId    the event ID
+     * @param entrantIds list of winner device IDs
+     * @param cb         callback for completion
+     */
     public void markWinners(String eventId, List<String> entrantIds, Callback<Void> cb) {
         markWinners(eventId, entrantIds, new ArrayList<>(), cb);
     }
 
-    // Promotes replacement from pool to winners (picks first if entrantId is null)
+    /**
+     * Promotes a replacement from pool to winners.
+     *
+     * @param eventId   the event ID
+     * @param entrantId the device ID of the replacement (null to pick first)
+     * @param cb        callback for completion
+     */
     public void markReplacement(String eventId, String entrantId, Callback<Void> cb) {
-        if (eventId == null || eventId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("eventId is empty"));
+        try {
+            ValidationHelper.requireNonEmpty(eventId, "eventId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
 
         if (entrantId != null && !entrantId.isEmpty()) {
-            // Specific entrant requested
             promoteReplacementToWinner(eventId, entrantId, cb);
         } else {
-            // Pick first available from replacement pool
             getReplacementPool(eventId, new Callback<List<Map<String, Object>>>() {
                 @Override
                 public void onSuccess(List<Map<String, Object>> pool) {
@@ -628,7 +655,6 @@ public class EventDB {
     }
     
     private void promoteReplacementToWinner(String eventId, String entrantId, Callback<Void> cb) {
-        // Check if entrant is in replacement pool
         db.collection("events").document(eventId)
                 .collection("replacementPool").document(entrantId)
                 .get()
@@ -640,7 +666,6 @@ public class EventDB {
 
                     WriteBatch batch = db.batch();
 
-                    // Remove from replacementPool
                     DocumentReference poolRef = db.collection("events")
                             .document(eventId)
                             .collection("replacementPool")
@@ -655,7 +680,7 @@ public class EventDB {
                     Map<String, Object> data = new HashMap<>();
                     data.put("deviceId", entrantId);
                     data.put("invitedAt", System.currentTimeMillis());
-                    data.put("isReplacement", true); // Mark as replacement for tracking
+                    data.put("isReplacement", true);
                     batch.set(winnersRef, data);
 
                     batch.commit()
@@ -665,23 +690,31 @@ public class EventDB {
                 .addOnFailureListener(cb::onError);
     }
 
-    // Moves winner to accepted or cancelled based on enrolled flag
+    /**
+     * Sets the enrolled status of a winner.
+     *
+     * @param eventId  the event ID
+     * @param deviceId the device ID of the entrant
+     * @param enrolled true for accepted, false for cancelled
+     * @param cb       callback for completion
+     */
     public void setEnrolledStatus(String eventId, String deviceId, Boolean enrolled, Callback<Void> cb) {
-        if (eventId == null || eventId.isEmpty() || deviceId == null || deviceId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("eventId or deviceId is empty"));
+        try {
+            ValidationHelper.requireNonEmpty(eventId, "eventId");
+            ValidationHelper.requireNonEmpty(deviceId, "deviceId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
 
         WriteBatch batch = db.batch();
 
-        // Remove from winners
         DocumentReference winnersRef = db.collection("events")
                 .document(eventId)
                 .collection("winners")
                 .document(deviceId);
         batch.delete(winnersRef);
 
-        // Add to appropriate list based on enrollment status
         String targetCollection = enrolled ? "accepted" : "cancelled";
         DocumentReference targetRef = db.collection("events")
                 .document(eventId)
@@ -699,8 +732,10 @@ public class EventDB {
     }
 
     public void getWinners(String eventId, Callback<List<Map<String, Object>>> cb) {
-        if (eventId == null || eventId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("eventId is empty"));
+        try {
+            ValidationHelper.requireNonEmpty(eventId, "eventId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
 
@@ -723,8 +758,10 @@ public class EventDB {
     }
 
     public void getCancelled(String eventId, Callback<List<Map<String, Object>>> cb) {
-        if (eventId == null || eventId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("eventId is empty"));
+        try {
+            ValidationHelper.requireNonEmpty(eventId, "eventId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
 
@@ -747,8 +784,10 @@ public class EventDB {
     }
 
     public void getEnrolled(String eventId, Callback<List<Map<String, Object>>> cb) {
-        if (eventId == null || eventId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("eventId is empty"));
+        try {
+            ValidationHelper.requireNonEmpty(eventId, "eventId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
 
@@ -771,8 +810,10 @@ public class EventDB {
     }
     
     public void getReplacementPool(String eventId, Callback<List<Map<String, Object>>> cb) {
-        if (eventId == null || eventId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("eventId is empty"));
+        try {
+            ValidationHelper.requireNonEmpty(eventId, "eventId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
 
@@ -795,8 +836,10 @@ public class EventDB {
     }
     
     public void getReplacementPoolCount(String eventId, Callback<Integer> cb) {
-        if (eventId == null || eventId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("eventId is empty"));
+        try {
+            ValidationHelper.requireNonEmpty(eventId, "eventId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
         
@@ -819,16 +862,14 @@ public class EventDB {
      * @param cb        callback for completion
      */
     public void promoteFromWaitlist(String eventId, String entrantId, Callback<Void> cb) {
-        if (eventId == null || eventId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("eventId is empty"));
-            return;
-        }
-        if (entrantId == null || entrantId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("entrantId is empty"));
+        try {
+            ValidationHelper.requireNonEmpty(eventId, "eventId");
+            ValidationHelper.requireNonEmpty(entrantId, "entrantId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
 
-        // Check if entrant is in waitlist
         db.collection("events").document(eventId)
                 .collection("waitingList").document(entrantId)
                 .get()
@@ -840,7 +881,6 @@ public class EventDB {
 
                     WriteBatch batch = db.batch();
 
-                    // Remove from waitingList
                     DocumentReference waitlistRef = db.collection("events")
                             .document(eventId)
                             .collection("waitingList")
@@ -866,8 +906,7 @@ public class EventDB {
     }
 
     /**
-     * Logs a decline and its replacement for audit purposes.
-     * Stores log entry in events/{eventId}/declineLogs subcollection.
+     * Logs a decline and its replacement.
      *
      * @param eventId            the event ID
      * @param declinedEntrantId  the device ID of the entrant who declined
@@ -882,12 +921,11 @@ public class EventDB {
                                       String source,
                                       boolean replacementNotified,
                                       Callback<Void> cb) {
-        if (eventId == null || eventId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("eventId is empty"));
-            return;
-        }
-        if (declinedEntrantId == null || declinedEntrantId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("declinedEntrantId is empty"));
+        try {
+            ValidationHelper.requireNonEmpty(eventId, "eventId");
+            ValidationHelper.requireNonEmpty(declinedEntrantId, "declinedEntrantId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
 
@@ -896,7 +934,6 @@ public class EventDB {
         logData.put("declinedEntrantId", declinedEntrantId);
         logData.put("eventId", eventId);
         logData.put("declinedAt", declinedAt);
-        // For automatic reselection, replacedAt equals declinedAt since replacement happens immediately
         logData.put("replacedAt", declinedAt);
         logData.put("replacementNotified", replacementNotified);
 
@@ -914,7 +951,6 @@ public class EventDB {
                 .addOnFailureListener(cb::onError);
     }
 
-    // Helper to parse event from Firestore doc
     private Event parseEventFromDocument(DocumentSnapshot doc) {
         try {
             Event event = new Event();
@@ -927,12 +963,10 @@ public class EventDB {
             event.setQrCode(doc.getString("qrCode"));
             event.setMaxCapacity(doc.get("maxCapacity", Integer.class));
 
-            // Convert Timestamp objects to String (ISO format)
             event.setEventDateTime(convertTimestampToString(doc.get("eventDateTime")));
             event.setRegistrationOpen(convertTimestampToString(doc.get("registrationOpen")));
             event.setRegistrationClose(convertTimestampToString(doc.get("registrationClose")));
 
-            // Parse tags array from Firestore
             Object tagsObj = doc.get("tags");
             if (tagsObj instanceof List) {
                 @SuppressWarnings("unchecked")
@@ -952,7 +986,6 @@ public class EventDB {
         }
     }
 
-    // Converts Firestore Timestamp to ISO string
     private String convertTimestampToString(Object value) {
         if (value == null) {
             return null;
@@ -966,33 +999,30 @@ public class EventDB {
             SimpleDateFormat isoFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US);
             return isoFormat.format(date);
         }
-        // Try to handle Date objects too
         if (value instanceof Date) {
             Date date = (Date) value;
             SimpleDateFormat isoFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US);
             return isoFormat.format(date);
         }
-        // Fallback: convert to string
         return value.toString();
     }
 
     /**
-     * Deletes an event and all its subcollections from the events collection.
-     * Deletes: waitingList, winners, accepted, cancelled, replacementPool, declineLogs
+     * Deletes an event and all its subcollections.
      *
      * @param eventId the event ID to delete
      * @param cb callback for completion
      */
     public void deleteEvent(String eventId, Callback<Void> cb) {
-        if (eventId == null || eventId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("eventId cannot be null or empty"));
+        try {
+            ValidationHelper.requireNonEmpty(eventId, "eventId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
         
         DocumentReference eventRef = db.collection("events").document(eventId);
         
-        // Delete all subcollections first, then the event document
-        // Firestore doesn't support recursive deletion, so we need to delete each subcollection
         String[] subcollections = {
             "waitingList",
             "winners", 
@@ -1005,38 +1035,35 @@ public class EventDB {
         deleteSubcollections(eventRef, subcollections, 0, new Callback<Void>() {
             @Override
             public void onSuccess(Void value) {
-                // All subcollections deleted, now delete the event document
-                eventRef.delete()
-                    .addOnSuccessListener(aVoid -> {
-                        android.util.Log.d("EventDB", "Event deleted: " + eventId);
-                        cb.onSuccess(null);
-                    })
-                    .addOnFailureListener(e -> {
-                        android.util.Log.e("EventDB", "Failed to delete event: " + eventId, e);
-                        cb.onError(e);
-                    });
+                deleteEventDocument(eventRef, eventId, cb);
             }
             
             @Override
             public void onError(@NonNull Exception e) {
-                android.util.Log.e("EventDB", "Failed to delete subcollections for event: " + eventId, e);
-                // Continue with event deletion even if subcollection deletion fails
-                eventRef.delete()
-                    .addOnSuccessListener(aVoid -> {
-                        android.util.Log.d("EventDB", "Event deleted (with subcollection errors): " + eventId);
-                        cb.onSuccess(null);
-                    })
-                    .addOnFailureListener(deleteError -> {
-                        android.util.Log.e("EventDB", "Failed to delete event: " + eventId, deleteError);
-                        cb.onError(deleteError);
-                    });
+                android.util.Log.w("EventDB", "Some subcollections failed to delete for event: " + eventId, e);
+                deleteEventDocument(eventRef, eventId, cb);
             }
         });
     }
 
     /**
+     * Deletes the event document itself.
+     */
+    private void deleteEventDocument(DocumentReference eventRef, String eventId, Callback<Void> cb) {
+        eventRef.delete()
+            .addOnSuccessListener(aVoid -> {
+                android.util.Log.d("EventDB", "Event deleted: " + eventId);
+                cb.onSuccess(null);
+            })
+            .addOnFailureListener(e -> {
+                android.util.Log.e("EventDB", "Failed to delete event: " + eventId, e);
+                cb.onError(e);
+            });
+    }
+
+    /**
      * Recursively deletes all documents in subcollections.
-     * 
+     *
      * @param eventRef the event document reference
      * @param subcollectionNames array of subcollection names to delete
      * @param index current index in the array
@@ -1045,7 +1072,6 @@ public class EventDB {
     private void deleteSubcollections(DocumentReference eventRef, String[] subcollectionNames, 
                                       int index, Callback<Void> cb) {
         if (index >= subcollectionNames.length) {
-            // All subcollections processed
             cb.onSuccess(null);
             return;
         }
@@ -1055,13 +1081,10 @@ public class EventDB {
             .get()
             .addOnSuccessListener(querySnapshot -> {
                 if (querySnapshot == null || querySnapshot.isEmpty()) {
-                    // No documents in this subcollection, move to next
                     deleteSubcollections(eventRef, subcollectionNames, index + 1, cb);
                     return;
                 }
                 
-                // Delete all documents in this subcollection
-                // Firestore batch limit is 500 operations, so split if needed
                 List<QueryDocumentSnapshot> docs = new ArrayList<>();
                 for (QueryDocumentSnapshot doc : querySnapshot) {
                     docs.add(doc);
@@ -1070,52 +1093,40 @@ public class EventDB {
                 deleteDocumentsInBatches(eventRef, subcollectionName, docs, 0, new Callback<Void>() {
                     @Override
                     public void onSuccess(Void value) {
-                        android.util.Log.d("EventDB", "Deleted subcollection: " + subcollectionName);
-                        // Move to next subcollection
                         deleteSubcollections(eventRef, subcollectionNames, index + 1, cb);
                     }
                     
                     @Override
                     public void onError(@NonNull Exception e) {
                         android.util.Log.w("EventDB", "Failed to delete subcollection: " + subcollectionName, e);
-                        // Continue with next subcollection even if this one fails
                         deleteSubcollections(eventRef, subcollectionNames, index + 1, cb);
                     }
                 });
             })
             .addOnFailureListener(e -> {
                 android.util.Log.w("EventDB", "Failed to query subcollection: " + subcollectionName, e);
-                // Continue with next subcollection even if query fails
                 deleteSubcollections(eventRef, subcollectionNames, index + 1, cb);
             });
     }
 
     /**
-     * Deletes documents in batches to respect Firestore's 500 operation limit per batch.
+     * Deletes documents in batches.
      *
      * @param eventRef the event document reference
-     * @param subcollectionName name of the subcollection (for logging)
+     * @param subcollectionName name of the subcollection
      * @param docs list of documents to delete
-     * @param batchIndex current batch index (0-based)
+     * @param batchIndex current batch index
      * @param cb callback for completion
      */
     private void deleteDocumentsInBatches(DocumentReference eventRef, String subcollectionName,
                                          List<QueryDocumentSnapshot> docs, int batchIndex,
                                          Callback<Void> cb) {
-        if (docs.isEmpty()) {
+        if (docs.isEmpty() || batchIndex * BATCH_SIZE >= docs.size()) {
             cb.onSuccess(null);
             return;
         }
         
-        final int BATCH_SIZE = 500;
         int startIndex = batchIndex * BATCH_SIZE;
-        
-        if (startIndex >= docs.size()) {
-            // All batches processed
-            cb.onSuccess(null);
-            return;
-        }
-        
         int endIndex = Math.min(startIndex + BATCH_SIZE, docs.size());
         WriteBatch batch = db.batch();
         
@@ -1124,14 +1135,9 @@ public class EventDB {
         }
         
         batch.commit()
-            .addOnSuccessListener(aVoid -> {
-                android.util.Log.d("EventDB", "Deleted batch " + (batchIndex + 1) + " of subcollection: " + subcollectionName);
-                // Process next batch
-                deleteDocumentsInBatches(eventRef, subcollectionName, docs, batchIndex + 1, cb);
-            })
+            .addOnSuccessListener(aVoid -> deleteDocumentsInBatches(eventRef, subcollectionName, docs, batchIndex + 1, cb))
             .addOnFailureListener(e -> {
                 android.util.Log.w("EventDB", "Failed to delete batch " + (batchIndex + 1) + " of subcollection: " + subcollectionName, e);
-                // Continue with next batch even if this one fails
                 deleteDocumentsInBatches(eventRef, subcollectionName, docs, batchIndex + 1, cb);
             });
     }

@@ -1,93 +1,78 @@
 package ca.ualberta.codarc.codarc_events.views;
 
-import android.os.Bundle;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
+import androidx.appcompat.app.AlertDialog;
 
-import com.google.firebase.Timestamp;
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.textfield.TextInputEditText;
+
+import ca.ualberta.codarc.codarc_events.utils.TextWatcherHelper;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
 import ca.ualberta.codarc.codarc_events.R;
 import ca.ualberta.codarc.codarc_events.adapters.WaitlistAdapter;
+import ca.ualberta.codarc.codarc_events.controllers.NotifyEnrolledController;
 import ca.ualberta.codarc.codarc_events.data.EntrantDB;
 import ca.ualberta.codarc.codarc_events.data.EventDB;
 import ca.ualberta.codarc.codarc_events.models.Entrant;
-import ca.ualberta.codarc.codarc_events.models.Event;
-import ca.ualberta.codarc.codarc_events.utils.Identity;
 
 /**
  * Displays list of enrolled entrants for an event.
+ * Allows organizer to send broadcast notifications to all enrolled entrants.
  */
-public class ViewEnrolledActivity extends AppCompatActivity {
+public class ViewEnrolledActivity extends BaseEntrantListActivity {
 
-    private RecyclerView recyclerView;
     private WaitlistAdapter adapter;
-    private TextView emptyState;
-    private EventDB eventDB;
-    private EntrantDB entrantDB;
-    private String eventId;
+    private MaterialButton btnNotifyEnrolled;
+    private NotifyEnrolledController notifyController;
     private List<WaitlistAdapter.WaitlistItem> itemList;
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_view_enrolled);
-
-        eventId = getIntent().getStringExtra("eventId");
-        if (eventId == null || eventId.isEmpty()) {
-            Toast.makeText(this, "Event ID required", Toast.LENGTH_SHORT).show();
-            finish();
-            return;
-        }
-
-        eventDB = new EventDB();
-        entrantDB = new EntrantDB();
-        itemList = new ArrayList<>();
-
-        recyclerView = findViewById(R.id.rv_entrants);
-        emptyState = findViewById(R.id.tv_empty_state);
-
-        recyclerView.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new WaitlistAdapter(itemList);
-        recyclerView.setAdapter(adapter);
-
-        verifyOrganizerAccess();
-        loadEnrolled();
+    protected int getLayoutResourceId() {
+        return R.layout.activity_view_enrolled;
     }
 
-    private void verifyOrganizerAccess() {
-        String deviceId = Identity.getOrCreateDeviceId(this);
-        
-        eventDB.getEvent(eventId, new EventDB.Callback<Event>() {
-            @Override
-            public void onSuccess(Event event) {
-                if (event == null || event.getOrganizerId() == null || !event.getOrganizerId().equals(deviceId)) {
-                    runOnUiThread(() -> {
-                        Toast.makeText(ViewEnrolledActivity.this, "Only event organizer can access this", Toast.LENGTH_SHORT).show();
-                        finish();
-                    });
-                }
-            }
+    @Override
+    protected int getRecyclerViewId() {
+        return R.id.rv_entrants;
+    }
 
-            @Override
-            public void onError(@NonNull Exception e) {
-                runOnUiThread(() -> {
-                    Toast.makeText(ViewEnrolledActivity.this, "Failed to verify access", Toast.LENGTH_SHORT).show();
-                    finish();
-                });
-            }
-        });
+    @Override
+    protected int getEmptyStateId() {
+        return R.id.tv_empty_state;
+    }
+
+    @Override
+    protected void setupAdapter() {
+        itemList = new ArrayList<>();
+        adapter = new WaitlistAdapter(itemList);
+        recyclerView.setAdapter(adapter);
+    }
+
+    @Override
+    protected boolean needsOrganizerAccess() {
+        return true;
+    }
+
+    @Override
+    protected void initializeActivity() {
+        notifyController = new NotifyEnrolledController(eventDB, entrantDB);
+        btnNotifyEnrolled = findViewById(R.id.btn_notify_enrolled);
+        setupNotifyButton();
+    }
+
+    @Override
+    protected void loadData() {
+        loadEnrolled();
     }
 
     private void loadEnrolled() {
@@ -96,9 +81,10 @@ public class ViewEnrolledActivity extends AppCompatActivity {
             public void onSuccess(List<Map<String, Object>> entries) {
                 if (entries == null || entries.isEmpty()) {
                     showEmptyState();
+                    updateNotifyButtonState(0);
                     return;
                 }
-
+                updateNotifyButtonState(entries.size());
                 fetchEntrantNames(entries);
             }
 
@@ -106,6 +92,7 @@ public class ViewEnrolledActivity extends AppCompatActivity {
             public void onError(@NonNull Exception e) {
                 Log.e("ViewEnrolledActivity", "Failed to load enrolled entrants", e);
                 Toast.makeText(ViewEnrolledActivity.this, "Failed to load enrolled entrants", Toast.LENGTH_SHORT).show();
+                updateNotifyButtonState(0);
             }
         });
     }
@@ -157,37 +144,75 @@ public class ViewEnrolledActivity extends AppCompatActivity {
         }
     }
 
-    private long parseTimestamp(Object timestampObj) {
-        if (timestampObj == null) {
-            Log.w("ViewEnrolledActivity", "Timestamp is null, using 0");
-            return 0L;
-        }
-
-        if (timestampObj instanceof Timestamp) {
-            Timestamp ts = (Timestamp) timestampObj;
-            return ts.toDate().getTime();
-        }
-
-        if (timestampObj instanceof Long) {
-            return (Long) timestampObj;
-        }
-
-        if (timestampObj instanceof Date) {
-            return ((Date) timestampObj).getTime();
-        }
-
-        Log.w("ViewEnrolledActivity", "Unknown timestamp type: " + timestampObj.getClass().getName());
-        return 0L;
+    private void setupNotifyButton() {
+        btnNotifyEnrolled.setOnClickListener(v -> showNotifyDialog());
     }
 
-    private void showEmptyState() {
-        recyclerView.setVisibility(View.GONE);
-        emptyState.setVisibility(View.VISIBLE);
+    /**
+     * Updates the notify button state based on enrolled count.
+     *
+     * @param enrolledCount the number of enrolled entrants
+     */
+    private void updateNotifyButtonState(int enrolledCount) {
+        if (btnNotifyEnrolled == null) return;
+        btnNotifyEnrolled.setEnabled(enrolledCount > 0);
     }
 
-    private void hideEmptyState() {
-        recyclerView.setVisibility(View.VISIBLE);
-        emptyState.setVisibility(View.GONE);
+    private void showNotifyDialog() {
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_notify_enrolled, null);
+        TextInputEditText etMessage = dialogView.findViewById(R.id.et_message);
+        TextView tvCharCount = dialogView.findViewById(R.id.tv_char_count);
+
+        etMessage.addTextChangedListener(TextWatcherHelper.createCharCountWatcher(tvCharCount, 500));
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setView(dialogView)
+                .setPositiveButton("Send", null)
+                .setNegativeButton("Cancel", (d, w) -> d.dismiss())
+                .create();
+
+        dialog.setOnShowListener(dialogInterface -> {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+                String message = etMessage.getText() != null ? etMessage.getText().toString() : "";
+                handleNotifyEnrolled(message, dialog);
+            });
+        });
+
+        dialog.show();
+    }
+
+    /**
+     * Handles sending notification to enrolled entrants.
+     * Delegates to controller for business logic.
+     *
+     * @param message the notification message
+     * @param dialog the dialog to dismiss on success
+     */
+    private void handleNotifyEnrolled(String message, AlertDialog dialog) {
+        notifyController.notifyEnrolled(eventId, message, new NotifyEnrolledController.NotifyEnrolledCallback() {
+            @Override
+            public void onSuccess(int notifiedCount, int failedCount) {
+                dialog.dismiss();
+                String resultMessage;
+                if (failedCount == 0) {
+                    resultMessage = "Notification sent to " + notifiedCount + " entrant(s)";
+                } else {
+                    resultMessage = "Notification sent to " + notifiedCount + " entrant(s). " +
+                            failedCount + " failed.";
+                }
+                Toast.makeText(ViewEnrolledActivity.this, resultMessage, Toast.LENGTH_LONG).show();
+            }
+
+            @Override
+            public void onError(@NonNull Exception e) {
+                Log.e("ViewEnrolledActivity", "Failed to notify enrolled entrants", e);
+                String errorMessage = e.getMessage();
+                if (errorMessage == null || errorMessage.isEmpty()) {
+                    errorMessage = "Failed to send notification";
+                }
+                Toast.makeText(ViewEnrolledActivity.this, errorMessage, Toast.LENGTH_LONG).show();
+            }
+        });
     }
 }
 

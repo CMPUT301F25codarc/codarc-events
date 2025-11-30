@@ -14,6 +14,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.button.MaterialButton;
 
 import ca.ualberta.codarc.codarc_events.R;
+import ca.ualberta.codarc.codarc_events.controllers.DeleteOwnProfileController;
 import ca.ualberta.codarc.codarc_events.data.EntrantDB;
 import ca.ualberta.codarc.codarc_events.data.UserDB;
 import ca.ualberta.codarc.codarc_events.models.Entrant;
@@ -21,20 +22,12 @@ import ca.ualberta.codarc.codarc_events.utils.Identity;
 
 /**
  * Handles creation, update, and deletion of an entrant's profile.
- *
- * <p>Users can view and edit their profile information, delete their profile,
- * or navigate back to the event dashboard. This activity loads existing profile
- * data if available and allows users to modify their name, email, and phone number.</p>
- * 
- * <p>In the refactored structure:
- * - Creates an Entrants document with profile data
- * - Sets isEntrant = true in the Users collection
- * </p>
  */
 public class ProfileCreationActivity extends AppCompatActivity {
 
     private EntrantDB entrantDB;
     private UserDB userDB;
+    private DeleteOwnProfileController deleteOwnProfileController;
     private String deviceId;
     private EditText nameEt;
     private EditText emailEt;
@@ -48,7 +41,6 @@ public class ProfileCreationActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_profile_creation);
 
-        // Initialize views
         nameEt = findViewById(R.id.et_name);
         emailEt = findViewById(R.id.et_email);
         phoneEt = findViewById(R.id.et_phone);
@@ -56,25 +48,21 @@ public class ProfileCreationActivity extends AppCompatActivity {
         deleteBtn = findViewById(R.id.btn_delete_profile);
         backBtn = findViewById(R.id.iv_back);
 
-        // Initialize Firestore helpers
         entrantDB = new EntrantDB();
         userDB = new UserDB();
+        deleteOwnProfileController = new DeleteOwnProfileController();
         deviceId = Identity.getOrCreateDeviceId(this);
 
-        // Load existing profile data if available
         loadProfile();
 
-        // Handle Save button
         if (saveBtn != null) {
             saveBtn.setOnClickListener(v -> saveOrUpdateProfile());
         }
 
-        // Handle Delete button
         if (deleteBtn != null) {
             deleteBtn.setOnClickListener(v -> confirmAndDeleteProfile());
         }
 
-        // Handle Back button
         if (backBtn != null) {
             backBtn.setOnClickListener(v -> {
                 onBackPressed();
@@ -83,11 +71,6 @@ public class ProfileCreationActivity extends AppCompatActivity {
         }
     }
 
-    /**
-     * Loads existing profile info from Firestore and fills input fields.
-     * If no profile exists, fields remain empty for new profile creation.
-     * Checks if user is banned and shows appropriate message.
-     */
     private void loadProfile() {
         if (nameEt == null || emailEt == null || phoneEt == null) {
             return;
@@ -95,13 +78,11 @@ public class ProfileCreationActivity extends AppCompatActivity {
         entrantDB.getProfile(deviceId, new EntrantDB.Callback<Entrant>() {
             @Override
             public void onSuccess(Entrant entrant) {
-                // Check if user is banned (entrant can be null but document might exist with banned flag)
                 if (entrant != null && entrant.isBanned()) {
                     showBannedMessage();
                     return;
                 }
                 
-                // If entrant exists and is not banned, load profile data
                 if (entrant != null) {
                     if (entrant.getName() != null) {
                         nameEt.setText(entrant.getName());
@@ -113,13 +94,10 @@ public class ProfileCreationActivity extends AppCompatActivity {
                         phoneEt.setText(entrant.getPhone());
                     }
                 }
-                // If entrant is null, fields remain empty for new profile creation
             }
 
             @Override
             public void onError(@androidx.annotation.NonNull Exception e) {
-                // Profile might not exist yet - allow user to create one
-                // getProfile() already handles banned check via isBanned() internally
             }
         });
     }
@@ -155,21 +133,11 @@ public class ProfileCreationActivity extends AppCompatActivity {
                 .show();
     }
 
-    /**
-     * Validates input fields and saves/updates profile in Firestore.
-     * Sets the isRegistered flag to true upon successful save.
-     * 
-     * In the refactored structure:
-     * - First checks if Entrant document exists
-     * - If not, creates it (first time) and sets isEntrant = true in Users
-     * - If exists, just updates the profile data
-     */
     private void saveOrUpdateProfile() {
         if (nameEt == null || emailEt == null || phoneEt == null) {
             return;
         }
         
-        // First check if user is banned
         entrantDB.isBanned(deviceId, new EntrantDB.Callback<Boolean>() {
             @Override
             public void onSuccess(Boolean isBanned) {
@@ -178,21 +146,16 @@ public class ProfileCreationActivity extends AppCompatActivity {
                     return;
                 }
                 
-                // Not banned, proceed with profile creation/update
                 proceedWithSaveOrUpdate();
             }
 
             @Override
             public void onError(@androidx.annotation.NonNull Exception e) {
-                // If check fails, allow user to proceed (graceful degradation)
                 proceedWithSaveOrUpdate();
             }
         });
     }
 
-    /**
-     * Proceeds with saving or updating the profile after ban check.
-     */
     private void proceedWithSaveOrUpdate() {
         if (nameEt == null || emailEt == null || phoneEt == null) {
             return;
@@ -210,7 +173,6 @@ public class ProfileCreationActivity extends AppCompatActivity {
             return;
         }
 
-        // Get existing profile to preserve banned flag
         entrantDB.getProfile(deviceId, new EntrantDB.Callback<Entrant>() {
             @Override
             public void onSuccess(Entrant existing) {
@@ -219,29 +181,24 @@ public class ProfileCreationActivity extends AppCompatActivity {
                 entrant.setEmail(email);
                 entrant.setPhone(phone);
                 entrant.setIsRegistered(true);
-                // Preserve banned flag - if banned, it should stay banned
                 if (existing != null && existing.isBanned()) {
                     entrant.setBanned(true);
                 }
 
                 saveBtn.setEnabled(false);
                 
-                // Check if this is first time creating profile
                 entrantDB.entrantExists(deviceId, new EntrantDB.Callback<Boolean>() {
                     @Override
                     public void onSuccess(Boolean exists) {
                         if (!exists) {
-                            // First time - create Entrant and set isEntrant flag in Users
                             createNewEntrantProfile(entrant);
                         } else {
-                            // Already exists - just update
                             updateExistingEntrantProfile(entrant);
                         }
                     }
 
                     @Override
                     public void onError(@androidx.annotation.NonNull Exception e) {
-                        // If check fails, try to upsert anyway
                         updateExistingEntrantProfile(entrant);
                     }
                 });
@@ -249,7 +206,6 @@ public class ProfileCreationActivity extends AppCompatActivity {
 
             @Override
             public void onError(@androidx.annotation.NonNull Exception e) {
-                // Profile doesn't exist, create new one
                 Entrant entrant = new Entrant(deviceId, name, System.currentTimeMillis());
                 entrant.setEmail(email);
                 entrant.setPhone(phone);
@@ -262,14 +218,12 @@ public class ProfileCreationActivity extends AppCompatActivity {
     }
     
     /**
-     * Creates a new Entrant profile and sets isEntrant flag in Users collection.
-     * This is called when user creates their profile for the first time.
+     * Creates a new Entrant profile.
      */
     private void createNewEntrantProfile(Entrant entrant) {
         entrantDB.createEntrant(entrant, new EntrantDB.Callback<Void>() {
             @Override
             public void onSuccess(Void value) {
-                // Set isEntrant = true in Users collection
                 userDB.setEntrantRole(deviceId, true, new UserDB.Callback<Void>() {
                     @Override
                     public void onSuccess(Void v) {
@@ -281,7 +235,6 @@ public class ProfileCreationActivity extends AppCompatActivity {
 
                     @Override
                     public void onError(@androidx.annotation.NonNull Exception e) {
-                        // Profile created but role flag failed - not critical, continue
                         Toast.makeText(ProfileCreationActivity.this, "Profile created", Toast.LENGTH_SHORT).show();
                         saveBtn.setEnabled(true);
                         finish();
@@ -321,7 +274,6 @@ public class ProfileCreationActivity extends AppCompatActivity {
 
     /**
      * Shows confirmation dialog before deleting the user's profile.
-     * Prevents accidental deletion by requiring user confirmation.
      */
     private void confirmAndDeleteProfile() {
         new AlertDialog.Builder(this)
@@ -333,23 +285,25 @@ public class ProfileCreationActivity extends AppCompatActivity {
     }
 
     /**
-     * Clears the profile information and sets registration status to false.
-     * Preserves the device identity document to prevent waitlist join errors.
+     * Clears the profile information and removes from all events.
      */
     private void deleteProfile() {
         deleteBtn.setEnabled(false);
-        entrantDB.deleteProfile(deviceId, new EntrantDB.Callback<Void>() {
+        deleteOwnProfileController.deleteOwnProfile(deviceId, new DeleteOwnProfileController.Callback() {
             @Override
-            public void onSuccess(Void value) {
-                Toast.makeText(ProfileCreationActivity.this, "Profile deleted", Toast.LENGTH_SHORT).show();
-                finish();
-                overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
-            }
-
-            @Override
-            public void onError(@androidx.annotation.NonNull Exception e) {
-                deleteBtn.setEnabled(true);
-                Toast.makeText(ProfileCreationActivity.this, "Failed to delete profile", Toast.LENGTH_SHORT).show();
+            public void onResult(DeleteOwnProfileController.DeleteProfileResult result) {
+                runOnUiThread(() -> {
+                    if (result.isSuccess()) {
+                        Toast.makeText(ProfileCreationActivity.this, "Profile deleted", Toast.LENGTH_SHORT).show();
+                        finish();
+                        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
+                    } else {
+                        deleteBtn.setEnabled(true);
+                        Toast.makeText(ProfileCreationActivity.this,
+                                result.getErrorMessage() != null ? result.getErrorMessage() : "Failed to delete profile",
+                                Toast.LENGTH_SHORT).show();
+                    }
+                });
             }
         });
     }

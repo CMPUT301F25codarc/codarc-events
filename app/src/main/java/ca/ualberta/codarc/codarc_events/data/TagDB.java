@@ -6,11 +6,15 @@ import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.firebase.firestore.SetOptions;
 import com.google.firebase.firestore.Transaction;
+import com.google.firebase.firestore.WriteBatch;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -19,7 +23,6 @@ import java.util.Set;
  */
 public class TagDB {
 
-    /** Lightweight async callback used by the data layer. */
     public interface Callback<T> {
         void onSuccess(T value);
         void onError(@NonNull Exception e);
@@ -27,7 +30,6 @@ public class TagDB {
 
     private final FirebaseFirestore db;
 
-    /** Construct using the default Firestore instance. */
     public TagDB() {
         this.db = FirebaseFirestore.getInstance();
     }
@@ -43,10 +45,8 @@ public class TagDB {
                 .addOnSuccessListener(querySnapshot -> {
                     Set<String> tags = new HashSet<>();
                     
-                    // Add predefined tags
                     tags.addAll(ca.ualberta.codarc.codarc_events.utils.TagHelper.getPredefinedTags());
                     
-                    // Add custom tags from collection
                     if (querySnapshot != null) {
                         for (QueryDocumentSnapshot doc : querySnapshot) {
                             String tagName = doc.getId();
@@ -62,8 +62,7 @@ public class TagDB {
     }
 
     /**
-     * Adds tags to the tags collection when an event is created.
-     * Uses transactions to safely increment usage count.
+     * Adds tags to the tags collection.
      *
      * @param tags list of tags to add
      * @param cb callback for completion
@@ -74,15 +73,13 @@ public class TagDB {
             return;
         }
 
-        // Use batch write for efficiency
-        com.google.firebase.firestore.WriteBatch batch = db.batch();
+        WriteBatch batch = db.batch();
 
         for (String tag : tags) {
             if (tag == null || tag.trim().isEmpty()) {
                 continue;
             }
 
-            // Skip predefined tags (they don't need to be in collection)
             if (ca.ualberta.codarc.codarc_events.utils.TagHelper.isPredefinedTag(tag)) {
                 continue;
             }
@@ -90,11 +87,10 @@ public class TagDB {
             String normalizedTag = ca.ualberta.codarc.codarc_events.utils.TagHelper.normalizeTag(tag);
             DocumentReference tagRef = db.collection("tags").document(normalizedTag);
 
-            // Increment usage count (or create if doesn't exist)
-            batch.set(tagRef, new java.util.HashMap<String, Object>() {{
-                put("usageCount", FieldValue.increment(1));
-                put("createdAt", FieldValue.serverTimestamp());
-            }}, com.google.firebase.firestore.SetOptions.merge());
+            Map<String, Object> tagData = new HashMap<>();
+            tagData.put("usageCount", FieldValue.increment(1));
+            tagData.put("createdAt", FieldValue.serverTimestamp());
+            batch.set(tagRef, tagData, SetOptions.merge());
         }
 
         batch.commit()
@@ -103,8 +99,7 @@ public class TagDB {
     }
 
     /**
-     * Removes tags from the tags collection when an event is deleted or updated.
-     * Decrements usage count and removes tag if count reaches zero.
+     * Removes tags from the tags collection.
      *
      * @param tags list of tags to remove
      * @param cb callback for completion
@@ -115,15 +110,13 @@ public class TagDB {
             return;
         }
 
-        // Use batch write for efficiency
-        com.google.firebase.firestore.WriteBatch batch = db.batch();
+        WriteBatch batch = db.batch();
 
         for (String tag : tags) {
             if (tag == null || tag.trim().isEmpty()) {
                 continue;
             }
 
-            // Skip predefined tags
             if (ca.ualberta.codarc.codarc_events.utils.TagHelper.isPredefinedTag(tag)) {
                 continue;
             }
@@ -131,38 +124,22 @@ public class TagDB {
             String normalizedTag = ca.ualberta.codarc.codarc_events.utils.TagHelper.normalizeTag(tag);
             DocumentReference tagRef = db.collection("tags").document(normalizedTag);
 
-            // Decrement usage count
             batch.update(tagRef, "usageCount", FieldValue.increment(-1));
         }
 
         batch.commit()
-                .addOnSuccessListener(aVoid -> {
-                    // Clean up tags with zero usage (optional - can be done in Cloud Function)
-                    cleanupZeroUsageTags(tags, cb);
-                })
+                .addOnSuccessListener(aVoid -> cb.onSuccess(null))
                 .addOnFailureListener(cb::onError);
     }
 
     /**
-     * Cleans up tags that have zero usage count.
-     * This is optional - could also be done via Cloud Function.
-     */
-    private void cleanupZeroUsageTags(List<String> tags, Callback<Void> cb) {
-        // For simplicity, we'll just decrement. Actual deletion could be done via Cloud Function
-        // or periodic cleanup job. For now, tags with zero usage can remain.
-        cb.onSuccess(null);
-    }
-
-    /**
      * Updates tags when an event's tags are modified.
-     * Removes old tags and adds new ones.
      *
      * @param oldTags previous tags
      * @param newTags new tags
      * @param cb callback for completion
      */
     public void updateTags(List<String> oldTags, List<String> newTags, Callback<Void> cb) {
-        // Find tags to add and remove
         Set<String> oldSet = oldTags != null ? new HashSet<>(oldTags) : new HashSet<>();
         Set<String> newSet = newTags != null ? new HashSet<>(newTags) : new HashSet<>();
 
@@ -181,7 +158,6 @@ public class TagDB {
             }
         }
 
-        // Remove old tags first, then add new ones
         removeTags(toRemove, new Callback<Void>() {
             @Override
             public void onSuccess(Void value) {

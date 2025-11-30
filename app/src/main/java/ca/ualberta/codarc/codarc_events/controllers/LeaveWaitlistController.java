@@ -62,7 +62,6 @@ public class LeaveWaitlistController {
             return;
         }
 
-        // Check if actually on waitlist
         eventDB.isEntrantOnWaitlist(event.getId(), deviceId, new EventDB.Callback<Boolean>() {
             @Override
             public void onSuccess(Boolean isOnWaitlist) {
@@ -71,20 +70,16 @@ public class LeaveWaitlistController {
                     return;
                 }
 
-                // Perform leave operation
                 eventDB.leaveWaitlist(event.getId(), deviceId, new EventDB.Callback<Void>() {
                     @Override
                     public void onSuccess(Void value) {
-                        // Remove from registration history (graceful degradation - don't fail leave if this fails)
                         entrantDB.removeEventFromEntrant(deviceId, event.getId(), new EntrantDB.Callback<Void>() {
                             @Override
                             public void onSuccess(Void v) {
-                                // History updated successfully
                             }
 
                             @Override
                             public void onError(@NonNull Exception e) {
-                                // Log but don't fail the leave operation
                                 Log.w("LeaveWaitlistController", "Failed to update registration history", e);
                             }
                         });

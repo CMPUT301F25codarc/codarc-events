@@ -7,9 +7,6 @@ import java.util.UUID;
 
 /**
  * Generates and stores a stable device-scoped identifier.
- *
- * We keep this extremely simple for the project: a UUID persisted in
- * SharedPreferences. The value is used as the Firestore profile document id.
  */
 public class Identity {
 
@@ -18,6 +15,9 @@ public class Identity {
 
     /**
      * Returns a cached device id, generating and persisting one on first run.
+     *
+     * @param context the application context
+     * @return the device ID
      */
     public static String getOrCreateDeviceId(Context context) {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);

@@ -2,6 +2,8 @@ package ca.ualberta.codarc.codarc_events.controllers;
 
 import androidx.annotation.NonNull;
 
+import android.util.Log;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -9,10 +11,14 @@ import java.util.Map;
 
 import ca.ualberta.codarc.codarc_events.data.EntrantDB;
 import ca.ualberta.codarc.codarc_events.data.EventDB;
+import ca.ualberta.codarc.codarc_events.utils.ValidationHelper;
 
 /**
  * Handles lottery draw - selects winners and replacement pool.
- * Automatically sends notifications to winners when draw is completed.
+ * 
+ * Note: The notification deduplication logic that checks existing notifications before sending
+ * was implemented with assistance from Claude Sonnet 4.5 (Anthropic). The sophisticated async
+ * coordination and state tracking for preventing duplicate notifications were developed with LLM assistance.
  */
 public class DrawController {
 
@@ -54,23 +60,36 @@ public class DrawController {
         });
     }
 
-    // Runs lottery with default 3 replacements
+    /**
+     * Runs lottery with default replacement pool size.
+     *
+     * @param eventId the event ID
+     * @param numWinners number of winners to select
+     * @param cb callback for completion
+     */
     public void runDraw(String eventId, int numWinners, DrawCallback cb) {
         runDraw(eventId, numWinners, DEFAULT_REPLACEMENT_POOL_SIZE, cb);
     }
     
-    // Runs lottery with custom replacement pool size
+    /**
+     * Runs lottery with custom replacement pool size.
+     *
+     * @param eventId the event ID
+     * @param numWinners number of winners to select
+     * @param replacementPoolSize size of replacement pool
+     * @param cb callback for completion
+     */
     public void runDraw(String eventId, int numWinners, int replacementPoolSize, DrawCallback cb) {
-        if (eventId == null || eventId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("eventId is empty"));
-            return;
-        }
-        if (numWinners <= 0) {
-            cb.onError(new IllegalArgumentException("Number of winners must be > 0"));
-            return;
-        }
-        if (replacementPoolSize < 0) {
-            cb.onError(new IllegalArgumentException("Replacement pool size cannot be negative"));
+        try {
+            ValidationHelper.requireNonEmpty(eventId, "eventId");
+            if (numWinners <= 0) {
+                throw new IllegalArgumentException("Number of winners must be > 0");
+            }
+            if (replacementPoolSize < 0) {
+                throw new IllegalArgumentException("Replacement pool size cannot be negative");
+            }
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
 
@@ -82,39 +101,32 @@ public class DrawController {
                     return;
                 }
 
-                // Shuffle for random selection
                 Collections.shuffle(waitlist);
 
                 int total = waitlist.size();
                 int winnerCount = Math.min(numWinners, total);
                 
-                // Calculate how many replacements we can actually select
                 int remainingAfterWinners = total - winnerCount;
                 int replacementCount = Math.min(replacementPoolSize, remainingAfterWinners);
 
-                // Extract winners
                 List<String> winners = new ArrayList<>(winnerCount);
                 for (int i = 0; i < winnerCount; i++) {
                     Object id = waitlist.get(i).get("deviceId");
                     if (id != null) winners.add(id.toString());
                 }
 
-                // Extract replacement pool (next N after winners)
                 List<String> replacements = new ArrayList<>(replacementCount);
                 for (int i = winnerCount; i < winnerCount + replacementCount; i++) {
                     Object id = waitlist.get(i).get("deviceId");
                     if (id != null) replacements.add(id.toString());
                 }
 
-                // Mark winners and create replacement pool in Firebase
                 eventDB.markWinners(eventId, winners, replacements, new EventDB.Callback<Void>() {
                     @Override
                     public void onSuccess(Void ignore) {
-                        // Automatically send notifications to winners
                         sendWinnerNotifications(eventId, winners, new NotificationCallback() {
                             @Override
                             public void onComplete() {
-                                // Notifications sent (or failed silently - don't block draw success)
                                 cb.onSuccess(winners, replacements);
                             }
                         });
@@ -135,8 +147,7 @@ public class DrawController {
     }
 
     /**
-     * Sends winner notifications to all winners, checking for duplicates first.
-     * This prevents sending multiple notifications to the same user.
+     * Sends winner notifications to all winners.
      */
     private void sendWinnerNotifications(String eventId, List<String> winnerIds, NotificationCallback cb) {
         if (winnerIds == null || winnerIds.isEmpty()) {
@@ -144,46 +155,16 @@ public class DrawController {
             return;
         }
 
-        // Check which winners already have notifications for this event
         checkExistingNotifications(eventId, winnerIds, new NotificationCheckCallback() {
             @Override
             public void onChecked(List<String> winnersToNotify) {
-                if (winnersToNotify.isEmpty()) {
-                    // All winners already notified
-                    cb.onComplete();
-                    return;
-                }
-
-                // Send notifications only to winners who haven't been notified yet
-                String message = "Congratulations! You won. Proceed to signup.";
-                final int total = winnersToNotify.size();
-                final int[] completed = {0};
-                final int[] failed = {0};
-
-                for (String winnerId : winnersToNotify) {
-                    entrantDB.addNotification(winnerId, eventId, message, "winner", new EntrantDB.Callback<Void>() {
-                        @Override
-                        public void onSuccess(Void value) {
-                            completed[0]++;
-                            checkNotificationCompletion(completed, failed, total, cb);
-                        }
-
-                        @Override
-                        public void onError(@NonNull Exception e) {
-                            failed[0]++;
-                            // Log but don't fail the entire operation
-                            android.util.Log.e("DrawController", "Failed to send notification to " + winnerId, e);
-                            checkNotificationCompletion(completed, failed, total, cb);
-                        }
-                    });
-                }
+                sendNotificationsToList(eventId, winnersToNotify, cb);
             }
 
             @Override
             public void onError(@NonNull Exception e) {
-                // If check fails, try sending to all (better to send duplicate than miss one)
-                android.util.Log.w("DrawController", "Failed to check existing notifications, sending to all", e);
-                sendNotificationsToAll(eventId, winnerIds, cb);
+                Log.w("DrawController", "Failed to check existing notifications, sending to all", e);
+                sendNotificationsToList(eventId, winnerIds, cb);
             }
         });
     }
@@ -192,93 +173,146 @@ public class DrawController {
      * Checks which winners already have notifications for this event.
      */
     private void checkExistingNotifications(String eventId, List<String> winnerIds, NotificationCheckCallback cb) {
-        // For simplicity, we'll check by querying each winner's notifications
-        // In a production system, you might want to add a flag to the winners document
-        final List<String> winnersToNotify = new ArrayList<>();
-        final int[] checked = {0};
-        final int total = winnerIds.size();
-
-        if (total == 0) {
-            cb.onChecked(winnersToNotify);
+        if (winnerIds.isEmpty()) {
+            cb.onChecked(new ArrayList<>());
             return;
         }
 
-        for (String winnerId : winnerIds) {
-            entrantDB.getNotifications(winnerId, new EntrantDB.Callback<List<Map<String, Object>>>() {
-                @Override
-                public void onSuccess(List<Map<String, Object>> notifications) {
-                    boolean hasNotification = false;
-                    if (notifications != null) {
-                        for (Map<String, Object> notification : notifications) {
-                            String notifEventId = (String) notification.get("eventId");
-                            String category = (String) notification.get("category");
-                            if (eventId.equals(notifEventId) && "winner".equals(category)) {
-                                hasNotification = true;
-                                break;
-                            }
-                        }
-                    }
-                    if (!hasNotification) {
-                        synchronized (winnersToNotify) {
-                            winnersToNotify.add(winnerId);
-                        }
-                    }
-                    checked[0]++;
-                    if (checked[0] == total) {
-                        cb.onChecked(winnersToNotify);
-                    }
-                }
+        List<String> winnersToNotify = Collections.synchronizedList(new ArrayList<>());
+        NotificationChecker checker = new NotificationChecker(winnersToNotify, winnerIds.size(), cb);
 
-                @Override
-                public void onError(@NonNull Exception e) {
-                    // If we can't check, include this winner to be safe
-                    synchronized (winnersToNotify) {
-                        winnersToNotify.add(winnerId);
-                    }
-                    checked[0]++;
-                    if (checked[0] == total) {
-                        cb.onChecked(winnersToNotify);
-                    }
-                }
-            });
+        for (String winnerId : winnerIds) {
+            checkSingleWinnerNotification(eventId, winnerId, winnersToNotify, checker);
         }
     }
 
     /**
-     * Fallback: sends notifications to all winners without checking.
+     * Checks if a single winner already has a notification for this event.
      */
-    private void sendNotificationsToAll(String eventId, List<String> winnerIds, NotificationCallback cb) {
+    private void checkSingleWinnerNotification(String eventId, String winnerId,
+                                               List<String> winnersToNotify,
+                                               NotificationChecker checker) {
+        entrantDB.getNotifications(winnerId, new EntrantDB.Callback<List<Map<String, Object>>>() {
+            @Override
+            public void onSuccess(List<Map<String, Object>> notifications) {
+                if (!hasWinnerNotification(notifications, eventId)) {
+                    winnersToNotify.add(winnerId);
+                }
+                checker.onChecked();
+            }
+
+            @Override
+            public void onError(@NonNull Exception e) {
+                winnersToNotify.add(winnerId);
+                checker.onChecked();
+            }
+        });
+    }
+
+    /**
+     * Checks if notifications list contains a winner notification for the event.
+     */
+    private boolean hasWinnerNotification(List<Map<String, Object>> notifications, String eventId) {
+        if (notifications == null) {
+            return false;
+        }
+        for (Map<String, Object> notification : notifications) {
+            String notifEventId = (String) notification.get("eventId");
+            String category = (String) notification.get("category");
+            if (eventId.equals(notifEventId) && "winner".equals(category)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Sends notifications to a list of winners.
+     */
+    private void sendNotificationsToList(String eventId, List<String> winnerIds, NotificationCallback cb) {
         if (winnerIds == null || winnerIds.isEmpty()) {
             cb.onComplete();
             return;
         }
 
         String message = "Congratulations! You won. Proceed to signup.";
-        final int total = winnerIds.size();
-        final int[] completed = {0};
-        final int[] failed = {0};
+        NotificationSender sender = new NotificationSender(winnerIds.size(), cb);
 
         for (String winnerId : winnerIds) {
-            entrantDB.addNotification(winnerId, eventId, message, "winner", new EntrantDB.Callback<Void>() {
-                @Override
-                public void onSuccess(Void value) {
-                    completed[0]++;
-                    checkNotificationCompletion(completed, failed, total, cb);
-                }
-
-                @Override
-                public void onError(@NonNull Exception e) {
-                    failed[0]++;
-                    android.util.Log.e("DrawController", "Failed to send notification to " + winnerId, e);
-                    checkNotificationCompletion(completed, failed, total, cb);
-                }
-            });
+            sendSingleNotification(winnerId, eventId, message, sender);
         }
     }
 
-    private void checkNotificationCompletion(int[] completed, int[] failed, int total, NotificationCallback cb) {
-        if (completed[0] + failed[0] == total) {
-            cb.onComplete();
+    /**
+     * Sends a notification to a single winner.
+     */
+    private void sendSingleNotification(String winnerId, String eventId, String message,
+                                        NotificationSender sender) {
+        entrantDB.addNotification(winnerId, eventId, message, "winner", new EntrantDB.Callback<Void>() {
+            @Override
+            public void onSuccess(Void value) {
+                sender.onSuccess();
+            }
+
+            @Override
+            public void onError(@NonNull Exception e) {
+                Log.e("DrawController", "Failed to send notification to " + winnerId, e);
+                sender.onError();
+            }
+        });
+    }
+
+    /**
+     * Helper class to track notification checking completion.
+     */
+    private static class NotificationChecker {
+        private final List<String> winnersToNotify;
+        private final int total;
+        private final NotificationCheckCallback callback;
+        private int checked = 0;
+
+        NotificationChecker(List<String> winnersToNotify, int total, NotificationCheckCallback callback) {
+            this.winnersToNotify = winnersToNotify;
+            this.total = total;
+            this.callback = callback;
+        }
+
+        synchronized void onChecked() {
+            checked++;
+            if (checked == total) {
+                callback.onChecked(new ArrayList<>(winnersToNotify));
+            }
+        }
+    }
+
+    /**
+     * Helper class to track notification sending completion.
+     */
+    private static class NotificationSender {
+        private final int total;
+        private final NotificationCallback callback;
+        private int completed = 0;
+        private int failed = 0;
+
+        NotificationSender(int total, NotificationCallback callback) {
+            this.total = total;
+            this.callback = callback;
+        }
+
+        synchronized void onSuccess() {
+            completed++;
+            checkCompletion();
+        }
+
+        synchronized void onError() {
+            failed++;
+            checkCompletion();
+        }
+
+        private void checkCompletion() {
+            if (completed + failed == total) {
+                callback.onComplete();
+            }
         }
     }
 

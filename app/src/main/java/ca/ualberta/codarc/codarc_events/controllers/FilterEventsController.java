@@ -13,7 +13,6 @@ import ca.ualberta.codarc.codarc_events.utils.TagHelper;
 
 /**
  * Controller for filtering events based on tags and availability.
- * Handles all filtering business logic following MVC architecture.
  */
 public class FilterEventsController {
 
@@ -78,22 +77,10 @@ public class FilterEventsController {
             this.errorMessage = errorMessage;
         }
 
-        /**
-         * Creates a successful filter result.
-         *
-         * @param events the filtered list of events
-         * @return FilterResult with success status
-         */
         public static FilterResult success(List<Event> events) {
             return new FilterResult(true, events, null);
         }
 
-        /**
-         * Creates a failed filter result.
-         *
-         * @param errorMessage the error message
-         * @return FilterResult with failure status
-         */
         public static FilterResult failure(String errorMessage) {
             return new FilterResult(false, new ArrayList<>(), errorMessage);
         }
@@ -146,7 +133,6 @@ public class FilterEventsController {
             boolean matchesTagFilter = matchesTagFilter(event, criteria);
             boolean matchesAvailabilityFilter = matchesAvailabilityFilter(event, criteria, acceptedCounts);
 
-            // Event must match both filters (AND logic)
             if (matchesTagFilter && matchesAvailabilityFilter) {
                 filtered.add(event);
             }
@@ -174,7 +160,6 @@ public class FilterEventsController {
             return;
         }
 
-        // If availability filter is not enabled, we can filter synchronously
         if (!criteria.isAvailableOnly()) {
             Map<String, Integer> emptyCounts = new HashMap<>();
             FilterResult result = applyFilters(allEvents, criteria, emptyCounts);
@@ -182,7 +167,6 @@ public class FilterEventsController {
             return;
         }
 
-        // Fetch accepted participant counts for all events
         fetchAcceptedCounts(allEvents, eventDB, new AcceptedCountsCallback() {
             @Override
             public void onCountsReady(Map<String, Integer> counts) {
@@ -192,7 +176,6 @@ public class FilterEventsController {
 
             @Override
             public void onError(Exception e) {
-                // On error, treat all events as unavailable (safer default)
                 callback.onResult(FilterResult.success(new ArrayList<>()));
             }
         });
@@ -222,10 +205,9 @@ public class FilterEventsController {
 
         List<String> eventTags = event.getTags();
         if (eventTags == null || eventTags.isEmpty()) {
-            return false; // Event has no tags, doesn't match
+            return false;
         }
 
-        // Event matches if it has ANY of the selected tags (OR logic)
         for (String selectedTag : criteria.getSelectedTags()) {
             String normalizedSelected = TagHelper.normalizeTag(selectedTag);
             for (String eventTag : eventTags) {
@@ -248,18 +230,15 @@ public class FilterEventsController {
      */
     private boolean matchesAvailabilityFilter(Event event, FilterCriteria criteria, Map<String, Integer> acceptedCounts) {
         if (!criteria.isAvailableOnly()) {
-            return true; // No availability filter applied
+            return true;
         }
 
-        // Check registration window
         if (!EventValidationHelper.isWithinRegistrationWindow(event)) {
             return false;
         }
 
-        // Check capacity (based on accepted participants, not waitlist)
         Integer acceptedCount = acceptedCounts != null ? acceptedCounts.get(event.getId()) : null;
         if (acceptedCount == null) {
-            // If count is unavailable, treat as unavailable (safer default)
             return false;
         }
 

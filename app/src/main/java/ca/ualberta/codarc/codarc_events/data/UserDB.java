@@ -8,6 +8,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.SetOptions;
 
 import ca.ualberta.codarc.codarc_events.models.User;
+import ca.ualberta.codarc.codarc_events.utils.ValidationHelper;
 
 /**
  * Handles Users collection operations in Firestore.
@@ -28,14 +29,15 @@ public class UserDB {
     
     /**
      * Ensures a User document exists for the given device ID.
-     * If it doesn't exist, creates one with all role flags set to false.
-     * 
+     *
      * @param deviceId the unique device identifier
      * @param cb callback invoked once operation completes
      */
     public void ensureUserExists(String deviceId, Callback<Void> cb) {
-        if (deviceId == null || deviceId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("deviceId is empty"));
+        try {
+            ValidationHelper.requireNonEmpty(deviceId, "deviceId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
         
@@ -48,10 +50,8 @@ public class UserDB {
             
             DocumentSnapshot snapshot = task.getResult();
             if (snapshot != null && snapshot.exists()) {
-                // User already exists
                 cb.onSuccess(null);
             } else {
-                // Create new user with default flags
                 User newUser = new User(deviceId);
                 userRef.set(newUser)
                     .addOnSuccessListener(unused -> cb.onSuccess(null))
@@ -61,8 +61,10 @@ public class UserDB {
     }
     
     public void getUser(String deviceId, Callback<User> cb) {
-        if (deviceId == null || deviceId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("deviceId is empty"));
+        try {
+            ValidationHelper.requireNonEmpty(deviceId, "deviceId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
         
@@ -79,47 +81,67 @@ public class UserDB {
             .addOnFailureListener(cb::onError);
     }
     
-    // Sets isEntrant flag (called when user joins waitlist)
+    /**
+     * Sets a role flag for a user.
+     *
+     * @param deviceId the device ID
+     * @param roleField the field name to update (e.g., "isEntrant", "isOrganizer", "isAdmin")
+     * @param value the value to set
+     * @param cb callback for completion
+     */
+    private void setRole(String deviceId, String roleField, boolean value, Callback<Void> cb) {
+        try {
+            ValidationHelper.requireNonEmpty(deviceId, "deviceId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
+            return;
+        }
+        
+        db.collection("users").document(deviceId)
+            .update(roleField, value)
+            .addOnSuccessListener(unused -> cb.onSuccess(null))
+            .addOnFailureListener(cb::onError);
+    }
+    
+    /**
+     * Sets the isEntrant flag.
+     *
+     * @param deviceId the device ID
+     * @param isEntrant true if user is an entrant
+     * @param cb callback for completion
+     */
     public void setEntrantRole(String deviceId, boolean isEntrant, Callback<Void> cb) {
-        if (deviceId == null || deviceId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("deviceId is empty"));
-            return;
-        }
-        
-        db.collection("users").document(deviceId)
-            .update("isEntrant", isEntrant)
-            .addOnSuccessListener(unused -> cb.onSuccess(null))
-            .addOnFailureListener(cb::onError);
+        setRole(deviceId, "isEntrant", isEntrant, cb);
     }
     
-    // Sets isOrganizer flag (called when user creates event)
+    /**
+     * Sets the isOrganizer flag.
+     *
+     * @param deviceId the device ID
+     * @param isOrganizer true if user is an organizer
+     * @param cb callback for completion
+     */
     public void setOrganizerRole(String deviceId, boolean isOrganizer, Callback<Void> cb) {
-        if (deviceId == null || deviceId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("deviceId is empty"));
-            return;
-        }
-        
-        db.collection("users").document(deviceId)
-            .update("isOrganizer", isOrganizer)
-            .addOnSuccessListener(unused -> cb.onSuccess(null))
-            .addOnFailureListener(cb::onError);
+        setRole(deviceId, "isOrganizer", isOrganizer, cb);
     }
     
+    /**
+     * Sets the isAdmin flag.
+     *
+     * @param deviceId the device ID
+     * @param isAdmin true if user is an admin
+     * @param cb callback for completion
+     */
     public void setAdminRole(String deviceId, boolean isAdmin, Callback<Void> cb) {
-        if (deviceId == null || deviceId.isEmpty()) {
-            cb.onError(new IllegalArgumentException("deviceId is empty"));
-            return;
-        }
-        
-        db.collection("users").document(deviceId)
-            .update("isAdmin", isAdmin)
-            .addOnSuccessListener(unused -> cb.onSuccess(null))
-            .addOnFailureListener(cb::onError);
+        setRole(deviceId, "isAdmin", isAdmin, cb);
     }
     
     public void updateUser(User user, Callback<Void> cb) {
-        if (user == null || user.getDeviceId() == null || user.getDeviceId().isEmpty()) {
-            cb.onError(new IllegalArgumentException("user or deviceId is invalid"));
+        try {
+            ValidationHelper.requireNonNull(user, "user");
+            ValidationHelper.requireNonEmpty(user.getDeviceId(), "user.deviceId");
+        } catch (IllegalArgumentException e) {
+            cb.onError(e);
             return;
         }
         

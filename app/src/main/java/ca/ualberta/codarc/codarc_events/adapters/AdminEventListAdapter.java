@@ -50,11 +50,6 @@ public class AdminEventListAdapter extends RecyclerView.Adapter<AdminEventListAd
         this.deleteClickListener = deleteClickListener;
     }
 
-    /**
-     * Updates the list of events to display.
-     *
-     * @param events the new list of events
-     */
     public void setItems(List<Event> events) {
         this.events.clear();
         if (events != null) {
@@ -78,7 +73,6 @@ public class AdminEventListAdapter extends RecyclerView.Adapter<AdminEventListAd
         holder.eventName.setText(event.getName() != null ? event.getName() : "");
         holder.eventDate.setText(DateHelper.formatEventDate(event.getEventDateTime()));
         
-        // Show organizer ID if available
         if (event.getOrganizerId() != null && !event.getOrganizerId().isEmpty()) {
             holder.organizerId.setText("Organizer: " + event.getOrganizerId());
             holder.organizerId.setVisibility(View.VISIBLE);
@@ -86,7 +80,6 @@ public class AdminEventListAdapter extends RecyclerView.Adapter<AdminEventListAd
             holder.organizerId.setVisibility(View.GONE);
         }
         
-        // Display registration status
         String registrationStatus = getRegistrationStatus(event);
         holder.registrationStatus.setText(registrationStatus);
         holder.registrationStatus.setVisibility(View.VISIBLE);
@@ -105,7 +98,7 @@ public class AdminEventListAdapter extends RecyclerView.Adapter<AdminEventListAd
 
     /**
      * Determines the registration status of an event.
-     * 
+     *
      * @param event the event to check
      * @return status string: "Open", "Closed", or "Not Started"
      */
@@ -118,7 +111,6 @@ public class AdminEventListAdapter extends RecyclerView.Adapter<AdminEventListAd
             return "Open";
         }
         
-        // Check if registration hasn't started yet
         try {
             SimpleDateFormat isoFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US);
             long now = System.currentTimeMillis();
@@ -137,9 +129,6 @@ public class AdminEventListAdapter extends RecyclerView.Adapter<AdminEventListAd
         return "Closed";
     }
 
-    /**
-     * ViewHolder for event items in the RecyclerView.
-     */
     public static class ViewHolder extends RecyclerView.ViewHolder {
         final TextView eventName;
         final TextView eventDate;

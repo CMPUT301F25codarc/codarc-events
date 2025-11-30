@@ -25,19 +25,15 @@ public class LandingActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_landing);
 
-        // Stage 0: device identification - create User document
         String deviceId = Identity.getOrCreateDeviceId(this);
         UserDB userDB = new UserDB();
         userDB.ensureUserExists(deviceId, new UserDB.Callback<Void>() {
             @Override
             public void onSuccess(Void value) {
-                // Optional: brief confirmation toast per user story
-                // Toast.makeText(LandingActivity.this, "Identity verified", Toast.LENGTH_SHORT).show();
             }
 
             @Override
             public void onError(@androidx.annotation.NonNull Exception e) {
-                // Keep minimal; show a simple toast
                 Toast.makeText(LandingActivity.this, "Identity setup failed", Toast.LENGTH_SHORT).show();
             }
         });

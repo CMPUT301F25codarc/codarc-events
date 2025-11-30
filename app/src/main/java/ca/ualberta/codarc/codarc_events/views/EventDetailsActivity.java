@@ -48,18 +48,11 @@ public class EventDetailsActivity extends AppCompatActivity {
     private ImageButton settingsBtn;
     private String deviceId;
 
-    /**
-     * Initializes the event details screen, populating UI from the Event passed via Intent.
-     * Displays event information and regenerates the QR code from stored data.
-     *
-     * @param savedInstanceState previously saved instance state
-     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_event_detail);
 
-        // Initialize fields
         this.event = (Event) getIntent().getSerializableExtra("event");
         if (event == null) {
             Log.e("EventDetailsActivity", "Event not found in Intent");
@@ -76,7 +69,6 @@ public class EventDetailsActivity extends AppCompatActivity {
         this.joinBtn = findViewById(R.id.btn_join_waitlist);
         this.leaveBtn = findViewById(R.id.btn_leave_waitlist);
 
-        // UI references
         TextView title = findViewById(R.id.event_title);
         TextView desc = findViewById(R.id.event_desc);
         TextView dateTime = findViewById(R.id.event_datetime);
@@ -89,10 +81,8 @@ public class EventDetailsActivity extends AppCompatActivity {
         String eventDateTime = event.getEventDateTime();
         dateTime.setText(DateHelper.formatEventDate(eventDateTime));
 
-        // Load poster image if available
         loadPosterImage(eventBanner, event.getPosterUrl());
         
-        // Make poster clickable to view full screen (only if poster exists)
         if (event.getPosterUrl() != null && !event.getPosterUrl().isEmpty()) {
             eventBanner.setClickable(true);
             eventBanner.setFocusable(true);
@@ -104,14 +94,12 @@ public class EventDetailsActivity extends AppCompatActivity {
         String eventLocation = event.getLocation();
         location.setText("Location: " + (eventLocation != null && !eventLocation.isEmpty() ? eventLocation : "TBD"));
 
-        String regOpen  = DateHelper.formatEventDate(event.getRegistrationOpen());
+        String regOpen = DateHelper.formatEventDate(event.getRegistrationOpen());
         String regClose = DateHelper.formatEventDate(event.getRegistrationClose());
         regWindow.setText("Registration: " + (regOpen != null ? regOpen : "") + " → " + (regClose != null ? regClose : ""));
 
-        // Display tags
         displayTags();
 
-        // Generate QR code with null safety
         try {
             String qrData = event.getQrCode();
             if (qrData == null || qrData.isEmpty()) {
@@ -126,24 +114,15 @@ public class EventDetailsActivity extends AppCompatActivity {
             Toast.makeText(this, "Failed to display QR code", Toast.LENGTH_SHORT).show();
         }
 
-        // Initially hide leave button
         leaveBtn.setVisibility(View.GONE);
 
-        // Set up button handlers
         joinBtn.setOnClickListener(v -> showJoinConfirmation());
         leaveBtn.setOnClickListener(v -> showLeaveConfirmation());
 
-        // Check waitlist status on load
         checkWaitlistStatus();
-
-        // Show settings icon if organizer, hide join button
         setupOrganizerSettings();
     }
 
-    /**
-     * Refreshes the event data when returning to this activity.
-     * This ensures the poster is updated if it was changed in EventSettingsActivity.
-     */
     @Override
     protected void onResume() {
         super.onResume();
@@ -152,10 +131,6 @@ public class EventDetailsActivity extends AppCompatActivity {
         }
     }
 
-    /**
-     * Reloads the event from Firestore and updates the UI, particularly the poster image.
-     * This ensures the display reflects any changes made in EventSettingsActivity.
-     */
     private void refreshEventData() {
         eventDB.getEvent(event.getId(), new EventDB.Callback<Event>() {
             @Override
@@ -165,15 +140,12 @@ public class EventDetailsActivity extends AppCompatActivity {
                     event = updatedEvent;
                     String newPosterUrl = event.getPosterUrl();
                     
-                    // Refresh poster image if URL changed or if we need to force refresh
                     ImageView eventBanner = findViewById(R.id.event_banner);
                     if (eventBanner != null) {
-                        // Invalidate Glide cache if URL changed to ensure fresh image loads
                         if (oldPosterUrl != null && !oldPosterUrl.equals(newPosterUrl)) {
                             Glide.with(EventDetailsActivity.this).clear(eventBanner);
                         }
                         loadPosterImage(eventBanner, event.getPosterUrl());
-                        // Update click listener if poster exists
                         if (event.getPosterUrl() != null && !event.getPosterUrl().isEmpty()) {
                             eventBanner.setClickable(true);
                             eventBanner.setFocusable(true);
@@ -189,7 +161,6 @@ public class EventDetailsActivity extends AppCompatActivity {
 
             @Override
             public void onError(@NonNull Exception e) {
-                // Silently fail - event data might not have changed
                 Log.d("EventDetailsActivity", "Could not refresh event data", e);
             }
         });
@@ -213,15 +184,11 @@ public class EventDetailsActivity extends AppCompatActivity {
         }
     }
 
-    /**
-     * Checks if current user can join waitlist and updates UI accordingly.
-     */
     private void checkWaitlistStatus() {
         if (event == null || deviceId == null) {
             return;
         }
 
-        // Hide join button if user is the organizer
         if (event.getOrganizerId() != null && event.getOrganizerId().equals(deviceId)) {
             runOnUiThread(() -> {
                 joinBtn.setVisibility(View.GONE);
@@ -257,7 +224,6 @@ public class EventDetailsActivity extends AppCompatActivity {
                         public void onError(@NonNull Exception e) {
                             Log.e("EventDetailsActivity", "Failed to check if can join", e);
                             runOnUiThread(() -> {
-                                // Double-check organizer status before showing button
                                 if (event.getOrganizerId() != null && event.getOrganizerId().equals(deviceId)) {
                                     joinBtn.setVisibility(View.GONE);
                                     leaveBtn.setVisibility(View.GONE);
@@ -275,7 +241,6 @@ public class EventDetailsActivity extends AppCompatActivity {
             public void onError(@NonNull Exception e) {
                 Log.e("EventDetailsActivity", "Failed to check waitlist status", e);
                 runOnUiThread(() -> {
-                    // Double-check organizer status before showing button
                     if (event.getOrganizerId() != null && event.getOrganizerId().equals(deviceId)) {
                         joinBtn.setVisibility(View.GONE);
                         leaveBtn.setVisibility(View.GONE);
@@ -288,9 +253,6 @@ public class EventDetailsActivity extends AppCompatActivity {
         });
     }
 
-    /**
-     * Shows confirmation dialog for joining waitlist.
-     */
     private void showJoinConfirmation() {
         new AlertDialog.Builder(this)
                 .setTitle("Join Waitlist")
@@ -300,10 +262,6 @@ public class EventDetailsActivity extends AppCompatActivity {
                 .show();
     }
 
-    /**
-     * Performs the join waitlist operation with validation.
-     * Uses JoinWaitlistController to handle business logic.
-     */
     private void performJoin() {
         joinController.joinWaitlist(event, deviceId, new JoinWaitlistController.Callback() {
             @Override
@@ -326,9 +284,6 @@ public class EventDetailsActivity extends AppCompatActivity {
         });
     }
 
-    /**
-     * Shows confirmation dialog for leaving waitlist.
-     */
     private void showLeaveConfirmation() {
         new AlertDialog.Builder(this)
                 .setTitle("Leave Waitlist")
@@ -338,10 +293,6 @@ public class EventDetailsActivity extends AppCompatActivity {
                 .show();
     }
 
-    /**
-     * Performs the leave waitlist operation.
-     * Uses LeaveWaitlistController to handle business logic.
-     */
     private void performLeave() {
         leaveController.leaveWaitlist(event, deviceId, new LeaveWaitlistController.Callback() {
             @Override
@@ -356,13 +307,6 @@ public class EventDetailsActivity extends AppCompatActivity {
         });
     }
 
-    /**
-     * Loads and displays the event poster image using Glide.
-     * Shows placeholder if no poster URL is available or if loading fails.
-     *
-     * @param imageView the ImageView to display the poster in
-     * @param posterUrl the URL of the poster image (can be null)
-     */
     private void loadPosterImage(ImageView imageView, String posterUrl) {
         if (posterUrl != null && !posterUrl.trim().isEmpty()) {
             Glide.with(this)
@@ -376,7 +320,7 @@ public class EventDetailsActivity extends AppCompatActivity {
                                                    Object model, Target<android.graphics.drawable.Drawable> target,
                                                    boolean isFirstResource) {
                             Log.w("EventDetailsActivity", "Failed to load poster image", e);
-                            return false; // Let Glide handle error (show placeholder)
+                            return false;
                         }
 
                         @Override
@@ -384,21 +328,15 @@ public class EventDetailsActivity extends AppCompatActivity {
                                                       Object model, Target<android.graphics.drawable.Drawable> target,
                                                       com.bumptech.glide.load.DataSource dataSource,
                                                       boolean isFirstResource) {
-                            return false; // Let Glide handle display
+                            return false;
                         }
                     })
                     .into(imageView);
         } else {
-            // No poster URL, use placeholder
             imageView.setImageResource(R.drawable.sample_event_banner);
         }
     }
 
-    /**
-     * Opens the full-screen image viewer to display the poster.
-     *
-     * @param imageUrl the URL of the image to display
-     */
     private void openFullScreenImage(String imageUrl) {
         if (imageUrl == null || imageUrl.isEmpty()) {
             return;
@@ -408,9 +346,6 @@ public class EventDetailsActivity extends AppCompatActivity {
         startActivity(intent);
     }
 
-    /**
-     * Displays tags on the event details page.
-     */
     private void displayTags() {
         ChipGroup tagGroup = findViewById(R.id.chip_group_tags);
         if (tagGroup == null) {
