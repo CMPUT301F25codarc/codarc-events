@@ -65,13 +65,14 @@ public class CreateEventController {
      * @param capacityStr maximum capacity as string
      * @param tags list of tags
      * @param posterUrl optional poster image URL
+     * @param requireGeolocation whether location sharing is required
      * @return CreateEventResult with validation result
      */
     public CreateEventResult validateAndCreateEvent(String name, String description,
-                                                     String dateTime, String location,
-                                                     String regOpen, String regClose,
-                                                     String capacityStr, List<String> tags,
-                                                     String posterUrl) {
+                                                    String dateTime, String location,
+                                                    String regOpen, String regClose,
+                                                    String capacityStr, List<String> tags,
+                                                    String posterUrl, boolean requireGeolocation) {
         // Validate required fields
         if (name == null || name.trim().isEmpty()) {
             return CreateEventResult.failure("Event name is required");
@@ -102,6 +103,7 @@ public class CreateEventController {
         event.setOrganizerId(organizerId);
         event.setQrCode(qrData);
         event.setOpen(true);
+        event.setRequireGeolocation(requireGeolocation);
 
         // Parse capacity (optional field)
         if (capacityStr != null && !capacityStr.trim().isEmpty()) {

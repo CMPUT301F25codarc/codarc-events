@@ -25,6 +25,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
+import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 
@@ -47,7 +48,7 @@ import ca.ualberta.codarc.codarc_events.utils.TagHelper;
 /**
  * Create Event screen that lets organizers fill event info.
  * Includes date/time pickers and writes to Firestore.
- * 
+ *
  * In the refactored structure:
  * - Creates event in Events collection
  * - Creates Organizer document (if first event)
@@ -73,6 +74,7 @@ public class CreateEventActivity extends AppCompatActivity {
     private Uri selectedImageUri;
     private PosterStorage posterStorage;
     private ActivityResultLauncher<Intent> imagePickerLauncher;
+    private MaterialSwitch switchGeolocation;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -95,6 +97,7 @@ public class CreateEventActivity extends AppCompatActivity {
         regOpen = findViewById(R.id.et_reg_open);
         regClose = findViewById(R.id.et_reg_close);
         capacity = findViewById(R.id.et_capacity);
+        switchGeolocation = findViewById(R.id.switch_geolocation);
 
         // Poster UI setup
         ivPoster = findViewById(R.id.iv_poster);
@@ -209,10 +212,11 @@ public class CreateEventActivity extends AppCompatActivity {
         String open = getDateValue(regOpen);
         String close = getDateValue(regClose);
         String capacityStr = get(capacity);
+        boolean requireGeolocation = switchGeolocation != null && switchGeolocation.isChecked();
 
         // Use controller to validate and create event (without posterUrl for now)
         CreateEventController.CreateEventResult result = controller.validateAndCreateEvent(
-                name, desc, dateTime, loc, open, close, capacityStr, selectedTags, null
+                name, desc, dateTime, loc, open, close, capacityStr, selectedTags, null, requireGeolocation
         );
 
         if (!result.isValid()) {
@@ -244,7 +248,7 @@ public class CreateEventActivity extends AppCompatActivity {
                     uploadPosterAndUpdateEvent(event);
                 } else {
                     // No image selected, proceed with organizer setup
-                handleOrganizerSetup(event);
+                    handleOrganizerSetup(event);
                 }
             }
 
@@ -252,8 +256,8 @@ public class CreateEventActivity extends AppCompatActivity {
             public void onError(@NonNull Exception e) {
                 Log.e("CreateEventActivity", "Failed to create event", e);
                 runOnUiThread(() -> {
-                Toast.makeText(CreateEventActivity.this, "Failed to create event. Please try again.", Toast.LENGTH_SHORT).show();
-                progressBar.setVisibility(View.GONE);
+                    Toast.makeText(CreateEventActivity.this, "Failed to create event. Please try again.", Toast.LENGTH_SHORT).show();
+                    progressBar.setVisibility(View.GONE);
                 });
             }
         });
@@ -316,7 +320,7 @@ public class CreateEventActivity extends AppCompatActivity {
             }
         });
     }
-    
+
     /**
      * Handles organizer setup after event creation.
      * Checks if organizer document exists, creates it if needed,
@@ -342,7 +346,7 @@ public class CreateEventActivity extends AppCompatActivity {
             }
         });
     }
-    
+
     /**
      * Creates a new Organizer document and sets isOrganizer flag in Users.
      * Then adds the event to the organizer's events subcollection.
@@ -377,7 +381,7 @@ public class CreateEventActivity extends AppCompatActivity {
             }
         });
     }
-    
+
     /**
      * Adds the event to the organizer's events subcollection.
      */
@@ -409,7 +413,7 @@ public class CreateEventActivity extends AppCompatActivity {
         List<String> predefinedTags = TagHelper.getPredefinedTags();
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
                 android.R.layout.simple_dropdown_item_1line, predefinedTags);
-        
+
         tagInput.setAdapter(adapter);
         tagInput.setThreshold(1);
 

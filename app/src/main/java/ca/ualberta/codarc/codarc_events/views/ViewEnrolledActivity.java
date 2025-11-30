@@ -1,5 +1,6 @@
 package ca.ualberta.codarc.codarc_events.views;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -13,10 +14,12 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.firebase.Timestamp;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Locale;
 
 import ca.ualberta.codarc.codarc_events.R;
 import ca.ualberta.codarc.codarc_events.adapters.WaitlistAdapter;
@@ -38,6 +41,7 @@ public class ViewEnrolledActivity extends AppCompatActivity {
     private EntrantDB entrantDB;
     private String eventId;
     private List<WaitlistAdapter.WaitlistItem> itemList;
+    private View exportButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,6 +61,7 @@ public class ViewEnrolledActivity extends AppCompatActivity {
 
         recyclerView = findViewById(R.id.rv_entrants);
         emptyState = findViewById(R.id.tv_empty_state);
+        exportButton = findViewById(R.id.btn_export_csv);
 
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         adapter = new WaitlistAdapter(itemList);
@@ -64,11 +69,12 @@ public class ViewEnrolledActivity extends AppCompatActivity {
 
         verifyOrganizerAccess();
         loadEnrolled();
+        setupExportButton();
     }
 
     private void verifyOrganizerAccess() {
         String deviceId = Identity.getOrCreateDeviceId(this);
-        
+
         eventDB.getEvent(eventId, new EventDB.Callback<Event>() {
             @Override
             public void onSuccess(Event event) {
@@ -189,5 +195,37 @@ public class ViewEnrolledActivity extends AppCompatActivity {
         recyclerView.setVisibility(View.VISIBLE);
         emptyState.setVisibility(View.GONE);
     }
-}
 
+    private void setupExportButton() {
+        if (exportButton != null) {
+            exportButton.setOnClickListener(v -> shareAsCsv());
+        }
+    }
+
+    private void shareAsCsv() {
+        if (itemList == null || itemList.isEmpty()) {
+            Toast.makeText(this, R.string.export_csv_error, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        StringBuilder csvBuilder = new StringBuilder();
+        csvBuilder.append("Name,DeviceId,RespondedAt\n");
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US);
+        for (WaitlistAdapter.WaitlistItem item : itemList) {
+            String time = item.getRequestTime() > 0
+                    ? format.format(new Date(item.getRequestTime()))
+                    : "";
+            csvBuilder.append('"').append(item.getName().replace("\"", "\"\""))
+                    .append("\",")
+                    .append('"').append(item.getDeviceId()).append("\",")
+                    .append('"').append(time).append('"')
+                    .append("\n");
+        }
+
+        Intent shareIntent = new Intent(Intent.ACTION_SEND);
+        shareIntent.setType("text/csv");
+        shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Enrolled entrants");
+        shareIntent.putExtra(Intent.EXTRA_TEXT, csvBuilder.toString());
+        startActivity(Intent.createChooser(shareIntent, getString(R.string.export_csv_button)));
+    }
+}

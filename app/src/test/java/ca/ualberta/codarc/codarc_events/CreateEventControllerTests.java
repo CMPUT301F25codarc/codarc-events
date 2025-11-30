@@ -19,197 +19,200 @@ import ca.ualberta.codarc.codarc_events.models.Event;
  */
 public class CreateEventControllerTests {
 
-    private CreateEventController makeController() {
-        // eventDB is not used by validateAndCreateEvent or canAddTag,
-        // so we can safely pass null here.
-        return new CreateEventController(null, "ORG123");
+    @Test
+    public void validateAndCreateEvent_success_trimsFields_setsGeneratedIdAndQr_openTrue() {
+        var res = controller.validateAndCreateEvent(
+                NAME, DESC, EVENT_AT, LOCATION, REG_OPEN, REG_CLOSE, "", Collections.emptyList(), ""
+        );
+
+        assertTrue(res.isValid());
+        assertNull(res.getErrorMessage());
+        Event e = res.getEvent();
+        assertNotNull(e);
+
+        // Trimmed fields
+        assertEquals("Launch Party", e.getName());
+        assertEquals("Free snacks", e.getDescription());
+        assertEquals("CSC Atrium", e.getLocation());
+
+        // Required passthroughs
+        assertEquals(EVENT_AT, e.getEventDateTime());
+        assertEquals(REG_OPEN, e.getRegistrationOpen());
+        assertEquals(REG_CLOSE, e.getRegistrationClose());
+
+        // Organizer + generated identifiers
+        assertEquals(ORGANIZER, e.getOrganizerId());
+        assertNotNull(e.getId());
+        assertFalse(e.getId().trim().isEmpty());
+        assertNotNull(e.getQrCode());
+        assertTrue(e.getQrCode().startsWith("event:"));
+
+        // Flags and capacity
+        assertTrue(e.isOpen());
+        assertNull(e.getMaxCapacity());
     }
 
     @Test
-    public void validateAndCreateEvent_success_populatesEventCorrectly() {
-        CreateEventController controller = makeController();
-
-        String name = "Test Event";
-        String description = "  A cool test event  ";
-        String dateTime = "2025-12-01 07:00 PM";
-        String location = "Student Union Building";
-        String regOpen = "2025-11-20 08:00 AM";
-        String regClose = "2025-11-30 10:00 PM";
-        String capacityStr = "100";
-        List<String> tags = Arrays.asList("fun", "coding");
-        String posterUrl = "https://example.com/poster.png";
-
-        CreateEventController.CreateEventResult result =
-                controller.validateAndCreateEvent(
-                        name,
-                        description,
-                        dateTime,
-                        location,
-                        regOpen,
-                        regClose,
-                        capacityStr,
-                        tags,
-                        posterUrl
-                );
-
-        assertTrue(result.isValid());
-        assertEquals(null, result.getErrorMessage());
-
-        Event event = result.getEvent();
-        assertNotNull(event);
-
-        // Basic field checks
-        assertEquals("Test Event", event.getName());  // trimmed
-        assertEquals("A cool test event", event.getDescription()); // trimmed
-        assertEquals(dateTime, event.getEventDateTime());
-        assertEquals(location, event.getLocation());
-        assertEquals(regOpen, event.getRegistrationOpen());
-        assertEquals(regClose, event.getRegistrationClose());
-        assertEquals("ORG123", event.getOrganizerId());
-        assertTrue(event.isOpen());
-
-        // Capacity parsing
-        assertEquals(Integer.valueOf(100), event.getMaxCapacity());
-
-        // Tags + poster
-        assertEquals(tags, event.getTags());
-        assertEquals(posterUrl, event.getPosterUrl());
-
-        // QR code format
-        assertNotNull(event.getQrCode());
-        assertTrue(event.getQrCode().startsWith("event:"));
+    public void validateAndCreateEvent_missingName_fails() {
+        var r = controller.validateAndCreateEvent(
+                null, DESC, EVENT_AT, LOCATION, REG_OPEN, REG_CLOSE, "", Collections.emptyList(), ""
+        );
+        assertFalse(r.isValid());
+        assertEquals("Event name is required", r.getErrorMessage());
+        assertNull(r.getEvent());
     }
 
     @Test
-    public void validateAndCreateEvent_missingName_returnsFailure() {
-        CreateEventController controller = makeController();
-
-        CreateEventController.CreateEventResult result =
-                controller.validateAndCreateEvent(
-                        "   ",                         // name (blank)
-                        "desc",
-                        "2025-12-01 07:00 PM",
-                        "Campus",
-                        "2025-11-20 08:00 AM",
-                        "2025-11-30 10:00 PM",
-                        "50",
-                        Collections.emptyList(),
-                        null
-                );
-
-        assertFalse(result.isValid());
-        assertEquals("Event name is required", result.getErrorMessage());
+    public void validateAndCreateEvent_emptyName_fails() {
+        var r = controller.validateAndCreateEvent(
+                "  ", DESC, EVENT_AT, LOCATION, REG_OPEN, REG_CLOSE, "", Collections.emptyList(), ""
+        );
+        assertFalse(r.isValid());
+        assertEquals("Event name is required", r.getErrorMessage());
+        assertNull(r.getEvent());
     }
 
     @Test
-    public void validateAndCreateEvent_missingDateTime_returnsFailure() {
-        CreateEventController controller = makeController();
-
-        CreateEventController.CreateEventResult result =
-                controller.validateAndCreateEvent(
-                        "Event Name",
-                        "desc",
-                        "   ",                         // dateTime blank
-                        "Campus",
-                        "2025-11-20 08:00 AM",
-                        "2025-11-30 10:00 PM",
-                        "50",
-                        Collections.emptyList(),
-                        null
-                );
-
-        assertFalse(result.isValid());
-        assertEquals("Event date/time is required", result.getErrorMessage());
+    public void validateAndCreateEvent_missingEventDate_fails() {
+        var r = controller.validateAndCreateEvent(
+                NAME, DESC, null, LOCATION, REG_OPEN, REG_CLOSE, "", Collections.emptyList(), ""
+        );
+        assertFalse(r.isValid());
+        assertEquals("Event date/time is required", r.getErrorMessage());
+        assertNull(r.getEvent());
     }
 
     @Test
-    public void validateAndCreateEvent_invalidCapacity_setsMaxCapacityNull() {
-        CreateEventController controller = makeController();
-
-        CreateEventController.CreateEventResult result =
-                controller.validateAndCreateEvent(
-                        "Event Name",
-                        "desc",
-                        "2025-12-01 07:00 PM",
-                        "Campus",
-                        "2025-11-20 08:00 AM",
-                        "2025-11-30 10:00 PM",
-                        "not-a-number",                // invalid capacity
-                        Collections.emptyList(),
-                        null
-                );
-
-        assertTrue(result.isValid());
-        Event event = result.getEvent();
-        assertNotNull(event);
-        assertEquals(null, event.getMaxCapacity());
+    public void validateAndCreateEvent_emptyEventDate_fails() {
+        var r = controller.validateAndCreateEvent(
+                NAME, DESC, "  ", LOCATION, REG_OPEN, REG_CLOSE, "", Collections.emptyList(), ""
+        );
+        assertFalse(r.isValid());
+        assertEquals("Event date/time is required", r.getErrorMessage());
+        assertNull(r.getEvent());
     }
 
     @Test
-    public void validateAndCreateEvent_negativeCapacity_setsMaxCapacityNull() {
-        CreateEventController controller = makeController();
-
-        CreateEventController.CreateEventResult result =
-                controller.validateAndCreateEvent(
-                        "Event Name",
-                        "desc",
-                        "2025-12-01 07:00 PM",
-                        "Campus",
-                        "2025-11-20 08:00 AM",
-                        "2025-11-30 10:00 PM",
-                        "-5",                         // negative capacity
-                        Collections.emptyList(),
-                        null
-                );
-
-        assertTrue(result.isValid());
-        Event event = result.getEvent();
-        assertNotNull(event);
-        assertEquals(null, event.getMaxCapacity());
+    public void validateAndCreateEvent_missingRegOpen_fails() {
+        var r = controller.validateAndCreateEvent(
+                NAME, DESC, EVENT_AT, LOCATION, null, REG_CLOSE, "", Collections.emptyList(), ""
+        );
+        assertFalse(r.isValid());
+        assertEquals("Registration open date is required", r.getErrorMessage());
+        assertNull(r.getEvent());
     }
 
     @Test
-    public void validateAndCreateEvent_emptyCapacity_setsMaxCapacityNull() {
-        CreateEventController controller = makeController();
-
-        CreateEventController.CreateEventResult result =
-                controller.validateAndCreateEvent(
-                        "Event Name",
-                        "desc",
-                        "2025-12-01 07:00 PM",
-                        "Campus",
-                        "2025-11-20 08:00 AM",
-                        "2025-11-30 10:00 PM",
-                        "   ",                        // empty capacity
-                        Collections.emptyList(),
-                        null
-                );
-
-        assertTrue(result.isValid());
-        Event event = result.getEvent();
-        assertNotNull(event);
-        assertEquals(null, event.getMaxCapacity());
+    public void validateAndCreateEvent_emptyRegOpen_fails() {
+        var r = controller.validateAndCreateEvent(
+                NAME, DESC, EVENT_AT, LOCATION, "  ", REG_CLOSE, "", Collections.emptyList(), ""
+        );
+        assertFalse(r.isValid());
+        assertEquals("Registration open date is required", r.getErrorMessage());
+        assertNull(r.getEvent());
     }
 
     @Test
-    public void canAddTag_allowsNewTagWhenListEmpty() {
-        CreateEventController controller = makeController();
-
-        boolean canAdd = controller.canAddTag("Music", Collections.emptyList());
-
-        assertTrue(canAdd);
+    public void validateAndCreateEvent_missingRegClose_fails() {
+        var r = controller.validateAndCreateEvent(
+                NAME, DESC, EVENT_AT, LOCATION, REG_OPEN, null, "", Collections.emptyList(), ""
+        );
+        assertFalse(r.isValid());
+        assertEquals("Registration close date is required", r.getErrorMessage());
+        assertNull(r.getEvent());
     }
 
     @Test
-    public void canAddTag_rejectsDuplicateTagCaseInsensitive() {
-        CreateEventController controller = makeController();
-        List<String> existing = Arrays.asList("music", "Sports");
+    public void validateAndCreateEvent_emptyRegClose_fails() {
+        var r = controller.validateAndCreateEvent(
+                NAME, DESC, EVENT_AT, LOCATION, REG_OPEN, "  ", "", Collections.emptyList(), ""
+        );
+        assertFalse(r.isValid());
+        assertEquals("Registration close date is required", r.getErrorMessage());
+        assertNull(r.getEvent());
+    }
+
+    @Test
+    public void validateAndCreateEvent_capacity_parsesPositiveInt() {
+        var r = controller.validateAndCreateEvent(
+                NAME, DESC, EVENT_AT, LOCATION, REG_OPEN, REG_CLOSE, "42", Collections.emptyList(), ""
+        );
+        assertTrue(r.isValid());
+        assertEquals(Integer.valueOf(42), r.getEvent().getMaxCapacity());
+    }
+
+    @Test
+    public void validateAndCreateEvent_capacity_zeroBecomesNull() {
+        var r = controller.validateAndCreateEvent(
+                NAME, DESC, EVENT_AT, LOCATION, REG_OPEN, REG_CLOSE, "0", Collections.emptyList(), ""
+        );
+        assertTrue(r.isValid());
+        assertNull(r.getEvent().getMaxCapacity());
+    }
+
+    @Test
+    public void validateAndCreateEvent_capacity_negativeBecomesNull() {
+        var r = controller.validateAndCreateEvent(
+                NAME, DESC, EVENT_AT, LOCATION, REG_OPEN, REG_CLOSE, "-5", Collections.emptyList(), ""
+        );
+        assertTrue(r.isValid());
+        assertNull(r.getEvent().getMaxCapacity());
+    }
+
+    @Test
+    public void validateAndCreateEvent_capacity_badStringBecomesNull() {
+        var r = controller.validateAndCreateEvent(
+                NAME, DESC, EVENT_AT, LOCATION, REG_OPEN, REG_CLOSE, "abc", Collections.emptyList(), ""
+        );
+        assertTrue(r.isValid());
+        assertNull(r.getEvent().getMaxCapacity());
+    }
+
+    // ---------- validateAndCreateEvent: tags and poster ----------
+
+    @Test
+    public void validateAndCreateEvent_withTags_setsTags() {
+        var tags = Arrays.asList("music", "outdoor");
+        var r = controller.validateAndCreateEvent(
+                NAME, DESC, EVENT_AT, LOCATION, REG_OPEN, REG_CLOSE, "", tags, ""
+        );
+        assertTrue(r.isValid());
+        assertEquals(tags, r.getEvent().getTags());
+    }
+
+    @Test
+    public void validateAndCreateEvent_withPosterUrl_setsPosterUrl() {
+        String posterUrl = "https://example.com/poster.jpg";
+        var r = controller.validateAndCreateEvent(
+                NAME, DESC, EVENT_AT, LOCATION, REG_OPEN, REG_CLOSE, "", Collections.emptyList(), posterUrl
+        );
+        assertTrue(r.isValid());
+        assertEquals(posterUrl, r.getEvent().getPosterUrl());
+    }
+
+    // ---------- persistEvent ----------
+
+    @Test
+    public void persistEvent_happyPath_forwardsToDbAddEvent() {
+        var res = controller.validateAndCreateEvent(
+                NAME, DESC, EVENT_AT, LOCATION, REG_OPEN, REG_CLOSE, "", Collections.emptyList(), ""
+        );
+        assertTrue(res.isValid());
+        Event e = res.getEvent();
+
+        @SuppressWarnings("unchecked")
+        EventDB.Callback<Void> cb = mock(EventDB.Callback.class);
 
         boolean canAdd1 = controller.canAddTag("MUSIC", existing);
         boolean canAdd2 = controller.canAddTag("sports", existing);
 
-        assertFalse(canAdd1);
-        assertFalse(canAdd2);
+        ArgumentCaptor<Event> eventCap = ArgumentCaptor.forClass(Event.class);
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<EventDB.Callback<Void>> cbCap = ArgumentCaptor.forClass(EventDB.Callback.class);
+
+        verify(mockDb, times(1)).addEvent(eventCap.capture(), cbCap.capture());
+        assertEquals(e.getId(), eventCap.getValue().getId());
+        assertSame(cb, cbCap.getValue());
     }
 
     @Test
@@ -218,5 +221,42 @@ public class CreateEventControllerTests {
 
         assertFalse(controller.canAddTag(null, Collections.emptyList()));
         assertFalse(controller.canAddTag("   ", Collections.emptyList()));
+    }
+
+    // ---------- canAddTag ----------
+
+    @Test
+    public void canAddTag_validNewTag_returnsTrue() {
+        assertTrue(controller.canAddTag("sports", Arrays.asList("music", "outdoor")));
+    }
+
+    @Test
+    public void canAddTag_duplicateTag_returnsFalse() {
+        assertFalse(controller.canAddTag("music", Arrays.asList("music", "outdoor")));
+    }
+
+    @Test
+    public void canAddTag_duplicateCaseInsensitive_returnsFalse() {
+        assertFalse(controller.canAddTag("MUSIC", Arrays.asList("music", "outdoor")));
+    }
+
+    @Test
+    public void canAddTag_nullTag_returnsFalse() {
+        assertFalse(controller.canAddTag(null, Arrays.asList("music")));
+    }
+
+    @Test
+    public void canAddTag_emptyTag_returnsFalse() {
+        assertFalse(controller.canAddTag("  ", Arrays.asList("music")));
+    }
+
+    @Test
+    public void canAddTag_emptyList_returnsTrue() {
+        assertTrue(controller.canAddTag("sports", Collections.emptyList()));
+    }
+
+    @Test
+    public void canAddTag_nullList_returnsTrue() {
+        assertTrue(controller.canAddTag("sports", null));
     }
 }

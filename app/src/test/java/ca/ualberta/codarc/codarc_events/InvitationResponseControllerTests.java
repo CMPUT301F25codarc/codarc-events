@@ -1,11 +1,16 @@
 package ca.ualberta.codarc.codarc_events;
 
+import android.util.Log;
+
 import ca.ualberta.codarc.codarc_events.controllers.InvitationResponseController;
 import ca.ualberta.codarc.codarc_events.data.EntrantDB;
 import ca.ualberta.codarc.codarc_events.data.EventDB;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -18,19 +23,31 @@ import static org.mockito.Mockito.*;
 
 /**
  * Unit tests for InvitationResponseController.
- * No Android dependencies, no static mocking.
+ * Uses Mockito static mocking to intercept android.util.Log calls.
  */
 public class InvitationResponseControllerTests {
 
     private EventDB mockEventDb;
     private EntrantDB mockEntrantDb;
     private InvitationResponseController controller;
+    private MockedStatic<Log> logMock;
 
     @Before
     public void setUp() {
+        // Intercept android.util.Log so Log.e does not throw "not mocked" in JVM tests
+        logMock = Mockito.mockStatic(Log.class);
+        // No need to stub specific methods unless you want to verify logging
+
         mockEventDb = mock(EventDB.class);
         mockEntrantDb = mock(EntrantDB.class);
         controller = new InvitationResponseController(mockEventDb, mockEntrantDb);
+    }
+
+    @After
+    public void tearDown() {
+        if (logMock != null) {
+            logMock.close();
+        }
     }
 
     // ---------- Validation ----------

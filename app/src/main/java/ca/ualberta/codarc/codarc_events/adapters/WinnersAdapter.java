@@ -5,6 +5,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import android.widget.Button;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -23,9 +24,15 @@ import ca.ualberta.codarc.codarc_events.R;
 public class WinnersAdapter extends RecyclerView.Adapter<WinnersAdapter.ViewHolder> {
 
     private final List<WinnerItem> items;
+    private final WinnerActionListener actionListener;
 
-    public WinnersAdapter(List<WinnerItem> items) {
+    public interface WinnerActionListener {
+        void onCancelRequested(String deviceId);
+    }
+
+    public WinnersAdapter(List<WinnerItem> items, WinnerActionListener actionListener) {
         this.items = items;
+        this.actionListener = actionListener;
     }
 
     @NonNull
@@ -65,6 +72,13 @@ public class WinnersAdapter extends RecyclerView.Adapter<WinnersAdapter.ViewHold
 
         holder.statusText.setText(statusText);
         holder.nameText.setTextColor(nameColor);
+
+        holder.cancelButton.setVisibility(statusText.equals("Pending") ? View.VISIBLE : View.GONE);
+        holder.cancelButton.setOnClickListener(v -> {
+            if (actionListener != null) {
+                actionListener.onCancelRequested(item.getDeviceId());
+            }
+        });
     }
 
     @Override
@@ -76,12 +90,14 @@ public class WinnersAdapter extends RecyclerView.Adapter<WinnersAdapter.ViewHold
         TextView nameText;
         TextView timeText;
         TextView statusText;
+        Button cancelButton;
 
         ViewHolder(View itemView) {
             super(itemView);
             nameText = itemView.findViewById(R.id.tv_entrant_name);
             timeText = itemView.findViewById(R.id.tv_request_time);
             statusText = itemView.findViewById(R.id.tv_status);
+            cancelButton = itemView.findViewById(R.id.btn_cancel_winner);
         }
     }
 
