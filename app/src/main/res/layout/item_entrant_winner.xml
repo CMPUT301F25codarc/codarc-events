@@ -41,5 +41,11 @@
         android:paddingStart="16dp"
         android:paddingEnd="8dp" />
 
-</LinearLayout>
+    <Button
+        android:id="@+id/btn_cancel_winner"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Cancel"
+        android:visibility="gone" />
 
+</LinearLayout>
