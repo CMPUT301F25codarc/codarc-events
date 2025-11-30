@@ -1,245 +1,241 @@
 package ca.ualberta.codarc.codarc_events;
 
-import static org.junit.Assert.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-
+import ca.ualberta.codarc.codarc_events.controllers.NotifyWinnersController;
+import ca.ualberta.codarc.codarc_events.data.EntrantDB;
+import ca.ualberta.codarc.codarc_events.data.EventDB;
+import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Mockito;
+import org.mockito.ArgumentCaptor;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import ca.ualberta.codarc.codarc_events.controllers.NotifyWinnersController;
-import ca.ualberta.codarc.codarc_events.data.EntrantDB;
-import ca.ualberta.codarc.codarc_events.data.EventDB;
+import static org.junit.Assert.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 public class NotifyWinnersControllerTests {
 
-    private static class Mocks {
-        EventDB eventDB = Mockito.mock(EventDB.class);
-        EntrantDB entrantDB = Mockito.mock(EntrantDB.class);
-        NotifyWinnersController controller =
-                new NotifyWinnersController(eventDB, entrantDB);
+    private EventDB mockEventDb;
+    private EntrantDB mockEntrantDb;
+    private NotifyWinnersController controller;
+
+    @Before
+    public void setUp() {
+        mockEventDb = mock(EventDB.class);
+        mockEntrantDb = mock(EntrantDB.class);
+        controller = new NotifyWinnersController(mockEventDb, mockEntrantDb);
     }
 
-    // ------------- validateMessage tests -------------
+    // ---------------- validateMessage ----------------
 
     @Test
-    public void validateMessage_validMessage_returnsSuccess() {
-        Mocks m = new Mocks();
+    public void validateMessage_nullOrEmpty_fails() {
+        NotifyWinnersController.ValidationResult res1 = controller.validateMessage(null);
+        assertFalse(res1.isValid());
+        assertEquals("Message cannot be empty", res1.getErrorMessage());
 
-        NotifyWinnersController.ValidationResult result =
-                m.controller.validateMessage("Congrats, you have been selected!");
-
-        assertTrue(result.isValid());
-        assertNull(result.getErrorMessage());
-    }
-
-    @Test
-    public void validateMessage_nullOrEmpty_returnsFailure() {
-        Mocks m = new Mocks();
-
-        NotifyWinnersController.ValidationResult resNull =
-                m.controller.validateMessage(null);
-        NotifyWinnersController.ValidationResult resEmpty =
-                m.controller.validateMessage("   ");
-
-        assertFalse(resNull.isValid());
-        assertEquals("Message cannot be empty", resNull.getErrorMessage());
-
-        assertFalse(resEmpty.isValid());
-        assertEquals("Message cannot be empty", resEmpty.getErrorMessage());
+        NotifyWinnersController.ValidationResult res2 = controller.validateMessage("   ");
+        assertFalse(res2.isValid());
+        assertEquals("Message cannot be empty", res2.getErrorMessage());
     }
 
     @Test
-    public void validateMessage_tooLong_returnsFailure() {
-        Mocks m = new Mocks();
-
-        // 501 characters
+    public void validateMessage_tooLong_fails() {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < 501; i++) {
             sb.append("x");
         }
+        String longMsg = sb.toString();
 
-        NotifyWinnersController.ValidationResult result =
-                m.controller.validateMessage(sb.toString());
-
-        assertFalse(result.isValid());
-        assertTrue(result.getErrorMessage().contains("500"));
-    }
-
-    // ------------- notifyWinners tests -------------
-
-    @Test
-    public void notifyWinners_emptyEventId_triggersOnError() {
-        Mocks m = new Mocks();
-
-        final boolean[] errorCalled = { false };
-        final Exception[] errorHolder = { null };
-
-        NotifyWinnersController.NotifyWinnersCallback callback =
-                new NotifyWinnersController.NotifyWinnersCallback() {
-                    @Override
-                    public void onSuccess(int notifiedCount, int failedCount) {
-                        // should not be called
-                    }
-
-                    @Override
-                    public void onError(@androidx.annotation.NonNull Exception e) {
-                        errorCalled[0] = true;
-                        errorHolder[0] = e;
-                    }
-                };
-
-        m.controller.notifyWinners("", "msg", callback);
-
-        assertTrue(errorCalled[0]);
-        assertTrue(errorHolder[0] instanceof IllegalArgumentException);
-        assertEquals("eventId is empty", errorHolder[0].getMessage());
-
-        Mockito.verifyNoInteractions(m.eventDB);
-        Mockito.verifyNoInteractions(m.entrantDB);
+        NotifyWinnersController.ValidationResult res = controller.validateMessage(longMsg);
+        assertFalse(res.isValid());
+        assertEquals("Message cannot exceed 500 characters", res.getErrorMessage());
     }
 
     @Test
-    public void notifyWinners_invalidMessage_triggersOnError() {
-        Mocks m = new Mocks();
+    public void validateMessage_valid_succeeds() {
+        NotifyWinnersController.ValidationResult res = controller.validateMessage("Congrats, you won!");
+        assertTrue(res.isValid());
+        assertNull(res.getErrorMessage());
+    }
 
-        final boolean[] errorCalled = { false };
-        final Exception[] errorHolder = { null };
+    // ---------------- notifyWinners: basic validation ----------------
 
-        NotifyWinnersController.NotifyWinnersCallback callback =
-                new NotifyWinnersController.NotifyWinnersCallback() {
-                    @Override
-                    public void onSuccess(int notifiedCount, int failedCount) {
-                        // should not be called
-                    }
+    @Test
+    public void notifyWinners_emptyEventId_errorsFast() {
+        NotifyWinnersController.NotifyWinnersCallback cb =
+                mock(NotifyWinnersController.NotifyWinnersCallback.class);
 
-                    @Override
-                    public void onError(@androidx.annotation.NonNull Exception e) {
-                        errorCalled[0] = true;
-                        errorHolder[0] = e;
-                    }
-                };
+        controller.notifyWinners("", "Hello", cb);
 
-        m.controller.notifyWinners("EVENT1", "   ", callback);
+        ArgumentCaptor<Exception> exCap = ArgumentCaptor.forClass(Exception.class);
+        verify(cb).onError(exCap.capture());
 
-        assertTrue(errorCalled[0]);
-        assertTrue(errorHolder[0] instanceof IllegalArgumentException);
-        assertEquals("Message cannot be empty", errorHolder[0].getMessage());
+        assertTrue(exCap.getValue() instanceof IllegalArgumentException);
+        assertEquals("eventId is empty", exCap.getValue().getMessage());
 
-        Mockito.verifyNoInteractions(m.eventDB);
-        Mockito.verifyNoInteractions(m.entrantDB);
+        verifyNoInteractions(mockEventDb, mockEntrantDb);
     }
 
     @Test
-    @SuppressWarnings("unchecked")
-    public void notifyWinners_noWinners_triggersOnError() {
-        Mocks m = new Mocks();
+    public void notifyWinners_invalidMessage_usesValidationError() {
+        NotifyWinnersController.NotifyWinnersCallback cb =
+                mock(NotifyWinnersController.NotifyWinnersCallback.class);
 
-        // Stub eventDB.getWinners to return an empty list
-        Mockito.doAnswer(invocation -> {
-            EventDB.Callback<List<Map<String, Object>>> cb =
-                    (EventDB.Callback<List<Map<String, Object>>>) invocation.getArguments()[1];
-            cb.onSuccess(new ArrayList<>()); // empty winners list
-            return null;
-        }).when(m.eventDB).getWinners(eq("EVENT1"), any(EventDB.Callback.class));
+        controller.notifyWinners("E1", "   ", cb);
 
-        final boolean[] errorCalled = { false };
-        final Exception[] errorHolder = { null };
+        ArgumentCaptor<Exception> exCap = ArgumentCaptor.forClass(Exception.class);
+        verify(cb).onError(exCap.capture());
 
-        NotifyWinnersController.NotifyWinnersCallback callback =
-                new NotifyWinnersController.NotifyWinnersCallback() {
-                    @Override
-                    public void onSuccess(int notifiedCount, int failedCount) {
-                        // should not be called
-                    }
+        assertTrue(exCap.getValue() instanceof IllegalArgumentException);
+        assertEquals("Message cannot be empty", exCap.getValue().getMessage());
 
-                    @Override
-                    public void onError(@androidx.annotation.NonNull Exception e) {
-                        errorCalled[0] = true;
-                        errorHolder[0] = e;
-                    }
-                };
+        verifyNoInteractions(mockEventDb, mockEntrantDb);
+    }
 
-        m.controller.notifyWinners("EVENT1", "You have been selected", callback);
+    // ---------------- notifyWinners: getWinners failures ----------------
 
-        assertTrue(errorCalled[0]);
-        assertTrue(errorHolder[0] instanceof RuntimeException);
-        assertEquals("No winners selected", errorHolder[0].getMessage());
+    @Test
+    public void notifyWinners_getWinnersError_bubblesToCallback() {
+        NotifyWinnersController.NotifyWinnersCallback cb =
+                mock(NotifyWinnersController.NotifyWinnersCallback.class);
 
-        Mockito.verify(m.eventDB).getWinners(eq("EVENT1"), any(EventDB.Callback.class));
-        Mockito.verifyNoInteractions(m.entrantDB);
+        controller.notifyWinners("E1", "Hello winners", cb);
+
+        ArgumentCaptor<EventDB.Callback<List<Map<String, Object>>>> winnersCap =
+                ArgumentCaptor.forClass(EventDB.Callback.class);
+        verify(mockEventDb).getWinners(eq("E1"), winnersCap.capture());
+
+        Exception boom = new RuntimeException("db down");
+        winnersCap.getValue().onError(boom);
+
+        verify(cb).onError(boom);
+        verifyNoInteractions(mockEntrantDb);
     }
 
     @Test
-    @SuppressWarnings("unchecked")
-    public void notifyWinners_success_notifiesAllWinners() {
-        Mocks m = new Mocks();
+    public void notifyWinners_noWinners_reportsError() {
+        NotifyWinnersController.NotifyWinnersCallback cb =
+                mock(NotifyWinnersController.NotifyWinnersCallback.class);
 
-        // Build fake winners list with one deviceId
+        controller.notifyWinners("E1", "Hello winners", cb);
+
+        ArgumentCaptor<EventDB.Callback<List<Map<String, Object>>>> winnersCap =
+                ArgumentCaptor.forClass(EventDB.Callback.class);
+        verify(mockEventDb).getWinners(eq("E1"), winnersCap.capture());
+
+        winnersCap.getValue().onSuccess(Collections.emptyList());
+
+        ArgumentCaptor<Exception> exCap = ArgumentCaptor.forClass(Exception.class);
+        verify(cb).onError(exCap.capture());
+
+        assertTrue(exCap.getValue() instanceof RuntimeException);
+        assertEquals("No winners selected", exCap.getValue().getMessage());
+        verifyNoInteractions(mockEntrantDb);
+    }
+
+    // ---------------- notifyWinners: happy path ----------------
+
+    @Test
+    public void notifyWinners_allNotificationsSuccess_reportsCounts() {
+        NotifyWinnersController.NotifyWinnersCallback cb =
+                mock(NotifyWinnersController.NotifyWinnersCallback.class);
+
+        controller.notifyWinners("E1", "You won!", cb);
+
+        // 1) eventDB.getWinners -> two winners
+        ArgumentCaptor<EventDB.Callback<List<Map<String, Object>>>> winnersCap =
+                ArgumentCaptor.forClass(EventDB.Callback.class);
+        verify(mockEventDb).getWinners(eq("E1"), winnersCap.capture());
+
         List<Map<String, Object>> winners = new ArrayList<>();
-        Map<String, Object> entry = new HashMap<>();
-        entry.put("deviceId", "device123");
-        winners.add(entry);
+        Map<String, Object> w1 = new HashMap<>();
+        w1.put("deviceId", "dev1");
+        Map<String, Object> w2 = new HashMap<>();
+        w2.put("deviceId", "dev2");
+        winners.add(w1);
+        winners.add(w2);
 
-        // Stub getWinners to return our list
-        Mockito.doAnswer(invocation -> {
-            EventDB.Callback<List<Map<String, Object>>> cb =
-                    (EventDB.Callback<List<Map<String, Object>>>) invocation.getArguments()[1];
-            cb.onSuccess(winners);
-            return null;
-        }).when(m.eventDB).getWinners(eq("EVENT1"), any(EventDB.Callback.class));
+        winnersCap.getValue().onSuccess(winners);
 
-        // Stub addNotification to immediately succeed
-        Mockito.doAnswer(invocation -> {
-            EntrantDB.Callback<Void> cb =
-                    (EntrantDB.Callback<Void>) invocation.getArguments()[4];
-            cb.onSuccess(null);
-            return null;
-        }).when(m.entrantDB).addNotification(
-                eq("device123"),
-                eq("EVENT1"),
-                anyString(),
-                anyString(),
-                any(EntrantDB.Callback.class)
+        // 2) verify notifications
+        ArgumentCaptor<String> deviceIdCap = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<EntrantDB.Callback<Void>> notifCap =
+                ArgumentCaptor.forClass(EntrantDB.Callback.class);
+
+        verify(mockEntrantDb, times(2)).addNotification(
+                deviceIdCap.capture(),
+                eq("E1"),
+                eq("You won!"),
+                eq("winners_broadcast"),
+                notifCap.capture()
         );
 
-        final boolean[] errorCalled = { false };
-        final int[] notifiedHolder = { -1 };
-        final int[] failedHolder = { -1 };
+        List<String> deviceIds = deviceIdCap.getAllValues();
+        assertTrue(deviceIds.contains("dev1"));
+        assertTrue(deviceIds.contains("dev2"));
 
-        NotifyWinnersController.NotifyWinnersCallback callback =
-                new NotifyWinnersController.NotifyWinnersCallback() {
-                    @Override
-                    public void onSuccess(int notifiedCount, int failedCount) {
-                        notifiedHolder[0] = notifiedCount;
-                        failedHolder[0] = failedCount;
-                    }
+        // 3) simulate notification success
+        for (EntrantDB.Callback<Void> cbNotif : notifCap.getAllValues()) {
+            cbNotif.onSuccess(null);
+        }
 
-                    @Override
-                    public void onError(@androidx.annotation.NonNull Exception e) {
-                        errorCalled[0] = true;
-                    }
-                };
+        // 4) callback should report notifiedCount=2, failedCount=0
+        ArgumentCaptor<Integer> notifiedCap = ArgumentCaptor.forClass(Integer.class);
+        ArgumentCaptor<Integer> failedCap = ArgumentCaptor.forClass(Integer.class);
 
-        m.controller.notifyWinners("EVENT1", "You have been selected!", callback);
+        verify(cb).onSuccess(notifiedCap.capture(), failedCap.capture());
+        assertEquals(2, notifiedCap.getValue().intValue());
+        assertEquals(0, failedCap.getValue().intValue());
+    }
 
-        assertFalse(errorCalled[0]);
-        assertEquals(1, notifiedHolder[0]);
-        assertEquals(0, failedHolder[0]);
+    // ---------------- notifyWinners: null deviceId entries ----------------
 
-        Mockito.verify(m.eventDB).getWinners(eq("EVENT1"), any(EventDB.Callback.class));
-        Mockito.verify(m.entrantDB).addNotification(
-                eq("device123"),
-                eq("EVENT1"),
-                anyString(),
-                anyString(),
-                any(EntrantDB.Callback.class)
+    @Test
+    public void notifyWinners_entriesWithoutDeviceId_areCountedAsFailed() {
+        NotifyWinnersController.NotifyWinnersCallback cb =
+                mock(NotifyWinnersController.NotifyWinnersCallback.class);
+
+        controller.notifyWinners("E1", "You won!", cb);
+
+        ArgumentCaptor<EventDB.Callback<List<Map<String, Object>>>> winnersCap =
+                ArgumentCaptor.forClass(EventDB.Callback.class);
+        verify(mockEventDb).getWinners(eq("E1"), winnersCap.capture());
+
+        // one missing deviceId entry, one valid
+        List<Map<String, Object>> winners = new ArrayList<>();
+        Map<String, Object> missing = new HashMap<>();
+        Map<String, Object> valid = new HashMap<>();
+        valid.put("deviceId", "dev1");
+        winners.add(missing);
+        winners.add(valid);
+
+        winnersCap.getValue().onSuccess(winners);
+
+        // valid one still calls addNotification once
+        ArgumentCaptor<String> deviceIdCap = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<EntrantDB.Callback<Void>> notifCap =
+                ArgumentCaptor.forClass(EntrantDB.Callback.class);
+
+        verify(mockEntrantDb).addNotification(
+                deviceIdCap.capture(),
+                eq("E1"),
+                eq("You won!"),
+                eq("winners_broadcast"),
+                notifCap.capture()
         );
+        assertEquals("dev1", deviceIdCap.getValue());
+
+        // callback is fired when the null-entry branch runs
+        ArgumentCaptor<Integer> notifiedCap = ArgumentCaptor.forClass(Integer.class);
+        ArgumentCaptor<Integer> failedCap = ArgumentCaptor.forClass(Integer.class);
+
+        verify(cb).onSuccess(notifiedCap.capture(), failedCap.capture());
+        assertEquals(1, notifiedCap.getValue().intValue());
+        assertEquals(1, failedCap.getValue().intValue());
     }
 }
