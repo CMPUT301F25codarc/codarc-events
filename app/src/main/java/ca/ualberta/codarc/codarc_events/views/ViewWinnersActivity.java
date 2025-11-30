@@ -248,7 +248,6 @@ public class ViewWinnersActivity extends BaseEntrantListActivity {
 
     /**
      * Handles sending notification to selected entrants.
-     * Delegates to controller for business logic.
      *
      * @param message the notification message
      * @param dialog the dialog to dismiss on success

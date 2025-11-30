@@ -374,4 +374,3 @@ public class ProfileCreationActivity extends AppCompatActivity {
     }
 }
 
-

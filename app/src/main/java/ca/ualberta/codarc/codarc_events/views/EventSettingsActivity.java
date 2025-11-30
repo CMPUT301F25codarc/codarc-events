@@ -5,6 +5,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.ImageButton;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
@@ -115,6 +116,8 @@ public class EventSettingsActivity extends AppCompatActivity {
             intent.putExtra("eventId", event.getId());
             startActivity(intent);
         });
+
+        setupBackButton();
     }
 
     private void setupImagePicker() {
@@ -179,5 +182,10 @@ public class EventSettingsActivity extends AppCompatActivity {
                 });
             }
         });
+    }
+
+    private void setupBackButton() {
+        ImageButton backButton = findViewById(R.id.btn_back);
+        backButton.setOnClickListener(v -> finish());
     }
 }

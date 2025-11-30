@@ -32,13 +32,13 @@
 
         <!-- Title -->
         <TextView
-            android:id="@+id/tv_title"
+            android:id="@+id/tv_company_name"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:gravity="center"
-            android:text="@string/entrant_dashboard_title"
-            android:textColor="@color/text_primary"
+            android:text="EventFlow"
+            android:textColor="@color/primary_purple"
             android:textSize="20sp"
             android:textStyle="bold" />
 
@@ -83,28 +83,19 @@
         android:orientation="horizontal"
         android:padding="12dp">
 
-        <!-- Search Icon -->
-        <ImageView
-            android:layout_width="20dp"
-            android:layout_height="20dp"
-            android:layout_gravity="center_vertical"
-            android:layout_marginEnd="8dp"
-            android:src="@drawable/ic_search"
-            app:tint="@color/text_secondary" />
+        <!-- Filter Icon -->
 
-        <!-- Search Input -->
-        <EditText
-            android:id="@+id/et_search"
-            android:layout_width="0dp"
+        <TextView
+            android:id="@+id/tv_title"
+            android:layout_width="355dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:background="@android:color/transparent"
-            android:hint="@string/search_events_hint"
+            android:gravity="center"
+            android:text="@string/entrant_dashboard_title"
             android:textColor="@color/text_primary"
-            android:textColorHint="@color/text_secondary"
-            android:textSize="16sp" />
+            android:textSize="20sp"
+            android:textStyle="bold" />
 
-        <!-- Filter Icon -->
         <ImageView
             android:id="@+id/iv_filter"
             android:layout_width="20dp"
@@ -113,6 +104,7 @@
             android:layout_marginStart="8dp"
             android:src="@drawable/ic_filter"
             app:tint="@color/entrant_action_button_purple" />
+        
     </LinearLayout>
 
     <!-- Events List -->

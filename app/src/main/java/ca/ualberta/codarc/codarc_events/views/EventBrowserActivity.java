@@ -47,6 +47,7 @@ import ca.ualberta.codarc.codarc_events.utils.TagHelper;
  */
 public class EventBrowserActivity extends AppCompatActivity {
 
+    private ImageView adminLockButton;
     private RecyclerView rvEvents;
     private final List<Event> eventList = new ArrayList<>();
     private final List<Event> allEvents = new ArrayList<>();
@@ -134,9 +135,11 @@ public class EventBrowserActivity extends AppCompatActivity {
         }
 
         // Admin lock button: check admin status and show menu
-        ImageView adminLockButton = findViewById(R.id.btn_admin);
+        adminLockButton = findViewById(R.id.btn_admin);
         if (adminLockButton != null) {
-            adminLockButton.setOnClickListener(v -> checkAdminAndShowMenu());
+            adminLockButton.setVisibility(View.GONE); // start hidden
+            checkAdminAndShowMenu(); // check if the user is admin
+            adminLockButton.setOnClickListener(v -> showAdminMenu());
         }
     }
 
@@ -147,7 +150,7 @@ public class EventBrowserActivity extends AppCompatActivity {
             @Override
             public void onSuccess(User user) {
                 if (user != null && user.isAdmin()) {
-                    showAdminMenu();
+                    adminLockButton.setVisibility(View.VISIBLE);
                 } else {
                     Toast.makeText(EventBrowserActivity.this, 
                         R.string.admin_access_required, Toast.LENGTH_SHORT).show();

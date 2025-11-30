@@ -16,7 +16,6 @@ import okhttp3.Response;
 
 /**
  * Helper for sending FCM notifications via Cloud Function.
- * Fire-and-forget: errors are logged but don't block caller.
  */
 public class FCMHelper {
     
@@ -35,7 +34,6 @@ public class FCMHelper {
     
     /**
      * Sends push notifications to a list of device tokens.
-     * Fire-and-forget: errors are logged but don't throw exceptions.
      *
      * @param tokens list of FCM device tokens
      * @param title notification title

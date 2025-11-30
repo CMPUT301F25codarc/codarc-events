@@ -128,6 +128,7 @@ public class EventDetailsActivity extends AppCompatActivity {
 
         checkWaitlistStatus();
         setupOrganizerSettings();
+        setupBackButton();
     }
 
     @Override
@@ -405,6 +406,11 @@ public class EventDetailsActivity extends AppCompatActivity {
                 tagGroup.addView(chip);
             }
         }
+    }
+
+    private void setupBackButton() {
+        ImageButton backButton = findViewById(R.id.btn_back);
+        backButton.setOnClickListener(v -> finish());
     }
 
 }

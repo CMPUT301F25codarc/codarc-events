@@ -106,4 +106,3 @@ public class RegistrationHistoryActivity extends AppCompatActivity {
     }
 }
 
-

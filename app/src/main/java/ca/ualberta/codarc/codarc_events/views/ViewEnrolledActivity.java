@@ -296,7 +296,6 @@ public class ViewEnrolledActivity extends BaseEntrantListActivity {
 
     /**
      * Handles sending notification to enrolled entrants.
-     * Delegates to controller for business logic.
      *
      * @param message the notification message
      * @param dialog the dialog to dismiss on success

@@ -143,22 +143,23 @@
                 android:textSize="14sp" />
 
             <!-- QR Code -->
+
+            <!-- Buttons -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:gravity="center"
                 android:layout_marginTop="20dp"
-                android:layout_marginBottom="8dp">
+                android:layout_marginBottom="8dp"
+                android:gravity="center">
 
                 <ImageView
                     android:id="@+id/event_qr"
                     android:layout_width="200dp"
                     android:layout_height="200dp"
-                    android:padding="12dp"
-                    android:contentDescription="Event QR Code" />
+                    android:contentDescription="Event QR Code"
+                    android:padding="12dp" />
             </LinearLayout>
 
-            <!-- Buttons -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -189,13 +190,17 @@
                     android:textColor="@android:color/white"
                     app:cornerRadius="12dp" />
             </LinearLayout>
+
+            <ImageButton
+                android:id="@+id/btn_back"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/back"
+                android:src="@drawable/ic_arrow_back"
+                app:tint="@color/entrant_action_button_purple" />
         </LinearLayout>
 
-        <!-- Bottom Spacer -->
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="32dp"
-            android:background="@android:color/transparent" />
 
     </LinearLayout>
 </ScrollView>
