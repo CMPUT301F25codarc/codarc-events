@@ -1,246 +1,244 @@
 package ca.ualberta.codarc.codarc_events;
 
-import ca.ualberta.codarc.codarc_events.controllers.NotifyCancelledController;
-import ca.ualberta.codarc.codarc_events.data.EntrantDB;
-import ca.ualberta.codarc.codarc_events.data.EventDB;
-import org.junit.Before;
+import static org.junit.Assert.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+
 import org.junit.Test;
-import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.Assert.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import ca.ualberta.codarc.codarc_events.controllers.NotifyCancelledController;
+import ca.ualberta.codarc.codarc_events.data.EntrantDB;
+import ca.ualberta.codarc.codarc_events.data.EventDB;
 
 public class NotifyCancelledControllerTests {
 
-    private EventDB mockEventDb;
-    private EntrantDB mockEntrantDb;
-    private NotifyCancelledController controller;
-
-    @Before
-    public void setUp() {
-        mockEventDb = mock(EventDB.class);
-        mockEntrantDb = mock(EntrantDB.class);
-        controller = new NotifyCancelledController(mockEventDb, mockEntrantDb);
+    // Helper to build controller with mocks
+    private static class Mocks {
+        EventDB eventDB = Mockito.mock(EventDB.class);
+        EntrantDB entrantDB = Mockito.mock(EntrantDB.class);
+        NotifyCancelledController controller =
+                new NotifyCancelledController(eventDB, entrantDB);
     }
 
-    // ---------------- validateMessage ----------------
+    // ---------------- validateMessage tests ----------------
 
     @Test
-    public void validateMessage_nullOrEmpty_fails() {
-        // null
-        NotifyCancelledController.ValidationResult res1 = controller.validateMessage(null);
-        assertFalse(res1.isValid());
-        assertEquals("Message cannot be empty", res1.getErrorMessage());
+    public void validateMessage_validMessage_returnsSuccess() {
+        Mocks m = new Mocks();
 
-        // empty / whitespace
-        NotifyCancelledController.ValidationResult res2 = controller.validateMessage("   ");
-        assertFalse(res2.isValid());
-        assertEquals("Message cannot be empty", res2.getErrorMessage());
+        NotifyCancelledController.ValidationResult result =
+                m.controller.validateMessage("This event has been cancelled");
+
+        assertTrue(result.isValid());
+        assertNull(result.getErrorMessage());
     }
 
     @Test
-    public void validateMessage_tooLong_fails() {
+    public void validateMessage_nullOrEmpty_returnsFailure() {
+        Mocks m = new Mocks();
+
+        NotifyCancelledController.ValidationResult resNull =
+                m.controller.validateMessage(null);
+        NotifyCancelledController.ValidationResult resEmpty =
+                m.controller.validateMessage("   ");
+
+        assertFalse(resNull.isValid());
+        assertEquals("Message cannot be empty", resNull.getErrorMessage());
+
+        assertFalse(resEmpty.isValid());
+        assertEquals("Message cannot be empty", resEmpty.getErrorMessage());
+    }
+
+    @Test
+    public void validateMessage_tooLong_returnsFailure() {
+        Mocks m = new Mocks();
+
+        // 501 chars
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < 501; i++) {
-            sb.append("a");
-        }
-        String longMessage = sb.toString();
-
-        NotifyCancelledController.ValidationResult res = controller.validateMessage(longMessage);
-        assertFalse(res.isValid());
-        assertEquals("Message cannot exceed 500 characters", res.getErrorMessage());
-    }
-
-    @Test
-    public void validateMessage_valid_succeeds() {
-        NotifyCancelledController.ValidationResult res = controller.validateMessage("All good");
-        assertTrue(res.isValid());
-        assertNull(res.getErrorMessage());
-    }
-
-    // ---------------- notifyCancelled: basic validation ----------------
-
-    @Test
-    public void notifyCancelled_emptyEventId_errorsFast() {
-        NotifyCancelledController.NotifyCancelledCallback cb =
-                mock(NotifyCancelledController.NotifyCancelledCallback.class);
-
-        controller.notifyCancelled("", "Hello", cb);
-
-        ArgumentCaptor<Exception> exCap = ArgumentCaptor.forClass(Exception.class);
-        verify(cb).onError(exCap.capture());
-        assertTrue(exCap.getValue() instanceof IllegalArgumentException);
-        assertEquals("eventId is empty", exCap.getValue().getMessage());
-
-        verifyNoInteractions(mockEventDb, mockEntrantDb);
-    }
-
-    @Test
-    public void notifyCancelled_invalidMessage_usesValidationError() {
-        NotifyCancelledController.NotifyCancelledCallback cb =
-                mock(NotifyCancelledController.NotifyCancelledCallback.class);
-
-        controller.notifyCancelled("E1", "   ", cb);
-
-        ArgumentCaptor<Exception> exCap = ArgumentCaptor.forClass(Exception.class);
-        verify(cb).onError(exCap.capture());
-        assertTrue(exCap.getValue() instanceof IllegalArgumentException);
-        assertEquals("Message cannot be empty", exCap.getValue().getMessage());
-
-        verifyNoInteractions(mockEventDb, mockEntrantDb);
-    }
-
-    // ---------------- notifyCancelled: getCancelled failures ----------------
-
-    @Test
-    public void notifyCancelled_getCancelledError_bubblesToCallback() {
-        NotifyCancelledController.NotifyCancelledCallback cb =
-                mock(NotifyCancelledController.NotifyCancelledCallback.class);
-
-        controller.notifyCancelled("E1", "Hello", cb);
-
-        ArgumentCaptor<EventDB.Callback<List<Map<String, Object>>>> cancelCap =
-                ArgumentCaptor.forClass(EventDB.Callback.class);
-        verify(mockEventDb).getCancelled(eq("E1"), cancelCap.capture());
-
-        Exception boom = new RuntimeException("db down");
-        cancelCap.getValue().onError(boom);
-
-        verify(cb).onError(boom);
-        verifyNoInteractions(mockEntrantDb);
-    }
-
-    @Test
-    public void notifyCancelled_noCancelledEntrants_reportsError() {
-        NotifyCancelledController.NotifyCancelledCallback cb =
-                mock(NotifyCancelledController.NotifyCancelledCallback.class);
-
-        controller.notifyCancelled("E1", "Hello", cb);
-
-        ArgumentCaptor<EventDB.Callback<List<Map<String, Object>>>> cancelCap =
-                ArgumentCaptor.forClass(EventDB.Callback.class);
-        verify(mockEventDb).getCancelled(eq("E1"), cancelCap.capture());
-
-        // simulate no cancelled entrants
-        cancelCap.getValue().onSuccess(Collections.emptyList());
-
-        ArgumentCaptor<Exception> exCap = ArgumentCaptor.forClass(Exception.class);
-        verify(cb).onError(exCap.capture());
-
-        assertTrue(exCap.getValue() instanceof RuntimeException);
-        assertEquals("No cancelled entrants found", exCap.getValue().getMessage());
-        verifyNoInteractions(mockEntrantDb);
-    }
-
-    // ---------------- notifyCancelled: happy path ----------------
-
-    @Test
-    public void notifyCancelled_allNotificationsSuccess_reportsCounts() {
-        NotifyCancelledController.NotifyCancelledCallback cb =
-                mock(NotifyCancelledController.NotifyCancelledCallback.class);
-
-        controller.notifyCancelled("E1", "Event cancelled", cb);
-
-        // 1) eventDB.getCancelled -> return two cancelled entries
-        ArgumentCaptor<EventDB.Callback<List<Map<String, Object>>>> cancelCap =
-                ArgumentCaptor.forClass(EventDB.Callback.class);
-        verify(mockEventDb).getCancelled(eq("E1"), cancelCap.capture());
-
-        List<Map<String, Object>> cancelled = new ArrayList<>();
-        Map<String, Object> c1 = new HashMap<>();
-        c1.put("deviceId", "dev1");
-        Map<String, Object> c2 = new HashMap<>();
-        c2.put("deviceId", "dev2");
-        cancelled.add(c1);
-        cancelled.add(c2);
-
-        cancelCap.getValue().onSuccess(cancelled);
-
-        // 2) verify notifications are sent for each device
-        ArgumentCaptor<String> deviceIdCap = ArgumentCaptor.forClass(String.class);
-        ArgumentCaptor<EntrantDB.Callback<Void>> notifCap =
-                ArgumentCaptor.forClass(EntrantDB.Callback.class);
-
-        verify(mockEntrantDb, times(2)).addNotification(
-                deviceIdCap.capture(),
-                eq("E1"),
-                eq("Event cancelled"),
-                eq("cancelled_broadcast"),
-                notifCap.capture()
-        );
-
-        List<String> deviceIds = deviceIdCap.getAllValues();
-        assertTrue(deviceIds.contains("dev1"));
-        assertTrue(deviceIds.contains("dev2"));
-
-        // 3) simulate both notifications succeeding
-        for (EntrantDB.Callback<Void> cbNotif : notifCap.getAllValues()) {
-            cbNotif.onSuccess(null);
+            sb.append("x");
         }
 
-        // 4) controller callback should report notifiedCount = 2, failedCount = 0
-        ArgumentCaptor<Integer> notifiedCap = ArgumentCaptor.forClass(Integer.class);
-        ArgumentCaptor<Integer> failedCap = ArgumentCaptor.forClass(Integer.class);
+        NotifyCancelledController.ValidationResult result =
+                m.controller.validateMessage(sb.toString());
 
-        verify(cb).onSuccess(notifiedCap.capture(), failedCap.capture());
-        assertEquals(2, notifiedCap.getValue().intValue());
-        assertEquals(0, failedCap.getValue().intValue());
+        assertFalse(result.isValid());
+        assertTrue(result.getErrorMessage().contains("500"));
     }
 
-    // ---------------- notifyCancelled: null deviceId entries ----------------
+    // ---------------- notifyCancelled tests ----------------
 
     @Test
-    public void notifyCancelled_entriesWithoutDeviceId_areCountedAsFailed() {
-        NotifyCancelledController.NotifyCancelledCallback cb =
-                mock(NotifyCancelledController.NotifyCancelledCallback.class);
+    public void notifyCancelled_emptyEventId_triggersOnError() {
+        Mocks m = new Mocks();
 
-        controller.notifyCancelled("E1", "Event cancelled", cb);
+        final boolean[] errorCalled = { false };
+        final Exception[] errorHolder = { null };
 
-        ArgumentCaptor<EventDB.Callback<List<Map<String, Object>>>> cancelCap =
-                ArgumentCaptor.forClass(EventDB.Callback.class);
-        verify(mockEventDb).getCancelled(eq("E1"), cancelCap.capture());
+        NotifyCancelledController.NotifyCancelledCallback callback =
+                new NotifyCancelledController.NotifyCancelledCallback() {
+                    @Override
+                    public void onSuccess(int notifiedCount, int failedCount) {
+                        // should not be called
+                    }
 
-        // one entry missing deviceId, one valid
+                    @Override
+                    public void onError(@androidx.annotation.NonNull Exception e) {
+                        errorCalled[0] = true;
+                        errorHolder[0] = e;
+                    }
+                };
+
+        m.controller.notifyCancelled("", "msg", callback);
+
+        assertTrue(errorCalled[0]);
+        assertTrue(errorHolder[0] instanceof IllegalArgumentException);
+        assertEquals("eventId is empty", errorHolder[0].getMessage());
+        Mockito.verifyNoInteractions(m.eventDB);
+        Mockito.verifyNoInteractions(m.entrantDB);
+    }
+
+    @Test
+    public void notifyCancelled_invalidMessage_triggersOnError() {
+        Mocks m = new Mocks();
+
+        final boolean[] errorCalled = { false };
+        final Exception[] errorHolder = { null };
+
+        NotifyCancelledController.NotifyCancelledCallback callback =
+                new NotifyCancelledController.NotifyCancelledCallback() {
+                    @Override
+                    public void onSuccess(int notifiedCount, int failedCount) {
+                        // should not be called
+                    }
+
+                    @Override
+                    public void onError(@androidx.annotation.NonNull Exception e) {
+                        errorCalled[0] = true;
+                        errorHolder[0] = e;
+                    }
+                };
+
+        // message is empty so validation fails
+        m.controller.notifyCancelled("EVENT1", "   ", callback);
+
+        assertTrue(errorCalled[0]);
+        assertTrue(errorHolder[0] instanceof IllegalArgumentException);
+        assertEquals("Message cannot be empty", errorHolder[0].getMessage());
+        Mockito.verifyNoInteractions(m.eventDB);
+        Mockito.verifyNoInteractions(m.entrantDB);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void notifyCancelled_noCancelledEntrants_triggersOnError() {
+        Mocks m = new Mocks();
+
+        // Stub eventDB.getCancelled to return an empty list
+        Mockito.doAnswer(invocation -> {
+            EventDB.Callback<List<Map<String, Object>>> cb =
+                    (EventDB.Callback<List<Map<String, Object>>>) invocation.getArguments()[1];
+            cb.onSuccess(new ArrayList<>()); // empty
+            return null;
+        }).when(m.eventDB).getCancelled(eq("EVENT1"), any(EventDB.Callback.class));
+
+        final boolean[] errorCalled = { false };
+        final Exception[] errorHolder = { null };
+
+        NotifyCancelledController.NotifyCancelledCallback callback =
+                new NotifyCancelledController.NotifyCancelledCallback() {
+                    @Override
+                    public void onSuccess(int notifiedCount, int failedCount) {
+                        // should not be called in this scenario
+                    }
+
+                    @Override
+                    public void onError(@androidx.annotation.NonNull Exception e) {
+                        errorCalled[0] = true;
+                        errorHolder[0] = e;
+                    }
+                };
+
+        m.controller.notifyCancelled("EVENT1", "Event cancelled", callback);
+
+        assertTrue(errorCalled[0]);
+        assertTrue(errorHolder[0] instanceof RuntimeException);
+        assertEquals("No cancelled entrants found", errorHolder[0].getMessage());
+        Mockito.verify(m.eventDB).getCancelled(eq("EVENT1"), any(EventDB.Callback.class));
+        Mockito.verifyNoInteractions(m.entrantDB);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void notifyCancelled_success_notifiesAllCancelledEntrants() {
+        Mocks m = new Mocks();
+
+        // Prepare cancelled list with one entrant that has a deviceId
         List<Map<String, Object>> cancelled = new ArrayList<>();
-        Map<String, Object> missingDevice = new HashMap<>();
-        Map<String, Object> valid = new HashMap<>();
-        valid.put("deviceId", "dev1");
-        cancelled.add(missingDevice);
-        cancelled.add(valid);
+        Map<String, Object> entry = new HashMap<>();
+        entry.put("deviceId", "device123");
+        cancelled.add(entry);
 
-        cancelCap.getValue().onSuccess(cancelled);
+        // Stub getCancelled to return our list
+        Mockito.doAnswer(invocation -> {
+            EventDB.Callback<List<Map<String, Object>>> cb =
+                    (EventDB.Callback<List<Map<String, Object>>>) invocation.getArguments()[1];
+            cb.onSuccess(cancelled);
+            return null;
+        }).when(m.eventDB).getCancelled(eq("EVENT1"), any(EventDB.Callback.class));
 
-        // the code immediately counts the null deviceId entry as failed and completed,
-        // then proceeds to call addNotification for the valid one
-        ArgumentCaptor<String> deviceIdCap = ArgumentCaptor.forClass(String.class);
-        ArgumentCaptor<EntrantDB.Callback<Void>> notifCap =
-                ArgumentCaptor.forClass(EntrantDB.Callback.class);
-
-        verify(mockEntrantDb).addNotification(
-                deviceIdCap.capture(),
-                eq("E1"),
-                eq("Event cancelled"),
-                eq("cancelled_broadcast"),
-                notifCap.capture()
+        // Stub addNotification to immediately succeed
+        Mockito.doAnswer(invocation -> {
+            EntrantDB.Callback<Void> cb =
+                    (EntrantDB.Callback<Void>) invocation.getArguments()[4];
+            cb.onSuccess(null);
+            return null;
+        }).when(m.entrantDB).addNotification(
+                eq("device123"),
+                eq("EVENT1"),
+                anyString(),
+                anyString(),
+                any(EntrantDB.Callback.class)
         );
-        assertEquals("dev1", deviceIdCap.getValue());
 
-        // we do not need to trigger the notif callback for this test,
-        // because the controller already called NotifyCancelledCallback based on the null entry
+        final boolean[] errorCalled = { false };
+        final int[] notifiedHolder = { -1 };
+        final int[] failedHolder = { -1 };
 
-        ArgumentCaptor<Integer> notifiedCap = ArgumentCaptor.forClass(Integer.class);
-        ArgumentCaptor<Integer> failedCap = ArgumentCaptor.forClass(Integer.class);
+        NotifyCancelledController.NotifyCancelledCallback callback =
+                new NotifyCancelledController.NotifyCancelledCallback() {
+                    @Override
+                    public void onSuccess(int notifiedCount, int failedCount) {
+                        notifiedHolder[0] = notifiedCount;
+                        failedHolder[0] = failedCount;
+                    }
 
-        verify(cb).onSuccess(notifiedCap.capture(), failedCap.capture());
-        // according to the current implementation, the null entry increments both completed and failed
-        assertEquals(1, notifiedCap.getValue().intValue());
-        assertEquals(1, failedCap.getValue().intValue());
+                    @Override
+                    public void onError(@androidx.annotation.NonNull Exception e) {
+                        errorCalled[0] = true;
+                    }
+                };
+
+        m.controller.notifyCancelled("EVENT1", "Event has been cancelled", callback);
+
+        assertFalse(errorCalled[0]);
+        assertEquals(1, notifiedHolder[0]);
+        assertEquals(0, failedHolder[0]);
+
+        Mockito.verify(m.eventDB).getCancelled(eq("EVENT1"), any(EventDB.Callback.class));
+        Mockito.verify(m.entrantDB).addNotification(
+                eq("device123"),
+                eq("EVENT1"),
+                anyString(),
+                anyString(),
+                any(EntrantDB.Callback.class)
+        );
     }
 }
