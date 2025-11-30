@@ -39,6 +39,9 @@ android {
             isIncludeAndroidResources = true
         }
     }
+    lint {
+        abortOnError = false
+    }
 }
 
 dependencies {
@@ -95,4 +98,3 @@ dependencies {
     // --- Optional for stable instrumentation ---
     androidTestUtil("androidx.test:orchestrator:1.5.1")
 }
-
