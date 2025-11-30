@@ -175,8 +175,7 @@
                 android:id="@+id/et_capacity"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="number"
-                android:hint="@string/capacity_unlimited_hint" />
+                android:inputType="number" />
 
         </com.google.android.material.textfield.TextInputLayout>
 
@@ -197,7 +196,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/margin_medium"
-            android:hint="Add tags"
+            android:hint=" Add tags"
             app:helperText="Type to search predefined tags or press Enter to add custom tag"
             app:helperTextEnabled="true"
             app:layout_constraintEnd_toEndOf="parent"

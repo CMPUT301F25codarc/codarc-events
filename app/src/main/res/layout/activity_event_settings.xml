@@ -36,16 +36,6 @@
             android:orientation="vertical"
             android:gravity="center_horizontal">
 
-            <!-- Manage Waitlist -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_manage_waitlist"
-                style="@style/Widget.Material3.Button.TonalButton"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Manage Waitlist"
-                android:textSize="16sp"
-                android:layout_marginBottom="12dp" />
-
             <!-- Run Lottery Draw -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_run_lottery"
@@ -56,29 +46,48 @@
                 android:textSize="16sp"
                 android:backgroundTint="@color/primary_purple"
                 android:textColor="@android:color/white"
-                android:layout_marginBottom="12dp" />
+                android:layout_marginBottom="12dp"
+                android:layout_marginLeft="16dp"
+                android:layout_marginRight="16dp"
+                android:layout_marginTop="12dp"/>
+
+            <!-- Manage Waitlist -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_manage_waitlist"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Manage Waitlist"
+                android:textSize="16sp"
+                android:layout_marginBottom="12dp"
+                android:layout_marginLeft="16dp"
+                android:layout_marginRight="16dp"/>
 
             <!-- View Winners -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_view_winners"
-                style="@style/Widget.Material3.Button.OutlinedButton"
+                style="@style/Widget.Material3.Button.TonalButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="View Winners"
                 android:textSize="16sp"
-                android:textColor="@color/primary_purple"
-                android:layout_marginBottom="12dp" />
+                android:textColor="@color/organizer_create_button_green"
+                android:layout_marginBottom="12dp"
+                android:layout_marginLeft="16dp"
+                android:layout_marginRight="16dp"/>
 
             <!-- View Cancelled -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_view_cancelled"
-                style="@style/Widget.Material3.Button.OutlinedButton"
+                style="@style/Widget.Material3.Button.TonalButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="View Cancelled"
                 android:textSize="16sp"
                 android:textColor="@color/error_red"
-                android:layout_marginBottom="12dp" />
+                android:layout_marginBottom="12dp"
+                android:layout_marginLeft="16dp"
+                android:layout_marginRight="16dp"/>
 
             <!-- View Enrolled -->
             <com.google.android.material.button.MaterialButton
@@ -87,30 +96,45 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="View Enrolled"
+                android:textColor="@color/primary_purple_dark"
                 android:textSize="16sp"
-                android:layout_marginBottom="12dp" />
+                android:layout_marginBottom="12dp"
+                android:layout_marginLeft="16dp"
+                android:layout_marginRight="16dp"/>
 
             <!-- View Map -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_view_map"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="match_parent"
+                style="@style/Widget.Material3.Button.TonalButton"                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/view_map"
                 android:textSize="16sp"
-                android:textColor="@color/primary_purple"
-                android:layout_marginBottom="12dp" />
+                android:layout_marginBottom="12dp"
+                android:layout_marginLeft="16dp"
+                android:layout_marginRight="16dp"/>
 
             <!-- Update Poster -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_update_poster"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="match_parent"
+                style="@style/Widget.Material3.Button.TonalButton"                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Update Event Poster"
                 android:textSize="16sp"
-                android:textColor="@color/primary_purple" />
+                android:textColor="@color/primary_purple"
+                android:layout_marginLeft="16dp"
+                android:layout_marginRight="16dp"/>
+
+            <ImageButton
+                android:id="@+id/btn_back"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/back"
+                android:src="@drawable/ic_arrow_back"
+                app:tint="@color/entrant_action_button_purple"
+                android:layout_margin="16dp"/>
 
         </LinearLayout>
+
     </com.google.android.material.card.MaterialCardView>
 </LinearLayout>

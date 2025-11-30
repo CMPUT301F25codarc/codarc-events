@@ -19,11 +19,6 @@ import ca.ualberta.codarc.codarc_events.data.UserDB;
 
 /**
  * Launcher activity that verifies identity and routes to the event browser.
- * 
- * In the refactored structure:
- * - Creates a User document in the users collection (base identity)
- * - User document has role flags (all false by default)
- * - Entrants and Organizers documents are created later when user performs actions
  */
 public class LandingActivity extends AppCompatActivity {
 
@@ -78,5 +73,4 @@ public class LandingActivity extends AppCompatActivity {
         }
     }
 }
-
 

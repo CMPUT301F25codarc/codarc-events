@@ -31,17 +31,4 @@ public class ValidationHelper {
             throw new IllegalArgumentException(fieldName + " cannot be null");
         }
     }
-
-    /**
-     * Validates that a string is not null or empty, and returns the trimmed value.
-     *
-     * @param value the string to validate and trim
-     * @param fieldName the name of the field for error messages
-     * @return the trimmed string
-     * @throws IllegalArgumentException if value is null or empty
-     */
-    public static String requireNonEmptyAndTrim(String value, String fieldName) {
-        requireNonEmpty(value, fieldName);
-        return value.trim();
-    }
 }

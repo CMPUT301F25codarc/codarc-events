@@ -9,7 +9,7 @@
               <option name="connection">
                 <ConnectionSetting>
                   <option name="appId" value="ca.ualberta.codarc.codarc_events" />
-                  <option name="mobileSdkAppId" value="1:909050672051:android:d9d6622aea754bc54951c6" />
+                  <option name="mobileSdkAppId" value="1:909050672051:android:fb006f6b30159d464951c6" />
                   <option name="projectId" value="codarc-events" />
                   <option name="projectNumber" value="909050672051" />
                 </ConnectionSetting>
