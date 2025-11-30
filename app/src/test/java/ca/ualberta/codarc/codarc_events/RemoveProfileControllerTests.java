@@ -47,7 +47,7 @@ public class RemoveProfileControllerTests {
 
         AdminRemoveProfileController.RemoveProfileResult res = resCap.getValue();
         assertFalse(res.isSuccess());
-        assertEquals("Entrant device ID is required", res.getErrorMessage());
+        assertEquals("deviceId cannot be null or empty", res.getErrorMessage());
 
         verifyNoInteractions(mockUserDb, mockEntrantDb, mockEventDb);
     }
@@ -64,7 +64,7 @@ public class RemoveProfileControllerTests {
 
         AdminRemoveProfileController.RemoveProfileResult res = resCap.getValue();
         assertFalse(res.isSuccess());
-        assertEquals("Admin device ID is required", res.getErrorMessage());
+        assertEquals("adminDeviceId cannot be null or empty", res.getErrorMessage());
 
         verifyNoInteractions(mockUserDb, mockEntrantDb, mockEventDb);
     }
@@ -118,16 +118,7 @@ public class RemoveProfileControllerTests {
         when(adminUser.isAdmin()).thenReturn(true);
         userCap.getValue().onSuccess(adminUser); // no Log in this path
 
-        // 2) Entrant exists
-        @SuppressWarnings("unchecked")
-        ArgumentCaptor<EntrantDB.Callback<Entrant>> entrantCap =
-                ArgumentCaptor.forClass(EntrantDB.Callback.class);
-        verify(mockEntrantDb).getProfile(eq("dev1"), entrantCap.capture());
-
-        Entrant entrant = new Entrant();
-        entrantCap.getValue().onSuccess(entrant); // onSuccess path has no Log
-
-        // 3) Entrant events list
+        // 2) Entrant events list (DeleteOwnProfileController goes directly to getEntrantEvents)
         @SuppressWarnings("unchecked")
         ArgumentCaptor<EntrantDB.Callback<List<String>>> eventsCap =
                 ArgumentCaptor.forClass(EntrantDB.Callback.class);

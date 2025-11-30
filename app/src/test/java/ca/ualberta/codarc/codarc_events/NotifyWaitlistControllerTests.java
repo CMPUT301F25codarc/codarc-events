@@ -77,7 +77,7 @@ public class NotifyWaitlistControllerTests {
         ArgumentCaptor<Exception> exCap = ArgumentCaptor.forClass(Exception.class);
         verify(cb).onError(exCap.capture());
         assertTrue(exCap.getValue() instanceof IllegalArgumentException);
-        assertEquals("eventId is empty", exCap.getValue().getMessage());
+        assertEquals("eventId cannot be null or empty", exCap.getValue().getMessage());
 
         verifyNoInteractions(mockEventDb, mockEntrantDb);
     }
@@ -163,7 +163,20 @@ public class NotifyWaitlistControllerTests {
 
         waitCap.getValue().onSuccess(waitlist);
 
-        // 2) verify notifications are sent for each device
+        // 2) verify notification preferences are checked for each device
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<EntrantDB.Callback<Boolean>> prefCap =
+                ArgumentCaptor.forClass(EntrantDB.Callback.class);
+        verify(mockEntrantDb, times(2)).getNotificationPreference(
+                anyString(), prefCap.capture()
+        );
+        
+        // Simulate both users have notifications enabled
+        for (EntrantDB.Callback<Boolean> prefCb : prefCap.getAllValues()) {
+            prefCb.onSuccess(true);
+        }
+
+        // 3) verify notifications are sent for each device
         ArgumentCaptor<String> deviceIdCap = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<EntrantDB.Callback<Void>> notifCap =
                 ArgumentCaptor.forClass(EntrantDB.Callback.class);
@@ -217,6 +230,18 @@ public class NotifyWaitlistControllerTests {
 
         waitCap.getValue().onSuccess(waitlist);
 
+        // the code immediately counts the null deviceId entry as failed,
+        // then checks notification preference for the valid one
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<EntrantDB.Callback<Boolean>> prefCap =
+                ArgumentCaptor.forClass(EntrantDB.Callback.class);
+        verify(mockEntrantDb).getNotificationPreference(
+                eq("dev1"), prefCap.capture()
+        );
+        
+        // Simulate user has notifications enabled
+        prefCap.getValue().onSuccess(true);
+
         // valid entry still triggers addNotification once
         ArgumentCaptor<String> deviceIdCap = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<EntrantDB.Callback<Void>> notifCap =
@@ -230,9 +255,12 @@ public class NotifyWaitlistControllerTests {
                 notifCap.capture()
         );
         assertEquals("dev1", deviceIdCap.getValue());
+        
+        // Trigger the notification callback to complete the NotificationSender
+        notifCap.getValue().onSuccess(null);
 
-        // The controller calls the callback once when the null device entry is processed.
-        // At that moment completed = 1 and failed = 1.
+        // The controller calls the callback when all notifications complete.
+        // null deviceId = 1 failed, valid notification = 1 success
         ArgumentCaptor<Integer> notifiedCap = ArgumentCaptor.forClass(Integer.class);
         ArgumentCaptor<Integer> failedCap = ArgumentCaptor.forClass(Integer.class);
 

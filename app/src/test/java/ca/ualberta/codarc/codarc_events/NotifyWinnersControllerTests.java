@@ -76,7 +76,7 @@ public class NotifyWinnersControllerTests {
         verify(cb).onError(exCap.capture());
 
         assertTrue(exCap.getValue() instanceof IllegalArgumentException);
-        assertEquals("eventId is empty", exCap.getValue().getMessage());
+        assertEquals("eventId cannot be null or empty", exCap.getValue().getMessage());
 
         verifyNoInteractions(mockEventDb, mockEntrantDb);
     }
@@ -162,7 +162,7 @@ public class NotifyWinnersControllerTests {
 
         winnersCap.getValue().onSuccess(winners);
 
-        // 2) verify notifications
+        // 2) verify notifications (winners skip preference check)
         ArgumentCaptor<String> deviceIdCap = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<EntrantDB.Callback<Void>> notifCap =
                 ArgumentCaptor.forClass(EntrantDB.Callback.class);
@@ -179,7 +179,7 @@ public class NotifyWinnersControllerTests {
         assertTrue(deviceIds.contains("dev1"));
         assertTrue(deviceIds.contains("dev2"));
 
-        // 3) simulate notification success
+        // 3) simulate notification success (must trigger callbacks for NotificationSender to complete)
         for (EntrantDB.Callback<Void> cbNotif : notifCap.getAllValues()) {
             cbNotif.onSuccess(null);
         }
@@ -216,7 +216,8 @@ public class NotifyWinnersControllerTests {
 
         winnersCap.getValue().onSuccess(winners);
 
-        // valid one still calls addNotification once
+        // null deviceId entry is immediately counted as failed,
+        // valid one still calls addNotification once (winners skip preference check)
         ArgumentCaptor<String> deviceIdCap = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<EntrantDB.Callback<Void>> notifCap =
                 ArgumentCaptor.forClass(EntrantDB.Callback.class);
@@ -228,9 +229,14 @@ public class NotifyWinnersControllerTests {
                 eq("winners_broadcast"),
                 notifCap.capture()
         );
+        
         assertEquals("dev1", deviceIdCap.getValue());
+        
+        // Trigger the notification callback to complete the NotificationSender
+        notifCap.getValue().onSuccess(null);
 
-        // callback is fired when the null-entry branch runs
+        // The controller calls the callback when all notifications complete.
+        // null deviceId = 1 failed, valid notification = 1 success
         ArgumentCaptor<Integer> notifiedCap = ArgumentCaptor.forClass(Integer.class);
         ArgumentCaptor<Integer> failedCap = ArgumentCaptor.forClass(Integer.class);
 

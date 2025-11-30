@@ -77,7 +77,7 @@ public class NotifyCancelledControllerTests {
         ArgumentCaptor<Exception> exCap = ArgumentCaptor.forClass(Exception.class);
         verify(cb).onError(exCap.capture());
         assertTrue(exCap.getValue() instanceof IllegalArgumentException);
-        assertEquals("eventId is empty", exCap.getValue().getMessage());
+        assertEquals("eventId cannot be null or empty", exCap.getValue().getMessage());
 
         verifyNoInteractions(mockEventDb, mockEntrantDb);
     }
@@ -163,7 +163,20 @@ public class NotifyCancelledControllerTests {
 
         cancelCap.getValue().onSuccess(cancelled);
 
-        // 2) verify notifications are sent for each device
+        // 2) verify notification preferences are checked for each device
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<EntrantDB.Callback<Boolean>> prefCap =
+                ArgumentCaptor.forClass(EntrantDB.Callback.class);
+        verify(mockEntrantDb, times(2)).getNotificationPreference(
+                anyString(), prefCap.capture()
+        );
+        
+        // Simulate both users have notifications enabled
+        for (EntrantDB.Callback<Boolean> prefCb : prefCap.getAllValues()) {
+            prefCb.onSuccess(true);
+        }
+
+        // 3) verify notifications are sent for each device
         ArgumentCaptor<String> deviceIdCap = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<EntrantDB.Callback<Void>> notifCap =
                 ArgumentCaptor.forClass(EntrantDB.Callback.class);
@@ -217,7 +230,18 @@ public class NotifyCancelledControllerTests {
 
         cancelCap.getValue().onSuccess(cancelled);
 
-        // the code immediately counts the null deviceId entry as failed and completed,
+        // the code immediately counts the null deviceId entry as failed,
+        // then checks notification preference for the valid one
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<EntrantDB.Callback<Boolean>> prefCap =
+                ArgumentCaptor.forClass(EntrantDB.Callback.class);
+        verify(mockEntrantDb).getNotificationPreference(
+                eq("dev1"), prefCap.capture()
+        );
+        
+        // Simulate user has notifications enabled
+        prefCap.getValue().onSuccess(true);
+
         // then proceeds to call addNotification for the valid one
         ArgumentCaptor<String> deviceIdCap = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<EntrantDB.Callback<Void>> notifCap =
@@ -231,10 +255,12 @@ public class NotifyCancelledControllerTests {
                 notifCap.capture()
         );
         assertEquals("dev1", deviceIdCap.getValue());
+        
+        // Trigger the notification callback to complete the NotificationSender
+        notifCap.getValue().onSuccess(null);
 
-        // we do not need to trigger the notif callback for this test,
-        // because the controller already called NotifyCancelledCallback based on the null entry
-
+        // The controller calls the callback when all notifications complete.
+        // null deviceId = 1 failed, valid notification = 1 success
         ArgumentCaptor<Integer> notifiedCap = ArgumentCaptor.forClass(Integer.class);
         ArgumentCaptor<Integer> failedCap = ArgumentCaptor.forClass(Integer.class);
 

@@ -44,7 +44,7 @@ public class RemoveImageControllerTests {
 
         RemoveImageController.RemoveImageResult res = resCap.getValue();
         assertFalse(res.isSuccess());
-        assertEquals("Event ID is required", res.getErrorMessage());
+        assertEquals("eventId cannot be null or empty", res.getErrorMessage());
 
         verifyNoInteractions(mockUserDb, mockEventDb, mockPosterStorage);
     }
@@ -61,7 +61,7 @@ public class RemoveImageControllerTests {
 
         RemoveImageController.RemoveImageResult res = resCap.getValue();
         assertFalse(res.isSuccess());
-        assertEquals("Admin device ID is required", res.getErrorMessage());
+        assertEquals("adminDeviceId cannot be null or empty", res.getErrorMessage());
 
         verifyNoInteractions(mockUserDb, mockEventDb, mockPosterStorage);
     }
