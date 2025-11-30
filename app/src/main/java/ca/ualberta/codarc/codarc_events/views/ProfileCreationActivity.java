@@ -86,6 +86,7 @@ public class ProfileCreationActivity extends AppCompatActivity {
     /**
      * Loads existing profile info from Firestore and fills input fields.
      * If no profile exists, fields remain empty for new profile creation.
+     * Checks if user is banned and shows appropriate message.
      */
     private void loadProfile() {
         if (nameEt == null || emailEt == null || phoneEt == null) {
@@ -94,6 +95,13 @@ public class ProfileCreationActivity extends AppCompatActivity {
         entrantDB.getProfile(deviceId, new EntrantDB.Callback<Entrant>() {
             @Override
             public void onSuccess(Entrant entrant) {
+                // Check if user is banned (entrant can be null but document might exist with banned flag)
+                if (entrant != null && entrant.isBanned()) {
+                    showBannedMessage();
+                    return;
+                }
+                
+                // If entrant exists and is not banned, load profile data
                 if (entrant != null) {
                     if (entrant.getName() != null) {
                         nameEt.setText(entrant.getName());
@@ -105,13 +113,46 @@ public class ProfileCreationActivity extends AppCompatActivity {
                         phoneEt.setText(entrant.getPhone());
                     }
                 }
+                // If entrant is null, fields remain empty for new profile creation
             }
 
             @Override
             public void onError(@androidx.annotation.NonNull Exception e) {
-                // Profile might not exist yet — ignore. User will create one.
+                // Profile might not exist yet - allow user to create one
+                // getProfile() already handles banned check via isBanned() internally
             }
         });
+    }
+
+    /**
+     * Shows a message indicating the user is banned and disables profile editing.
+     */
+    private void showBannedMessage() {
+        if (saveBtn != null) {
+            saveBtn.setEnabled(false);
+        }
+        if (deleteBtn != null) {
+            deleteBtn.setEnabled(false);
+        }
+        if (nameEt != null) {
+            nameEt.setEnabled(false);
+        }
+        if (emailEt != null) {
+            emailEt.setEnabled(false);
+        }
+        if (phoneEt != null) {
+            phoneEt.setEnabled(false);
+        }
+        
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.profile_banned_title)
+                .setMessage(R.string.profile_banned_message)
+                .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+                    finish();
+                    overridePendingTransition(android.R.anim.slide_in_left, android.R.anim.slide_out_right);
+                })
+                .setCancelable(false)
+                .show();
     }
 
     /**
@@ -127,43 +168,95 @@ public class ProfileCreationActivity extends AppCompatActivity {
         if (nameEt == null || emailEt == null || phoneEt == null) {
             return;
         }
+        
+        // First check if user is banned
+        entrantDB.isBanned(deviceId, new EntrantDB.Callback<Boolean>() {
+            @Override
+            public void onSuccess(Boolean isBanned) {
+                if (isBanned != null && isBanned) {
+                    showBannedMessage();
+                    return;
+                }
+                
+                // Not banned, proceed with profile creation/update
+                proceedWithSaveOrUpdate();
+            }
+
+            @Override
+            public void onError(@androidx.annotation.NonNull Exception e) {
+                // If check fails, allow user to proceed (graceful degradation)
+                proceedWithSaveOrUpdate();
+            }
+        });
+    }
+
+    /**
+     * Proceeds with saving or updating the profile after ban check.
+     */
+    private void proceedWithSaveOrUpdate() {
+        if (nameEt == null || emailEt == null || phoneEt == null) {
+            return;
+        }
         String name = nameEt.getText().toString().trim();
         String email = emailEt.getText().toString().trim();
         String phone = phoneEt.getText().toString().trim();
 
         if (TextUtils.isEmpty(name)) {
-            nameEt.setError("Name required");
+            nameEt.setError(getString(R.string.profile_name_required));
             return;
         }
         if (TextUtils.isEmpty(email) || !Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-            emailEt.setError("Valid email required");
+            emailEt.setError(getString(R.string.profile_email_required));
             return;
         }
 
-        Entrant entrant = new Entrant(deviceId, name, System.currentTimeMillis());
-        entrant.setEmail(email);
-        entrant.setPhone(phone);
-        entrant.setIsRegistered(true);
-
-        saveBtn.setEnabled(false);
-        
-        // Check if this is first time creating profile
-        entrantDB.entrantExists(deviceId, new EntrantDB.Callback<Boolean>() {
+        // Get existing profile to preserve banned flag
+        entrantDB.getProfile(deviceId, new EntrantDB.Callback<Entrant>() {
             @Override
-            public void onSuccess(Boolean exists) {
-                if (!exists) {
-                    // First time - create Entrant and set isEntrant flag in Users
-                    createNewEntrantProfile(entrant);
-                } else {
-                    // Already exists - just update
-                    updateExistingEntrantProfile(entrant);
+            public void onSuccess(Entrant existing) {
+                Entrant entrant = new Entrant(deviceId, name, 
+                    existing != null ? existing.getCreatedAtUtc() : System.currentTimeMillis());
+                entrant.setEmail(email);
+                entrant.setPhone(phone);
+                entrant.setIsRegistered(true);
+                // Preserve banned flag - if banned, it should stay banned
+                if (existing != null && existing.isBanned()) {
+                    entrant.setBanned(true);
                 }
+
+                saveBtn.setEnabled(false);
+                
+                // Check if this is first time creating profile
+                entrantDB.entrantExists(deviceId, new EntrantDB.Callback<Boolean>() {
+                    @Override
+                    public void onSuccess(Boolean exists) {
+                        if (!exists) {
+                            // First time - create Entrant and set isEntrant flag in Users
+                            createNewEntrantProfile(entrant);
+                        } else {
+                            // Already exists - just update
+                            updateExistingEntrantProfile(entrant);
+                        }
+                    }
+
+                    @Override
+                    public void onError(@androidx.annotation.NonNull Exception e) {
+                        // If check fails, try to upsert anyway
+                        updateExistingEntrantProfile(entrant);
+                    }
+                });
             }
 
             @Override
             public void onError(@androidx.annotation.NonNull Exception e) {
-                // If check fails, try to upsert anyway
-                updateExistingEntrantProfile(entrant);
+                // Profile doesn't exist, create new one
+                Entrant entrant = new Entrant(deviceId, name, System.currentTimeMillis());
+                entrant.setEmail(email);
+                entrant.setPhone(phone);
+                entrant.setIsRegistered(true);
+                
+                saveBtn.setEnabled(false);
+                createNewEntrantProfile(entrant);
             }
         });
     }

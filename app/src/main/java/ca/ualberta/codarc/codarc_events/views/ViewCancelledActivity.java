@@ -1,17 +1,22 @@
 package ca.ualberta.codarc.codarc_events.views;
 
-import android.app.AlertDialog;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
-import android.widget.Button;
+import android.view.LayoutInflater;
+import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.Timestamp;
 
 import java.util.ArrayList;
@@ -23,6 +28,7 @@ import java.util.Map;
 import ca.ualberta.codarc.codarc_events.R;
 import ca.ualberta.codarc.codarc_events.adapters.CancelledAdapter;
 import ca.ualberta.codarc.codarc_events.adapters.WaitlistAdapter;
+import ca.ualberta.codarc.codarc_events.controllers.NotifyCancelledController;
 import ca.ualberta.codarc.codarc_events.data.EntrantDB;
 import ca.ualberta.codarc.codarc_events.data.EventDB;
 import ca.ualberta.codarc.codarc_events.models.Entrant;
@@ -39,10 +45,10 @@ public class ViewCancelledActivity extends AppCompatActivity {
     private TextView emptyState;
     private EventDB eventDB;
     private EntrantDB entrantDB;
+    private NotifyCancelledController notifyController;
     private String eventId;
     private List<WaitlistAdapter.WaitlistItem> itemList;
-    private Button notifyButton;
-    private boolean isNotifying;
+    private MaterialButton btnNotifyCancelled;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -58,20 +64,18 @@ public class ViewCancelledActivity extends AppCompatActivity {
 
         eventDB = new EventDB();
         entrantDB = new EntrantDB();
+        notifyController = new NotifyCancelledController(eventDB, entrantDB);
         itemList = new ArrayList<>();
 
         recyclerView = findViewById(R.id.rv_entrants);
         emptyState = findViewById(R.id.tv_empty_state);
-        notifyButton = findViewById(R.id.btn_notify_cancelled);
+        btnNotifyCancelled = findViewById(R.id.btn_notify_cancelled);
 
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         adapter = new CancelledAdapter(itemList, deviceId -> showReplaceDialog(deviceId));
         recyclerView.setAdapter(adapter);
 
-        if (notifyButton != null) {
-            notifyButton.setOnClickListener(v -> notifyCancelledEntrants());
-        }
-        updateNotifyButtonState();
+        setupNotifyButton();
 
         verifyOrganizerAccess();
         loadCancelled();
@@ -107,9 +111,11 @@ public class ViewCancelledActivity extends AppCompatActivity {
             public void onSuccess(List<Map<String, Object>> entries) {
                 if (entries == null || entries.isEmpty()) {
                     showEmptyState();
+                    updateNotifyButtonState(0);
                     return;
                 }
 
+                updateNotifyButtonState(entries.size());
                 fetchEntrantNames(entries);
             }
 
@@ -117,6 +123,7 @@ public class ViewCancelledActivity extends AppCompatActivity {
             public void onError(@NonNull Exception e) {
                 Log.e("ViewCancelledActivity", "Failed to load cancelled entrants", e);
                 Toast.makeText(ViewCancelledActivity.this, "Failed to load cancelled entrants", Toast.LENGTH_SHORT).show();
+                updateNotifyButtonState(0);
             }
         });
     }
@@ -244,67 +251,108 @@ public class ViewCancelledActivity extends AppCompatActivity {
     private void showEmptyState() {
         recyclerView.setVisibility(android.view.View.GONE);
         emptyState.setVisibility(android.view.View.VISIBLE);
-        updateNotifyButtonState();
     }
 
     private void hideEmptyState() {
         recyclerView.setVisibility(android.view.View.VISIBLE);
         emptyState.setVisibility(android.view.View.GONE);
-        updateNotifyButtonState();
     }
 
-    private void notifyCancelledEntrants() {
-        if (itemList == null || itemList.isEmpty()) {
-            Toast.makeText(this, R.string.notification_none_available, Toast.LENGTH_SHORT).show();
-            return;
-        }
+    /**
+     * Sets up the notify button click listener.
+     */
+    private void setupNotifyButton() {
+        btnNotifyCancelled.setOnClickListener(v -> showNotifyDialog());
+    }
 
-        isNotifying = true;
-        updateNotifyButtonState();
+    /**
+     * Updates the notify button state based on cancelled entrants count.
+     * Button is enabled when cancelled entrants exist, disabled when empty.
+     *
+     * @param cancelledCount the number of cancelled entrants
+     */
+    private void updateNotifyButtonState(int cancelledCount) {
+        if (btnNotifyCancelled == null) return;
+        btnNotifyCancelled.setEnabled(cancelledCount > 0);
+    }
 
-        final int total = itemList.size();
-        final int[] completed = {0};
-        final int[] failed = {0};
-        String message = getString(R.string.notification_message_cancelled);
+    /**
+     * Shows the dialog for composing and sending notification to cancelled entrants.
+     */
+    private void showNotifyDialog() {
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_notify_cancelled, null);
+        TextInputEditText etMessage = dialogView.findViewById(R.id.et_message);
+        TextView tvCharCount = dialogView.findViewById(R.id.tv_char_count);
 
-        for (WaitlistAdapter.WaitlistItem item : itemList) {
-            entrantDB.addNotification(item.getDeviceId(), eventId, message, "cancelled", new EntrantDB.Callback<Void>() {
-                @Override
-                public void onSuccess(Void value) {
-                    handleNotificationCompletion(completed, failed, total, R.string.notification_sent_cancelled);
-                }
+        // Update character counter as user types
+        etMessage.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                // Not needed
+            }
 
-                @Override
-                public void onError(@NonNull Exception e) {
-                    failed[0]++;
-                    handleNotificationCompletion(completed, failed, total, R.string.notification_sent_cancelled);
-                }
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                int length = s != null ? s.length() : 0;
+                tvCharCount.setText(length + "/500");
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                // Not needed
+            }
+        });
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setView(dialogView)
+                .setPositiveButton("Send", null)
+                .setNegativeButton("Cancel", (d, w) -> d.dismiss())
+                .create();
+
+        // Override positive button to validate before dismissing
+        dialog.setOnShowListener(dialogInterface -> {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+                String message = etMessage.getText() != null ? etMessage.getText().toString() : "";
+                handleNotifyCancelled(message, dialog);
             });
-        }
+        });
+
+        dialog.show();
     }
 
-    private void handleNotificationCompletion(int[] completed, int[] failed, int total, int successMessageRes) {
-        completed[0]++;
-        if (completed[0] == total) {
-            runOnUiThread(() -> {
-                isNotifying = false;
-                updateNotifyButtonState();
-                if (failed[0] == 0) {
-                    Toast.makeText(ViewCancelledActivity.this, successMessageRes, Toast.LENGTH_SHORT).show();
-                } else if (failed[0] == total) {
-                    Toast.makeText(ViewCancelledActivity.this, R.string.notification_all_failed, Toast.LENGTH_SHORT).show();
+    /**
+     * Handles sending notification to cancelled entrants.
+     * Delegates to controller for business logic.
+     *
+     * @param message the notification message
+     * @param dialog the dialog to dismiss on success
+     */
+    private void handleNotifyCancelled(String message, AlertDialog dialog) {
+        notifyController.notifyCancelled(eventId, message, new NotifyCancelledController.NotifyCancelledCallback() {
+            @Override
+            public void onSuccess(int notifiedCount, int failedCount) {
+                dialog.dismiss();
+                String resultMessage;
+                if (failedCount == 0) {
+                    resultMessage = "Notification sent to " + notifiedCount + " entrant(s)";
                 } else {
-                    String message = getString(R.string.notification_partial_failure, failed[0]);
-                    Toast.makeText(ViewCancelledActivity.this, message, Toast.LENGTH_SHORT).show();
+                    resultMessage = "Notification sent to " + notifiedCount + " entrant(s). " +
+                            failedCount + " failed.";
                 }
-            });
-        }
-    }
+                Toast.makeText(ViewCancelledActivity.this, resultMessage, Toast.LENGTH_LONG).show();
+            }
 
-    private void updateNotifyButtonState() {
-        if (notifyButton == null) return;
-        boolean hasEntries = itemList != null && !itemList.isEmpty();
-        notifyButton.setEnabled(hasEntries && !isNotifying);
+            @Override
+            public void onError(@NonNull Exception e) {
+                Log.e("ViewCancelledActivity", "Failed to notify cancelled entrants", e);
+                String errorMessage = e.getMessage();
+                if (errorMessage == null || errorMessage.isEmpty()) {
+                    errorMessage = "Failed to send notification";
+                }
+                Toast.makeText(ViewCancelledActivity.this, errorMessage, Toast.LENGTH_LONG).show();
+                // Keep dialog open on error so user can retry
+            }
+        });
     }
 }
 
