@@ -1,39 +1,23 @@
 package ca.ualberta.codarc.codarc_events;
 
-import ca.ualberta.codarc.codarc_events.controllers.CreateEventController;
-import ca.ualberta.codarc.codarc_events.data.EventDB;
-import ca.ualberta.codarc.codarc_events.models.Event;
-import org.junit.Before;
-import org.junit.Test;
-import org.mockito.ArgumentCaptor;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 
+import ca.ualberta.codarc.codarc_events.controllers.CreateEventController;
+import ca.ualberta.codarc.codarc_events.models.Event;
+
+/**
+ * Unit tests for {@link CreateEventController}.
+ */
 public class CreateEventControllerTests {
-
-    private EventDB mockDb;
-    private CreateEventController controller;
-
-    // Valid baseline inputs
-    private static final String NAME = " Launch Party ";
-    private static final String DESC = "  Free snacks  ";
-    private static final String LOCATION = "  CSC Atrium  ";
-    private static final String EVENT_AT = "2025-12-01T18:00";
-    private static final String REG_OPEN = "2025-11-20T09:00";
-    private static final String REG_CLOSE = "2025-11-29T23:59";
-    private static final String ORGANIZER = "organizer-xyz";
-
-    @Before
-    public void setUp() {
-        mockDb = mock(EventDB.class);
-        controller = new CreateEventController(mockDb, ORGANIZER);
-    }
-
-    // ---------- validateAndCreateEvent: happy path ----------
 
     @Test
     public void validateAndCreateEvent_success_trimsFields_setsGeneratedIdAndQr_openTrue() {
@@ -67,8 +51,6 @@ public class CreateEventControllerTests {
         assertTrue(e.isOpen());
         assertNull(e.getMaxCapacity());
     }
-
-    // ---------- validateAndCreateEvent: required fields ----------
 
     @Test
     public void validateAndCreateEvent_missingName_fails() {
@@ -150,8 +132,6 @@ public class CreateEventControllerTests {
         assertNull(r.getEvent());
     }
 
-    // ---------- validateAndCreateEvent: capacity behavior (as-implemented) ----------
-
     @Test
     public void validateAndCreateEvent_capacity_parsesPositiveInt() {
         var r = controller.validateAndCreateEvent(
@@ -223,7 +203,8 @@ public class CreateEventControllerTests {
         @SuppressWarnings("unchecked")
         EventDB.Callback<Void> cb = mock(EventDB.Callback.class);
 
-        controller.persistEvent(e, cb);
+        boolean canAdd1 = controller.canAddTag("MUSIC", existing);
+        boolean canAdd2 = controller.canAddTag("sports", existing);
 
         ArgumentCaptor<Event> eventCap = ArgumentCaptor.forClass(Event.class);
         @SuppressWarnings("unchecked")
@@ -235,14 +216,11 @@ public class CreateEventControllerTests {
     }
 
     @Test
-    public void persistEvent_nullEvent_callsOnError_andDoesNotTouchDb() {
-        @SuppressWarnings("unchecked")
-        EventDB.Callback<Void> cb = mock(EventDB.Callback.class);
+    public void canAddTag_rejectsNullOrEmpty() {
+        CreateEventController controller = makeController();
 
-        controller.persistEvent(null, cb);
-
-        verify(mockDb, never()).addEvent(any(), any());
-        verify(cb, times(1)).onError(any(IllegalArgumentException.class));
+        assertFalse(controller.canAddTag(null, Collections.emptyList()));
+        assertFalse(controller.canAddTag("   ", Collections.emptyList()));
     }
 
     // ---------- canAddTag ----------
