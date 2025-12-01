@@ -13,19 +13,19 @@
         </DropdownSelection>
         <DialogSelection />
       </SelectionState>
-      <SelectionState runConfigName="EntrantIntentTests">
+      <SelectionState runConfigName="eventBrowser_lotteryCriteriaDialog_showsAndDismisses()">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="landing_continue_opensEventBrowserWithListContainer()">
+      <SelectionState runConfigName="OrganizerIntentTests">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="eventBrowser_canOpenFilterDialog_andSeeControls()">
+      <SelectionState runConfigName="organizer_viewCancelled_clickReplace_showsDialog_thenCancel()">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="profile_fillAndSave_doesNotCrash()">
+      <SelectionState runConfigName="organizer_viewWinners_launches()">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="eventDetails_mockEvent_rendersBasicFields()">
+      <SelectionState runConfigName="organizer_eventSettings_launchesWithMockEvent()">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
     </selectionStates>
