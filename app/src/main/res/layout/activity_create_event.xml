@@ -23,6 +23,7 @@
             app:layout_constraintBottom_toBottomOf="@+id/tv_header"
             app:layout_constraintEnd_toEndOf="@+id/tv_header"
             app:layout_constraintTop_toTopOf="@+id/tv_header"
+            android:visibility="gone"
             app:tint="@color/entrant_action_button_purple" />
 
         <TextView
