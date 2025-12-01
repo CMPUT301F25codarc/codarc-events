@@ -138,52 +138,6 @@ public class ProfileControllerTests {
         assertSame(boom, cb.error);
     }
 
-    // ---------- deleteProfile ----------
-
-    @Test
-    public void deleteProfile_nullDeviceId_onError() {
-        ProfileControllerTests.VoidCb cb = new ProfileControllerTests.VoidCb();
-
-        controller.deleteProfile(null, cb);
-
-        assertTrue(cb.errored);
-        assertTrue(cb.error instanceof IllegalArgumentException);
-        verifyNoInteractions(mockEntrantDb);
-    }
-
-    @Test
-    public void deleteProfile_callsDb_andBubblesSuccess() {
-        ProfileControllerTests.VoidCb cb = new ProfileControllerTests.VoidCb();
-
-        controller.deleteProfile("dev1", cb);
-
-        ArgumentCaptor<EntrantDB.Callback<Void>> cap =
-                ArgumentCaptor.forClass(EntrantDB.Callback.class);
-        verify(mockEntrantDb).deleteProfile(eq("dev1"), eq(false), cap.capture());
-
-        cap.getValue().onSuccess(null);
-
-        assertTrue(cb.succeeded);
-        assertFalse(cb.errored);
-    }
-
-    @Test
-    public void deleteProfile_callsDb_andBubblesError() {
-        ProfileControllerTests.VoidCb cb = new ProfileControllerTests.VoidCb();
-
-        controller.deleteProfile("dev1", cb);
-
-        ArgumentCaptor<EntrantDB.Callback<Void>> cap =
-                ArgumentCaptor.forClass(EntrantDB.Callback.class);
-        verify(mockEntrantDb).deleteProfile(eq("dev1"), eq(false), cap.capture());
-
-        Exception oof = new Exception("nope");
-        cap.getValue().onError(oof);
-
-        assertTrue(cb.errored);
-        assertSame(oof, cb.error);
-    }
-
     private static class VoidCb implements EntrantDB.Callback<Void> {
         boolean succeeded = false;
         boolean errored = false;

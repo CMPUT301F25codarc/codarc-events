@@ -5,7 +5,6 @@ import androidx.annotation.NonNull;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.SetOptions;
 
 import ca.ualberta.codarc.codarc_events.models.User;
 import ca.ualberta.codarc.codarc_events.utils.ValidationHelper;

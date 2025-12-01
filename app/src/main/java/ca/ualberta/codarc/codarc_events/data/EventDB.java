@@ -983,24 +983,6 @@ public class EventDB {
                 })
                 .addOnFailureListener(cb::onError);
     }
-    
-    public void getReplacementPoolCount(String eventId, Callback<Integer> cb) {
-        try {
-            ValidationHelper.requireNonEmpty(eventId, "eventId");
-        } catch (IllegalArgumentException e) {
-            cb.onError(e);
-            return;
-        }
-        
-        db.collection("events").document(eventId)
-                .collection("replacementPool")
-                .get()
-                .addOnSuccessListener(querySnapshot -> {
-                    int count = querySnapshot != null ? querySnapshot.size() : 0;
-                    cb.onSuccess(count);
-                })
-                .addOnFailureListener(cb::onError);
-    }
 
     // The following function is from Anthropic Claude Sonnet 4.5, "How to query multiple Firestore collections in parallel and combine results?", 2024-01-15
     /**

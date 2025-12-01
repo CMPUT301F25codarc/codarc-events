@@ -103,21 +103,5 @@ public class ProfileController {
         }
         entrantDB.upsertProfile(deviceId, entrant, callback);
     }
-
-    /**
-     * Clears profile.
-     *
-     * @param deviceId the device ID
-     * @param callback callback for completion
-     * @deprecated Use DeleteOwnProfileController for self-removal
-     */
-    @Deprecated
-    public void deleteProfile(String deviceId, EntrantDB.Callback<Void> callback) {
-        if (deviceId == null || deviceId.isEmpty()) {
-            callback.onError(new IllegalArgumentException("Device ID cannot be null or empty"));
-            return;
-        }
-        entrantDB.deleteProfile(deviceId, false, callback);
-    }
 }
 
