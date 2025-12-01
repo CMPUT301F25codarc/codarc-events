@@ -3,6 +3,7 @@ package ca.ualberta.codarc.codarc_events.views;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -71,6 +72,12 @@ public class ViewCancelledActivity extends BaseEntrantListActivity {
         notifyController = new NotifyCancelledController(eventDB, entrantDB, fcmHelper);
         btnNotifyCancelled = findViewById(R.id.btn_notify_cancelled);
         setupNotifyButton();
+        setupBackButton();
+    }
+
+    private void setupBackButton() {
+        ImageButton backButton = findViewById(R.id.btn_back);
+        backButton.setOnClickListener(v -> finish());
     }
 
     private FCMHelper createFCMHelperIfConfigured() {

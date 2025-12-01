@@ -13,6 +13,18 @@
         android:padding="@dimen/activity_margin">
 
         <!-- Header -->
+        <ImageButton
+            android:id="@+id/btn_back"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/back"
+            android:src="@drawable/ic_arrow_back"
+            app:layout_constraintBottom_toBottomOf="@+id/tv_header"
+            app:layout_constraintEnd_toEndOf="@+id/tv_header"
+            app:layout_constraintTop_toTopOf="@+id/tv_header"
+            app:tint="@color/entrant_action_button_purple" />
+
         <TextView
             android:id="@+id/tv_header"
             android:layout_width="0dp"
