@@ -21,10 +21,6 @@ import ca.ualberta.codarc.codarc_events.utils.ValidationHelper;
 /**
  * Handles registration history retrieval and processing.
  * Fetches event history for entrants and determines selection status.
- * 
- * Note: The complex decision tree logic for determining selection status (checkAccepted → checkCancelled 
- * → checkInvited → checkWaitlisted) was implemented with assistance from Claude Sonnet 4.5 (Anthropic).
- * The sophisticated chained async state determination logic was developed with LLM assistance.
  */
 public class RegistrationHistoryController {
 
@@ -250,6 +246,7 @@ public class RegistrationHistoryController {
         callback.onResult(HistoryResult.success(entries));
     }
 
+    // The following function is from Anthropic Claude Sonnet 4.5, "How do I implement a chained async decision tree to determine selection status (checkAccepted → checkCancelled → checkInvited → checkWaitlisted) in Java with Firestore?", 2024-01-15
     /**
      * Determines the selection status for an entrant in an event.
      *

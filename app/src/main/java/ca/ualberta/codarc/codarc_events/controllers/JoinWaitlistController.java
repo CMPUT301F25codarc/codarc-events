@@ -15,10 +15,6 @@ import ca.ualberta.codarc.codarc_events.utils.ValidationHelper;
 
 /**
  * Handles joining waitlists - validation and business logic.
- * 
- * Note: The complex multi-step validation orchestration (profile check → ban check → already joined 
- * → capacity check → join) was implemented with assistance from GPT 5.1 (OpenAI). The sophisticated
- * async validation chain and error handling logic were developed with LLM assistance.
  */
 public class JoinWaitlistController {
 
@@ -105,6 +101,7 @@ public class JoinWaitlistController {
         joinWaitlist(event, deviceId, null, callback);
     }
 
+    // The following function is from OpenAI GPT 5.1, "How do I implement a multi-step async validation chain (profile check → ban check → already joined → capacity check → join) for waitlist joining in Java?", 2024-01-15
     /**
      * Joins the waitlist for an event with optional location capture.
      *

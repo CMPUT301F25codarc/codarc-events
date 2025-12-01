@@ -13,10 +13,6 @@ import ca.ualberta.codarc.codarc_events.utils.ValidationHelper;
 
 /**
  * Handles invitation accept/decline responses.
- * 
- * Note: The automatic reselection logic with fallback chains (replacement pool → waitlist → log only)
- * was implemented with assistance from Claude Sonnet 4.5 (Anthropic). The sophisticated error handling,
- * state management, and multi-path fallback logic were developed with LLM assistance.
  */
 public class InvitationResponseController {
 
@@ -102,6 +98,7 @@ public class InvitationResponseController {
         });
     }
 
+    // The following function is from Anthropic Claude Sonnet 4.5, "How do I implement automatic reselection with fallback chains (replacement pool → waitlist → log only) when an entrant declines an invitation in Java?", 2024-01-15
     /**
      * Handles automatic reselection when an entrant declines an invitation.
      *

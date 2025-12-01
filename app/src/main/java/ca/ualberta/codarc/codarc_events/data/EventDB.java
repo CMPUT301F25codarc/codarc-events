@@ -25,11 +25,6 @@ import ca.ualberta.codarc.codarc_events.utils.ValidationHelper;
 
 /**
  * Handles Firestore operations for events.
- * 
- * Note: Complex batch operations for marking winners and managing replacement pools
- * (markWinners, markReplacement, promoteReplacementToWinner) were implemented with assistance 
- * from Claude Sonnet 4.5 (Anthropic). The sophisticated batch write operations with multiple
- * subcollection updates and state transitions were developed with LLM assistance.
  */
 public class EventDB {
 
@@ -603,6 +598,7 @@ public class EventDB {
                 .addOnFailureListener(cb::onError);
     }
 
+    // The following function is from Anthropic Claude Sonnet 4.5, "How do I implement complex batch write operations for marking winners and creating replacement pools with multiple Firestore subcollection updates and state transitions in Java?", 2024-01-15
     /**
      * Marks entrants as winners and creates replacement pool.
      *
@@ -1006,14 +1002,10 @@ public class EventDB {
                 .addOnFailureListener(cb::onError);
     }
 
+    // The following function is from Anthropic Claude Sonnet 4.5, "How do I query 4 Firestore collections in parallel and aggregate results with thread-safe coordination and graceful handling of partial failures in Java?", 2024-01-15
     /**
      * Gets all entrants with location data for map display.
      * Aggregates from waitlist, winners, accepted, and cancelled collections.
-     *
-     * Note: The complex async orchestration for querying 4 collections in parallel and aggregating
-     * results using the EntrantLocationAggregator helper class was implemented with assistance from
-     * Claude Sonnet 4.5 (Anthropic). The thread-safe coordination of multiple parallel Firestore queries
-     * and graceful handling of partial failures were developed with LLM assistance.
      *
      * @param eventId the event ID
      * @param callback callback with list of entries including location

@@ -7,10 +7,6 @@ import ca.ualberta.codarc.codarc_events.models.Event;
 
 /**
  * Handles QR code scanning - parsing, validation, and event lookup logic.
- * 
- * Note: QR code parsing and validation logic was implemented with assistance from 
- * Claude Sonnet 4.5 (Anthropic). The prefix-based parsing approach ("event:" prefix)
- * and fallback handling were developed with LLM assistance.
  */
 public class QRScanController {
 
@@ -52,6 +48,7 @@ public class QRScanController {
         }
     }
 
+    // The following function is from Anthropic Claude Sonnet 4.5, "How do I parse a QR code string with an 'event:' prefix and handle invalid formats in Java?", 2024-01-15
     /**
      * Parses an event ID from a QR code string.
      *

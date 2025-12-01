@@ -46,10 +46,6 @@ import ca.ualberta.codarc.codarc_events.utils.TagHelper;
 
 /**
  * Create Event screen that lets organizers fill event info.
- * 
- * Note: The complex async orchestration for poster upload during event creation (create event → 
- * upload poster → update event with poster URL) was implemented with assistance from Claude Sonnet 4.5 (Anthropic).
- * The sophisticated error handling, state management, and multi-step async coordination were developed with LLM assistance.
  */
 public class CreateEventActivity extends AppCompatActivity {
 
@@ -260,6 +256,7 @@ public class CreateEventActivity extends AppCompatActivity {
         });
     }
 
+    // The following function is from Anthropic Claude Sonnet 4.5, "How do I implement complex async orchestration for poster upload during event creation (create event → upload poster → update event with poster URL) with sophisticated error handling and state management in Java?", 2024-01-15
     private void uploadPosterAndUpdateEvent(Event event) {
         posterStorage.uploadPoster(event.getId(), selectedImageUri, new PosterStorage.Callback<String>() {
             @Override

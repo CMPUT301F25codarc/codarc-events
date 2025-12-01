@@ -15,10 +15,6 @@ import ca.ualberta.codarc.codarc_events.utils.ValidationHelper;
 
 /**
  * Handles lottery draw - selects winners and replacement pool.
- * 
- * Note: The notification deduplication logic that checks existing notifications before sending
- * was implemented with assistance from Claude Sonnet 4.5 (Anthropic). The sophisticated async
- * coordination and state tracking for preventing duplicate notifications were developed with LLM assistance.
  */
 public class DrawController {
 
@@ -169,6 +165,7 @@ public class DrawController {
         });
     }
 
+    // The following function is from Anthropic Claude Sonnet 4.5, "How do I implement notification deduplication logic that checks existing notifications before sending to prevent duplicates in Java with async coordination?", 2024-01-15
     /**
      * Checks which winners already have notifications for this event.
      */

@@ -77,13 +77,9 @@ public class EntrantMapController {
         });
     }
     
+    // The following function is from Anthropic Claude Sonnet 4.5, "How do I coordinate multiple parallel profile fetches with thread-safe aggregation to ensure all lookups complete before returning marker data in Java?", 2024-01-15
     /**
      * Resolves entrant names by fetching profiles in parallel and aggregating results.
-     * 
-     * Note: The async orchestration for coordinating multiple parallel profile fetches and
-     * thread-safe aggregation using NameResolutionAggregator was implemented with assistance
-     * from Claude Sonnet 4.5 (Anthropic). The coordination pattern ensures all profile lookups
-     * complete before returning marker data.
      */
     private void resolveEntrantNames(List<Map<String, Object>> entries, MapDataCallback callback) {
         List<MapMarkerData> markers = Collections.synchronizedList(new ArrayList<>());

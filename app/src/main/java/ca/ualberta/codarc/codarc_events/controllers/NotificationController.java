@@ -303,15 +303,10 @@ public class NotificationController {
         }
     }
 
+    // The following function is from Anthropic Claude Sonnet 4.5, "How do I implement FCM token fetching and aggregation logic with thread-safe token collection and coordination of multiple async token fetches in Java?", 2024-01-15
     /**
      * Sends FCM push notifications to entrants.
      * Fire-and-forget: errors are logged but don't affect Firestore notification saving.
-     * 
-     * Note: The FCM token fetching and aggregation logic (fetchTokensAndSend and
-     * TokenFetchAggregator) was implemented with assistance from Claude Sonnet 4.5 (Anthropic).
-     * The thread-safe token collection pattern using Collections.synchronizedList() and the
-     * aggregator helper class for coordinating multiple async token fetches were developed
-     * with LLM assistance.
      */
     private void sendFCMPushNotifications(List<Map<String, Object>> entrants,
                                          String eventId, String message,
