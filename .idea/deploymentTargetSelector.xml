@@ -19,13 +19,13 @@
       <SelectionState runConfigName="landing_continue_opensEventBrowserWithListContainer()">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="eventBrowser_canOpenQrScannerFromBottomNavAndGetPromptedForPermission()">
-        <option name="selectionMode" value="DROPDOWN" />
-      </SelectionState>
       <SelectionState runConfigName="eventBrowser_canOpenFilterDialog_andSeeControls()">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
       <SelectionState runConfigName="profile_fillAndSave_doesNotCrash()">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+      <SelectionState runConfigName="eventDetails_mockEvent_rendersBasicFields()">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
     </selectionStates>
