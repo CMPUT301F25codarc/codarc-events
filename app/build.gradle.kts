@@ -91,9 +91,9 @@ dependencies {
     androidTestImplementation(libs.espresso.core)
     androidTestImplementation("androidx.test.espresso:espresso-intents:3.6.1")
     /*
-       Author: Frank van Puffelen https://stackoverflow.com/users/209103/frank-van-puffelen
-       Title: java.lang.NoSuchMethodError: No static method registerDefaultInstance with Firebase
-       Answer: https://stackoverflow.com/a/66155176
+       Author: Vladimir Fisher https://stackoverflow.com/users/4975634/vladimir-fisher
+       Title: java.lang.NoSuchMethodError: No static method registerDefaultInstance with Firebase Performance and Espresso Instrumented Tests
+       Answer: https://stackoverflow.com/a/68675881
        Date: 2021-02-11
        License: CC-BY-SA 4.0 (International)
     */
