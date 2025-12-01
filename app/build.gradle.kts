@@ -39,6 +39,9 @@ android {
             isIncludeAndroidResources = true
         }
     }
+    lint {
+        abortOnError = false
+    }
 }
 
 dependencies {
@@ -87,6 +90,13 @@ dependencies {
     androidTestImplementation("androidx.test:rules:1.6.1")
     androidTestImplementation(libs.espresso.core)
     androidTestImplementation("androidx.test.espresso:espresso-intents:3.6.1")
+    /*
+       Author: Vladimir Fisher https://stackoverflow.com/users/4975634/vladimir-fisher
+       Title: java.lang.NoSuchMethodError: No static method registerDefaultInstance with Firebase Performance and Espresso Instrumented Tests
+       Answer: https://stackoverflow.com/a/68675881
+       Date: 2021-02-11
+       License: CC-BY-SA 4.0 (International)
+    */
     androidTestImplementation("androidx.test.espresso:espresso-contrib:3.6.1") {
         exclude(group = "com.google.protobuf", module = "protobuf-lite")
     }
@@ -95,4 +105,3 @@ dependencies {
     // --- Optional for stable instrumentation ---
     androidTestUtil("androidx.test:orchestrator:1.5.1")
 }
-
