@@ -3,6 +3,7 @@ package ca.ualberta.codarc.codarc_events.views;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -73,6 +74,12 @@ public class ViewWinnersActivity extends BaseEntrantListActivity {
         notifyController = new NotifyWinnersController(eventDB, entrantDB, fcmHelper);
         btnNotifyWinners = findViewById(R.id.btn_notify_winners);
         setupNotifyButton();
+        setupBackButton();
+    }
+
+    private void setupBackButton() {
+        ImageButton backButton = findViewById(R.id.btn_back);
+        backButton.setOnClickListener(v -> finish());
     }
 
     private FCMHelper createFCMHelperIfConfigured() {

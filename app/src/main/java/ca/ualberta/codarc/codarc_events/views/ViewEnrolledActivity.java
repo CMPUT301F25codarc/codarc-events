@@ -3,6 +3,7 @@ package ca.ualberta.codarc.codarc_events.views;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -80,6 +81,12 @@ public class ViewEnrolledActivity extends BaseEntrantListActivity {
         btnExportCsv = findViewById(R.id.btn_export_csv);
         setupNotifyButton();
         setupExportButton();
+        setupBackButton();
+    }
+
+    private void setupBackButton() {
+        ImageButton backButton = findViewById(R.id.btn_back);
+        backButton.setOnClickListener(v -> finish());
     }
 
     private FCMHelper createFCMHelperIfConfigured() {

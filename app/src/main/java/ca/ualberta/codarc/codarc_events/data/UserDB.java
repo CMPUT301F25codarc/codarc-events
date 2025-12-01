@@ -124,31 +124,5 @@ public class UserDB {
     public void setOrganizerRole(String deviceId, boolean isOrganizer, Callback<Void> cb) {
         setRole(deviceId, "isOrganizer", isOrganizer, cb);
     }
-    
-    /**
-     * Sets the isAdmin flag.
-     *
-     * @param deviceId the device ID
-     * @param isAdmin true if user is an admin
-     * @param cb callback for completion
-     */
-    public void setAdminRole(String deviceId, boolean isAdmin, Callback<Void> cb) {
-        setRole(deviceId, "isAdmin", isAdmin, cb);
-    }
-    
-    public void updateUser(User user, Callback<Void> cb) {
-        try {
-            ValidationHelper.requireNonNull(user, "user");
-            ValidationHelper.requireNonEmpty(user.getDeviceId(), "user.deviceId");
-        } catch (IllegalArgumentException e) {
-            cb.onError(e);
-            return;
-        }
-        
-        db.collection("users").document(user.getDeviceId())
-            .set(user, SetOptions.merge())
-            .addOnSuccessListener(unused -> cb.onSuccess(null))
-            .addOnFailureListener(cb::onError);
-    }
 }
 
