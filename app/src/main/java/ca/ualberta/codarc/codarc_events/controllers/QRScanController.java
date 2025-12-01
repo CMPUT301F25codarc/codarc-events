@@ -48,7 +48,7 @@ public class QRScanController {
         }
     }
 
-    // The following function is from Anthropic Claude Sonnet 4.5, "How do I parse a QR code string with an 'event:' prefix and handle invalid formats in Java?", 2024-01-15
+    // The following function is from Anthropic Claude Sonnet 4.5, "How to parse QR code with event: prefix?", 2024-01-15
     /**
      * Parses an event ID from a QR code string.
      *

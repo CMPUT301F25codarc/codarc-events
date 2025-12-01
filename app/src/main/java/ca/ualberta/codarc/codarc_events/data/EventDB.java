@@ -598,7 +598,7 @@ public class EventDB {
                 .addOnFailureListener(cb::onError);
     }
 
-    // The following function is from Anthropic Claude Sonnet 4.5, "How do I implement complex batch write operations for marking winners and creating replacement pools with multiple Firestore subcollection updates and state transitions in Java?", 2024-01-15
+    // The following function is from Anthropic Claude Sonnet 4.5, "How to batch update multiple Firestore subcollections for winners and replacement pool?", 2024-01-15
     /**
      * Marks entrants as winners and creates replacement pool.
      *
@@ -1002,7 +1002,7 @@ public class EventDB {
                 .addOnFailureListener(cb::onError);
     }
 
-    // The following function is from Anthropic Claude Sonnet 4.5, "How do I query 4 Firestore collections in parallel and aggregate results with thread-safe coordination and graceful handling of partial failures in Java?", 2024-01-15
+    // The following function is from Anthropic Claude Sonnet 4.5, "How to query multiple Firestore collections in parallel and combine results?", 2024-01-15
     /**
      * Gets all entrants with location data for map display.
      * Aggregates from waitlist, winners, accepted, and cancelled collections.

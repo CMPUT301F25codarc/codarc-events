@@ -77,7 +77,7 @@ public class EntrantMapController {
         });
     }
     
-    // The following function is from Anthropic Claude Sonnet 4.5, "How do I coordinate multiple parallel profile fetches with thread-safe aggregation to ensure all lookups complete before returning marker data in Java?", 2024-01-15
+    // The following function is from Anthropic Claude Sonnet 4.5, "How to fetch multiple profiles in parallel and wait for all to complete?", 2024-01-15
     /**
      * Resolves entrant names by fetching profiles in parallel and aggregating results.
      */

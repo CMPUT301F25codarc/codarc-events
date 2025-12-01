@@ -101,7 +101,7 @@ public class JoinWaitlistController {
         joinWaitlist(event, deviceId, null, callback);
     }
 
-    // The following function is from OpenAI GPT 5.1, "How do I implement a multi-step async validation chain (profile check → ban check → already joined → capacity check → join) for waitlist joining in Java?", 2024-01-15
+    // The following function is from OpenAI GPT 5.1, "How to validate multiple checks before joining waitlist?", 2024-01-15
     /**
      * Joins the waitlist for an event with optional location capture.
      *

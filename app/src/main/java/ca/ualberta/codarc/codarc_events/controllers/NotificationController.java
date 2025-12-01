@@ -303,7 +303,7 @@ public class NotificationController {
         }
     }
 
-    // The following function is from Anthropic Claude Sonnet 4.5, "How do I implement FCM token fetching and aggregation logic with thread-safe token collection and coordination of multiple async token fetches in Java?", 2024-01-15
+    // The following function is from Anthropic Claude Sonnet 4.5, "How to fetch FCM tokens for multiple users in parallel?", 2024-01-15
     /**
      * Sends FCM push notifications to entrants.
      * Fire-and-forget: errors are logged but don't affect Firestore notification saving.

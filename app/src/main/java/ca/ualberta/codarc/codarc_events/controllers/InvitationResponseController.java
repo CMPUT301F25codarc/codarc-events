@@ -98,7 +98,7 @@ public class InvitationResponseController {
         });
     }
 
-    // The following function is from Anthropic Claude Sonnet 4.5, "How do I implement automatic reselection with fallback chains (replacement pool → waitlist → log only) when an entrant declines an invitation in Java?", 2024-01-15
+    // The following function is from Anthropic Claude Sonnet 4.5, "How to automatically select replacement when entrant declines?", 2024-01-15
     /**
      * Handles automatic reselection when an entrant declines an invitation.
      *

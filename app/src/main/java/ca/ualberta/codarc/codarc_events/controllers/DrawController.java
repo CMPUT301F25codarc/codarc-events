@@ -165,7 +165,7 @@ public class DrawController {
         });
     }
 
-    // The following function is from Anthropic Claude Sonnet 4.5, "How do I implement notification deduplication logic that checks existing notifications before sending to prevent duplicates in Java with async coordination?", 2024-01-15
+    // The following function is from Anthropic Claude Sonnet 4.5, "How to check for duplicate notifications before sending?", 2024-01-15
     /**
      * Checks which winners already have notifications for this event.
      */
