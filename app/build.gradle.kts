@@ -90,6 +90,13 @@ dependencies {
     androidTestImplementation("androidx.test:rules:1.6.1")
     androidTestImplementation(libs.espresso.core)
     androidTestImplementation("androidx.test.espresso:espresso-intents:3.6.1")
+    /*
+       Author: Frank van Puffelen https://stackoverflow.com/users/209103/frank-van-puffelen
+       Title: java.lang.NoSuchMethodError: No static method registerDefaultInstance with Firebase
+       Answer: https://stackoverflow.com/a/66155176
+       Date: 2021-02-11
+       License: CC-BY-SA 4.0 (International)
+    */
     androidTestImplementation("androidx.test.espresso:espresso-contrib:3.6.1") {
         exclude(group = "com.google.protobuf", module = "protobuf-lite")
     }
