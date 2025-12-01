@@ -42,6 +42,19 @@
             </AndroidTestResultsTableState>
           </value>
         </entry>
+        <entry key="-1564504111">
+          <value>
+            <AndroidTestResultsTableState>
+              <option name="preferredColumnWidths">
+                <map>
+                  <entry key="Duration" value="90" />
+                  <entry key="Medium_Phone_API_36.0" value="120" />
+                  <entry key="Tests" value="360" />
+                </map>
+              </option>
+            </AndroidTestResultsTableState>
+          </value>
+        </entry>
         <entry key="-1492697258">
           <value>
             <AndroidTestResultsTableState>
@@ -172,6 +185,19 @@
             </AndroidTestResultsTableState>
           </value>
         </entry>
+        <entry key="753265209">
+          <value>
+            <AndroidTestResultsTableState>
+              <option name="preferredColumnWidths">
+                <map>
+                  <entry key="Duration" value="90" />
+                  <entry key="Medium_Phone_API_36.0" value="120" />
+                  <entry key="Tests" value="360" />
+                </map>
+              </option>
+            </AndroidTestResultsTableState>
+          </value>
+        </entry>
         <entry key="816642810">
           <value>
             <AndroidTestResultsTableState>
@@ -199,6 +225,19 @@
           </value>
         </entry>
         <entry key="1013348714">
+          <value>
+            <AndroidTestResultsTableState>
+              <option name="preferredColumnWidths">
+                <map>
+                  <entry key="Duration" value="90" />
+                  <entry key="Medium_Phone_API_36.0" value="120" />
+                  <entry key="Tests" value="360" />
+                </map>
+              </option>
+            </AndroidTestResultsTableState>
+          </value>
+        </entry>
+        <entry key="1150123155">
           <value>
             <AndroidTestResultsTableState>
               <option name="preferredColumnWidths">
