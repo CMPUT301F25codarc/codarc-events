@@ -13,16 +13,19 @@
         </DropdownSelection>
         <DialogSelection />
       </SelectionState>
-      <SelectionState runConfigName="OrganizerIntentTests">
-        <option name="selectionMode" value="DROPDOWN" />
-      </SelectionState>
       <SelectionState runConfigName="EntrantIntentTests">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="qrScanner_showsCameraPermissionDialog_andClickOk()">
+      <SelectionState runConfigName="landing_continue_opensEventBrowserWithListContainer()">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="eventBrowser_canOpenQrScannerFromBottomNav()">
+      <SelectionState runConfigName="eventBrowser_canOpenQrScannerFromBottomNavAndGetPromptedForPermission()">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+      <SelectionState runConfigName="eventBrowser_canOpenFilterDialog_andSeeControls()">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+      <SelectionState runConfigName="profile_fillAndSave_doesNotCrash()">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
     </selectionStates>
