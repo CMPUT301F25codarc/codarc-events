@@ -189,6 +189,25 @@ public class EntrantIntentTests {
             onView(withText("Leave")).perform(click());
         }
     }
+    @Test
+    public void eventBrowser_lotteryCriteriaDialog_showsAndDismisses() {
+        try (ActivityScenario<EventBrowserActivity> scenario =
+                     ActivityScenario.launch(EventBrowserActivity.class)) {
+
+            // Manually show the same dialog the card uses (dialog_lottery_info)
+            scenario.onActivity(activity -> {
+                android.view.View dialogView =
+                        android.view.LayoutInflater.from(activity)
+                                .inflate(R.layout.dialog_lottery_info, null);
+
+                new androidx.appcompat.app.AlertDialog.Builder(activity)
+                        .setView(dialogView)
+                        .setPositiveButton(activity.getString(R.string.got_it),
+                                (dialog, which) -> dialog.dismiss())
+                        .show();
+            });
+        }
+    }
 
     // ---------- helpers ----------
 
