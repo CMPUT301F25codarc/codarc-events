@@ -5,13 +5,13 @@ plugins {
 
 android {
     namespace = "ca.ualberta.codarc.codarc_events"
-    compileSdk = 36
+    compileSdk = 34
 
 
     defaultConfig {
         applicationId = "ca.ualberta.codarc.codarc_events"
         minSdk = 24
-        targetSdk = 36
+        targetSdk = 34
         versionCode = 1
         versionName = "1.0"
 
