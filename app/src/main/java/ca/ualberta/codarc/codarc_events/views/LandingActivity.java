@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -12,9 +13,11 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import com.google.android.material.button.MaterialButton;
+import com.google.firebase.messaging.FirebaseMessaging;
 import ca.ualberta.codarc.codarc_events.R;
 import ca.ualberta.codarc.codarc_events.utils.Identity;
 import ca.ualberta.codarc.codarc_events.utils.NotificationChannelHelper;
+import ca.ualberta.codarc.codarc_events.data.EntrantDB;
 import ca.ualberta.codarc.codarc_events.data.UserDB;
 
 /**
@@ -22,6 +25,7 @@ import ca.ualberta.codarc.codarc_events.data.UserDB;
  */
 public class LandingActivity extends AppCompatActivity {
 
+    private static final String TAG = "LandingActivity";
     private static final int REQUEST_NOTIFICATION_PERMISSION = 200;
 
     @Override
@@ -44,6 +48,8 @@ public class LandingActivity extends AppCompatActivity {
                 Toast.makeText(LandingActivity.this, "Identity setup failed", Toast.LENGTH_SHORT).show();
             }
         });
+
+        fetchAndSaveFCMToken(deviceId);
 
         MaterialButton continueBtn = findViewById(R.id.btn_continue);
         continueBtn.setOnClickListener(v -> {
@@ -71,6 +77,32 @@ public class LandingActivity extends AppCompatActivity {
             // Permission result is handled gracefully - notifications will still work in background
             // even if permission is denied
         }
+    }
+
+    private void fetchAndSaveFCMToken(String deviceId) {
+        FirebaseMessaging.getInstance().getToken()
+                .addOnCompleteListener(task -> {
+                    if (!task.isSuccessful()) {
+                        return;
+                    }
+
+                    String token = task.getResult();
+                    if (token == null || token.isEmpty()) {
+                        return;
+                    }
+
+                    EntrantDB entrantDB = new EntrantDB();
+                    entrantDB.saveFCMToken(deviceId, token, new EntrantDB.Callback<Void>() {
+                        @Override
+                        public void onSuccess(Void value) {
+                        }
+
+                        @Override
+                        public void onError(@NonNull Exception e) {
+                            Log.e(TAG, "Failed to save FCM token", e);
+                        }
+                    });
+                });
     }
 }
 

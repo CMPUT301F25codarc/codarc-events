@@ -362,7 +362,6 @@ public class NotificationController {
 
             @Override
             public void onError(@NonNull Exception e) {
-                Log.d(TAG, "Failed to get FCM token for " + deviceId, e);
                 aggregator.onTokenFetched();
             }
         });
@@ -381,8 +380,7 @@ public class NotificationController {
 
             @Override
             public void onError(@NonNull Exception e) {
-                Log.d(TAG, "Failed to get notification preference for " + deviceId, e);
-                aggregator.onTokenFetched();
+                fetchTokenForDevice(deviceId, tokens, aggregator);
             }
         });
     }
